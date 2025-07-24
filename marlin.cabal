@@ -1,0 +1,46 @@
+cabal-version: 3.8
+name: marlin
+version: 0.1.0.0
+license: NONE
+author: Michael Bock
+maintainer: no-day@posteo.net
+build-type: Simple
+extra-doc-files: CHANGELOG.md
+
+common warnings
+  ghc-options: -Wall
+  default-extensions:
+    DeriveGeneric
+    FlexibleContexts
+    FlexibleInstances
+    LambdaCase
+    NoFieldSelectors
+    NoImplicitPrelude
+    OverloadedStrings
+    RecordWildCards
+    TypeApplications
+
+library
+  import: warnings
+  exposed-modules:
+    Marlin.Core
+    Marlin.DSL
+    Marlin.Syntax
+
+  build-depends:
+    base ^>=4.17.2.1,
+    relude,
+
+  hs-source-dirs: src
+  default-language: Haskell2010
+
+executable marlin-exe
+  import: warnings
+  main-is: Main.hs
+  hs-source-dirs: app
+  build-depends:
+    base,
+    marlin,
+    relude,
+
+  default-language: Haskell2010

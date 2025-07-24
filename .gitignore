@@ -2,6 +2,7 @@
 /dist-newstyle/
 /.stack-work/
 /out/
+/tmp/
 
 # Cabal files
 *.cabal-sandbox/
