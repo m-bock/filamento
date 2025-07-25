@@ -33,35 +33,38 @@ heatup bedTemp hotendTemp inner = do
 coolDown :: GCode ()
 coolDown =
   section "Cool down" $ do
-    raw "M104 S0" "turn off nozzle"
-    raw "M140 S0" "turn off bed"
-    raw "M107" "turn off fan"
-    raw "M84" "motors off"
+    setHotendOff
+    setBedOff
+    setFanOff
+    motorsOff
 
 sampleProgram :: GCode ()
 sampleProgram = do
   setUnits Millimeter
-  heatup 60 200 (pure ())
-  autoHome_
+  setExtruderRelative
 
-  raw "M83" "set extruder to relative mode"
+  heatup 60 200 $ do
+    autoHome_
 
   let step = 10.0
 
   for_ (enumFromTo 10 20) $ \x' -> do
     linearMove
-      & x (fromIntegral x' * step)
-      & y 0.0
-      & z 0.2
-      & extrude 0
+      & setX (fromIntegral x' * step)
+      & setY 0.0
+      & setZ 0.2
+      & setExtrude 0
       & toGCode
 
     linearMove
-      & x (fromIntegral x' * step)
-      & y 100.0
-      & z 0.2
-      & extrude 10
+      & setX (fromIntegral x' * step)
+      & setY 100.0
+      & setZ 0.2
+      & setExtrude 10
       & toGCode
+
+  pause 30 -- instead of raw "G4 S30" "wait 30 seconds"
+  coolDown
 
 main :: IO ()
 main = do

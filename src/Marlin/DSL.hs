@@ -45,20 +45,27 @@ raw extra comm = GCode $ do
 class IsGCode a where
   toGCode :: a -> GCode ()
 
+-- class (HasX a, HasY a) => HasXY a where
+--   xy :: Vec2 -> a -> a
+--   xy (Vec2 x' y') obj = obj & x x' & y y'
+
+-- class (HasX a, HasY a, HasZ a) => HasXYZ a where
+--   xyz :: Vec3 -> a -> a
+
 class HasX a where
-  x :: Double -> a -> a
+  setX :: Double -> a -> a
 
 class HasY a where
-  y :: Double -> a -> a
+  setY :: Double -> a -> a
 
 class HasZ a where
-  z :: Double -> a -> a
+  setZ :: Double -> a -> a
 
 class HasExtrude a where
-  extrude :: Double -> a -> a
+  setExtrude :: Double -> a -> a
 
 class HasSpeed a where
-  speed :: Int -> a -> a
+  setSpeed :: Int -> a -> a
 
 class HasTargetTemperature a where
   setTargetTemperature :: Int -> a -> a
@@ -79,19 +86,19 @@ instance IsGCode LinearMove where
   toGCode = gCodeFromCmd . GLinearMove
 
 instance HasX LinearMove where
-  x x' obj = obj {_x = Just x'}
+  setX x' obj = obj {_x = Just x'}
 
 instance HasY LinearMove where
-  y y' obj = obj {_y = Just y'}
+  setY y' obj = obj {_y = Just y'}
 
 instance HasZ LinearMove where
-  z z' obj = obj {_z = Just z'}
+  setZ z' obj = obj {_z = Just z'}
 
 instance HasExtrude LinearMove where
-  extrude e' obj = obj {_e = Just e'}
+  setExtrude e' obj = obj {_e = Just e'}
 
 instance HasSpeed LinearMove where
-  speed f' obj = obj {_f = Just f'}
+  setSpeed f' obj = obj {_f = Just f'}
 
 -------------------------------------------------------------------------------
 
@@ -156,6 +163,29 @@ autoHome_ = toGCode autoHome
 
 instance IsGCode AutoHome where
   toGCode = gCodeFromCmd . GAutoHome
+
+-------------------------------------------------------------------------------
+
+setExtruderRelative :: GCode ()
+setExtruderRelative = gCodeFromCmd MSetExtruderRelative
+
+setExtruderAbsolute :: GCode ()
+setExtruderAbsolute = gCodeFromCmd MSetExtruderAbsolute
+
+setHotendOff :: GCode ()
+setHotendOff = gCodeFromCmd MSetHotendOff
+
+setBedOff :: GCode ()
+setBedOff = gCodeFromCmd MSetBedOff
+
+setFanOff :: GCode ()
+setFanOff = gCodeFromCmd MSetFanOff
+
+motorsOff :: GCode ()
+motorsOff = gCodeFromCmd MMotorsOff
+
+pause :: Int -> GCode ()
+pause seconds = gCodeFromCmd (GPause seconds)
 
 -------------------------------------------------------------------------------
 --- Utils

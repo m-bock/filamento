@@ -31,6 +31,7 @@ library
 
   build-depends:
     base ^>=4.17.2.1,
+    linear,
     mtl,
     relude,
 
@@ -43,6 +44,7 @@ executable marlin-exe
   hs-source-dirs: app
   build-depends:
     base,
+    linear,
     marlin,
     mtl,
     relude,

@@ -49,6 +49,13 @@ data GCodeCmd
   | MWaitForBedTemperature WaitForBedTemperature
   | MSSetHotendTemperature SetHotendTemperature
   | MWaitForHotendTemperature WaitForHotendTemperature
+  | MSetExtruderRelative
+  | MSetExtruderAbsolute
+  | MSetHotendOff
+  | MSetBedOff
+  | MSetFanOff
+  | MMotorsOff
+  | GPause Int -- G4 with seconds parameter
   deriving (Show, Eq)
 
 data GCodeLine = GCodeLine
@@ -69,8 +76,8 @@ gcodeToComment cmd =
     GMillimeterUnits -> "Set units to millimeters"
     GInchUnits -> "Set units to inches"
     GLinearMove (LinearMove x y z e f) ->
-      "Linear move to "
-        <> maybe "" (\v -> "X" <> show v) x
+      "Linear move to"
+        <> maybe "" (\v -> " X" <> show v) x
         <> maybe "" (\v -> " Y" <> show v) y
         <> maybe "" (\v -> " Z" <> show v) z
         <> maybe "" (\v -> " E" <> show v) e
@@ -88,6 +95,13 @@ gcodeToComment cmd =
     MWaitForHotendTemperature (WaitForHotendTemperature t) ->
       "Wait for hotend temperature to reach "
         <> maybe "" (\v -> "S" <> show v) t
+    MSetExtruderRelative -> "Set extruder to relative mode"
+    MSetExtruderAbsolute -> "Set extruder to absolute mode"
+    MSetHotendOff -> "Turn hotend off"
+    MSetBedOff -> "Turn bed off"
+    MSetFanOff -> "Turn fan off"
+    MMotorsOff -> "Turn all motors off"
+    GPause s -> "Pause for " <> show s <> " seconds"
 
 gcodeToRaw :: GCodeCmd -> RawGCodeCmd
 gcodeToRaw cmd =
@@ -163,4 +177,46 @@ gcodeToRaw cmd =
               $ catMaybes
                 [ ('S',) . ArgInt <$> t
                 ]
+        }
+    MSetExtruderRelative ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 83,
+          cmdArgs = Map.empty
+        }
+    MSetExtruderAbsolute ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 82,
+          cmdArgs = Map.empty
+        }
+    MSetHotendOff ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 104,
+          cmdArgs = Map.fromList [('S', ArgInt 0)]
+        }
+    MSetBedOff ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 140,
+          cmdArgs = Map.fromList [('S', ArgInt 0)]
+        }
+    MSetFanOff ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 107,
+          cmdArgs = Map.empty
+        }
+    MMotorsOff ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 84,
+          cmdArgs = Map.empty
+        }
+    GPause s ->
+      RawGCodeCmd
+        { cmdId = 'G',
+          cmdNum = 4,
+          cmdArgs = Map.fromList [('S', ArgInt s)]
         }
