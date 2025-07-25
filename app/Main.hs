@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Monad.Writer
 import Marlin.Core
 import Marlin.DSL
 import Relude
@@ -66,8 +67,30 @@ import Relude
 --     [ PlayTone (Just 2000) (Just 500) ]
 --     -- finalPhase
 
+-- init :: [GCode]
+-- init =
+--   [ setUnits Millimeter
+--   ]
+
+init2 :: [GCode]
+init2 = execWriter $ do
+  setUnits Millimeter
+
+  setBedTemperature
+    & setTargetTemperature 60
+    & f
+
+  linearMove
+    & setX 0.0
+    & f
+
+f :: (IsGCode a) => a -> Writer [GCode] ()
+f = tell . pure . run
+
 sampleProgram :: [GCode]
-sampleProgram = []
+sampleProgram =
+  [ run $ linearMove & setX 0.0
+  ]
 
 main :: IO ()
 main = putTextLn (render sampleProgram)
