@@ -7,11 +7,28 @@
 set dotenv-load
 
 gen:
-    cabal run jee-code-exe > out/myprint.gcode
+    cabal run
 
-print: gen
+cancel-print:
+    curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
+         -H "Content-Type: application/json" \
+         -X POST \
+         "${OCTOPRINT_URL:-http://localhost:5000}/api/job" \
+         -d '{"command": "cancel"}'
+
+    sleep 2
+
+print:
     curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
          -F "select=true" \
          -F "print=true" \
-         -F "file=@myprint.gcode" \
+         -F "file=@out/myprint.gcode" \
          "${OCTOPRINT_URL:-http://localhost:5000}/api/files/local"
+
+show:
+    code out/myprint.gcode
+
+dev1: gen cancel-print print show
+
+start-octo:
+    nix-shell -p octoprint --run "octoprint serve"

@@ -1,6 +1,9 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Marlin.DSL where
 
 import Control.Monad.Writer
+import Foreign (new)
 import Marlin.Core
 import Relude
 
@@ -8,33 +11,54 @@ import Relude
 --- GCode
 -------------------------------------------------------------------------------
 
-newtype GCode = GCode {runGCode :: Writer [GCodeCmd] ()}
+newtype GCode a = GCode {runGCode :: Writer [GCodeLine] a}
+  deriving (Functor, Applicative, Monad)
 
-instance ToText GCode where
+instance ToText (GCode a) where
   toText (GCode w) =
     execWriter w
-      & map (toText . gcodeToRaw)
-      & unlines
+      & map gcodeLineToRaw
+      & toText
+
+-------------------------------------------------------------------------------
+
+section :: Text -> GCode a -> GCode a
+section caption gc = do
+  comment caption
+  ret <- gc
+  newline
+  pure ret
+
+newline :: GCode ()
+newline = GCode $ tell [GCodeLine {cmd = Nothing, rawExtra = "", comment = Nothing}]
+
+comment :: Text -> GCode ()
+comment c = GCode $ do
+  tell [GCodeLine {cmd = Nothing, rawExtra = "", comment = Just c}]
+
+raw :: Text -> Text -> GCode ()
+raw extra comm = GCode $ do
+  tell [GCodeLine {cmd = Nothing, rawExtra = extra, comment = Just comm}]
 
 -------------------------------------------------------------------------------
 
 class IsGCode a where
-  toGCode :: a -> GCode
+  toGCode :: a -> GCode ()
 
 class HasX a where
-  setX :: Double -> a -> a
+  x :: Double -> a -> a
 
 class HasY a where
-  setY :: Double -> a -> a
+  y :: Double -> a -> a
 
 class HasZ a where
-  setZ :: Double -> a -> a
+  z :: Double -> a -> a
 
-class HasE a where
-  setE :: Double -> a -> a
+class HasExtrude a where
+  extrude :: Double -> a -> a
 
-class HasF a where
-  setF :: Int -> a -> a
+class HasSpeed a where
+  speed :: Int -> a -> a
 
 class HasTargetTemperature a where
   setTargetTemperature :: Int -> a -> a
@@ -55,17 +79,26 @@ instance IsGCode LinearMove where
   toGCode = gCodeFromCmd . GLinearMove
 
 instance HasX LinearMove where
-  setX x' obj = obj {_x = Just x'}
+  x x' obj = obj {_x = Just x'}
 
 instance HasY LinearMove where
-  setY y' obj = obj {_y = Just y'}
+  y y' obj = obj {_y = Just y'}
+
+instance HasZ LinearMove where
+  z z' obj = obj {_z = Just z'}
+
+instance HasExtrude LinearMove where
+  extrude e' obj = obj {_e = Just e'}
+
+instance HasSpeed LinearMove where
+  speed f' obj = obj {_f = Just f'}
 
 -------------------------------------------------------------------------------
 
 data Units = Millimeter | Inche
 
-setUnits :: Units -> GCode
-setUnits u = GCode $ tell $ pure $ case u of
+setUnits :: Units -> GCode ()
+setUnits u = gCodeFromCmd $ case u of
   Millimeter -> GMillimeterUnits
   Inche -> GInchUnits
 
@@ -114,10 +147,29 @@ instance HasTargetTemperature WaitForHotendTemperature where
   setTargetTemperature t obj = obj {_temperature = Just t}
 
 -------------------------------------------------------------------------------
+
+autoHome :: AutoHome
+autoHome = AutoHome
+
+autoHome_ :: GCode ()
+autoHome_ = toGCode autoHome
+
+instance IsGCode AutoHome where
+  toGCode = gCodeFromCmd . GAutoHome
+
+-------------------------------------------------------------------------------
 --- Utils
 -------------------------------------------------------------------------------
 
-gCodeFromCmd :: GCodeCmd -> GCode
-gCodeFromCmd = GCode . tell . pure
+gCodeFromCmd :: GCodeCmd -> GCode ()
+gCodeFromCmd cmd =
+  GCode
+    $ tell
+    $ pure
+    $ GCodeLine
+      { cmd = (Just cmd),
+        rawExtra = "",
+        comment = (Just (gcodeToComment cmd))
+      }
 
 -------------------------------------------------------------------------------

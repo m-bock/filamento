@@ -20,13 +20,13 @@ data ArgValue
   deriving (Show, Eq, Generic)
 
 -- | A parsed line of G‑code, possibly with a comment.
-data GCodeLine = GCodeLine
+data RawGCodeLine = RawGCodeLine
   { cmd :: Maybe RawGCodeCmd,
+    rawExtra :: Text,
     comment :: Maybe Text
   }
   deriving (Show, Eq, Generic)
 
--- | Typeclass for things convertible to Text.
 instance ToText ArgValue where
   toText (ArgInt i) = T.pack (show i)
   toText (ArgDouble d) = T.pack (printf "%.*f" (3 :: Int) d)
@@ -41,10 +41,16 @@ instance ToText RawGCodeCmd where
             & T.concat
      in headText <> argsText
 
-instance ToText GCodeLine where
-  toText (GCodeLine Nothing Nothing) = ""
-  toText (GCodeLine Nothing (Just c)) = "; " <> c
-  toText (GCodeLine (Just c) mComment) =
-    let base = toText c
-        com = maybe "" (\t -> " ; " <> t) mComment
-     in base <> com
+instance ToText [RawGCodeLine] where
+  toText lines = unlines zipped
+    where
+      cmds = map (\x -> maybe "" toText x.cmd <> x.rawExtra) lines
+      maxLength = fromMaybe 0 $ maximumMay (map T.length cmds)
+      comments = map (maybe "" (\c -> " ; " <> c) . (\x -> x.comment)) lines
+      zipped = zipWith (\cmd comment -> cmd <> (T.replicate (maxLength - T.length cmd) " ") <> comment) cmds comments
+
+maximumMay :: (Foldable t, Ord a) => t a -> Maybe a
+maximumMay = foldl' go Nothing
+  where
+    go Nothing y = Just y
+    go (Just x) y = Just (max x y)

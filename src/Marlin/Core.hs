@@ -37,15 +37,31 @@ data WaitForHotendTemperature = WaitForHotendTemperature
   }
   deriving (Show, Eq)
 
+data AutoHome = AutoHome
+  deriving (Show, Eq)
+
 data GCodeCmd
   = GMillimeterUnits
   | GInchUnits
   | GLinearMove LinearMove
+  | GAutoHome AutoHome
   | MSetBedTemperature SetBedTemperature
   | MWaitForBedTemperature WaitForBedTemperature
   | MSSetHotendTemperature SetHotendTemperature
   | MWaitForHotendTemperature WaitForHotendTemperature
   deriving (Show, Eq)
+
+data GCodeLine = GCodeLine
+  { cmd :: Maybe GCodeCmd,
+    rawExtra :: Text,
+    comment :: Maybe Text
+  }
+  deriving (Show, Eq)
+
+gcodeLineToRaw :: GCodeLine -> RawGCodeLine
+gcodeLineToRaw (GCodeLine Nothing extra Nothing) = RawGCodeLine {cmd = Nothing, rawExtra = extra, comment = Nothing}
+gcodeLineToRaw (GCodeLine Nothing extra (Just c)) = RawGCodeLine {cmd = Nothing, rawExtra = extra, comment = Just c}
+gcodeLineToRaw (GCodeLine (Just cmd) extra mComment) = RawGCodeLine {cmd = Just (gcodeToRaw cmd), rawExtra = extra, comment = mComment}
 
 gcodeToComment :: GCodeCmd -> Text
 gcodeToComment cmd =
@@ -59,6 +75,7 @@ gcodeToComment cmd =
         <> maybe "" (\v -> " Z" <> show v) z
         <> maybe "" (\v -> " E" <> show v) e
         <> maybe "" (\v -> " F" <> show v) f
+    GAutoHome _ -> "Auto home axes"
     MSetBedTemperature (SetBedTemperature t) ->
       "Set bed temperature to "
         <> maybe "" (\v -> "S" <> show v) t
@@ -100,6 +117,12 @@ gcodeToRaw cmd =
                   ('E',) . ArgDouble <$> e,
                   ('F',) . ArgInt <$> f
                 ]
+        }
+    GAutoHome _ ->
+      RawGCodeCmd
+        { cmdId = 'G',
+          cmdNum = 28,
+          cmdArgs = Map.empty
         }
     MSetBedTemperature (SetBedTemperature t) ->
       RawGCodeCmd
