@@ -3,7 +3,7 @@
 module Marlin.DSL where
 
 import Control.Monad.Writer
-import Foreign (new)
+import Linear (V2 (..), V3 (..))
 import Marlin.Core
 import Relude
 
@@ -45,12 +45,13 @@ raw extra comm = GCode $ do
 class IsGCode a where
   toGCode :: a -> GCode ()
 
--- class (HasX a, HasY a) => HasXY a where
---   xy :: Vec2 -> a -> a
---   xy (Vec2 x' y') obj = obj & x x' & y y'
+class (HasX a, HasY a) => HasXY a where
+  setXY :: V2 Double -> a -> a
+  setXY (V2 x y) obj = obj & setX x & setY y
 
--- class (HasX a, HasY a, HasZ a) => HasXYZ a where
---   xyz :: Vec3 -> a -> a
+class (HasX a, HasY a, HasZ a) => HasXYZ a where
+  setXYZ :: V3 Double -> a -> a
+  setXYZ (V3 x y z) obj = obj & setX x & setY y & setZ z
 
 class HasX a where
   setX :: Double -> a -> a
@@ -69,6 +70,9 @@ class HasSpeed a where
 
 class HasTargetTemperature a where
   setTargetTemperature :: Int -> a -> a
+
+class HasSkipIfTrusted a where
+  setSkipIfTrusted :: Bool -> a -> a
 
 -------------------------------------------------------------------------------
 
@@ -99,6 +103,10 @@ instance HasExtrude LinearMove where
 
 instance HasSpeed LinearMove where
   setSpeed f' obj = obj {_f = Just f'}
+
+instance HasXY LinearMove
+
+instance HasXYZ LinearMove
 
 -------------------------------------------------------------------------------
 
@@ -156,13 +164,16 @@ instance HasTargetTemperature WaitForHotendTemperature where
 -------------------------------------------------------------------------------
 
 autoHome :: AutoHome
-autoHome = AutoHome
+autoHome = AutoHome {_skipIfTrusted = False}
 
 autoHome_ :: GCode ()
 autoHome_ = toGCode autoHome
 
 instance IsGCode AutoHome where
   toGCode = gCodeFromCmd . GAutoHome
+
+instance HasSkipIfTrusted AutoHome where
+  setSkipIfTrusted skip obj = obj {_skipIfTrusted = skip}
 
 -------------------------------------------------------------------------------
 

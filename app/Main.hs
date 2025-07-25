@@ -3,6 +3,8 @@
 module Main where
 
 import qualified Data.Text as T
+import Linear (V3 (..))
+import Linear.V2 (V2 (..))
 import Marlin.DSL
 import Relude
 
@@ -38,33 +40,101 @@ coolDown =
     setFanOff
     motorsOff
 
+initialTestStripes :: GCode ()
+initialTestStripes = do
+  linearMove
+    & setXYZ (V3 5.0 0.0 0.2)
+    & setSpeed 10000
+    & toGCode
+
+  linearMove
+    & setXYZ (V3 5.0 100.0 0.2)
+    & setExtrude 10
+    & setSpeed 500
+    & toGCode
+
+  linearMove
+    & setXYZ (V3 10.0 0.0 0.2)
+    & setSpeed 10000
+    & toGCode
+
+  linearMove
+    & setXYZ (V3 10.0 100.0 0.2)
+    & setExtrude 10
+    & setSpeed 500
+    & toGCode
+
+layer :: Int -> GCode ()
+layer n = do
+  let step = 10.0
+
+  let z = 0.2 + (fromIntegral n * 0.2)
+
+  let extSpeed = if n == 0 then 500 else 1000
+
+  linearMove
+    & setZ z
+    & setSpeed 10000
+    & toGCode
+
+  for_ (enumFromTo 10 20) $ \x -> do
+    linearMove
+      & setExtrude (-2)
+      & toGCode
+
+    linearMove
+      & setXY (V2 (fromIntegral x * step) 0.0)
+      & setSpeed 10000
+      & setExtrude 0
+      & toGCode
+
+    linearMove
+      & setExtrude (2)
+      & toGCode
+
+    linearMove
+      & setXY (V2 (fromIntegral x * step) 100.0)
+      & setSpeed extSpeed
+      & setExtrude 10
+      & toGCode
+
+finalUpZ :: GCode ()
+finalUpZ = do
+  linearMove
+    & setX 100.0
+    & setY 100.0
+    & setSpeed 500
+    & toGCode
+
+  linearMove
+    & setZ 100.0
+    & setSpeed 10000
+    & toGCode
+
 sampleProgram :: GCode ()
 sampleProgram = do
   setUnits Millimeter
   setExtruderRelative
 
   heatup 60 200 $ do
-    autoHome_
-
-  let step = 10.0
-
-  for_ (enumFromTo 10 20) $ \x' -> do
-    linearMove
-      & setX (fromIntegral x' * step)
-      & setY 0.0
-      & setZ 0.2
-      & setExtrude 0
+    autoHome
+      & setSkipIfTrusted True
       & toGCode
 
-    linearMove
-      & setX (fromIntegral x' * step)
-      & setY 100.0
-      & setZ 0.2
-      & setExtrude 10
-      & toGCode
+  initialTestStripes
 
-  pause 30 -- instead of raw "G4 S30" "wait 30 seconds"
-  coolDown
+  -- layer 1
+  -- layer 2
+  -- layer 3
+  layer 4
+  layer 5
+  layer 6
+  layer 7
+
+  finalUpZ
+
+-- pause 30 -- instead of raw "G4 S30" "wait 30 seconds"
+-- coolDown
 
 main :: IO ()
 main = do

@@ -17,6 +17,7 @@ data RawGCodeCmd = RawGCodeCmd
 data ArgValue
   = ArgInt Int
   | ArgDouble Double
+  | ArgFlag Bool
   deriving (Show, Eq, Generic)
 
 -- | A parsed line of G‑code, possibly with a comment.
@@ -30,6 +31,8 @@ data RawGCodeLine = RawGCodeLine
 instance ToText ArgValue where
   toText (ArgInt i) = T.pack (show i)
   toText (ArgDouble d) = T.pack (printf "%.*f" (3 :: Int) d)
+  toText (ArgFlag True) = "1"
+  toText (ArgFlag False) = "0"
 
 instance ToText RawGCodeCmd where
   toText (RawGCodeCmd cid num args) =

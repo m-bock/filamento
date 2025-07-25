@@ -38,6 +38,8 @@ data WaitForHotendTemperature = WaitForHotendTemperature
   deriving (Show, Eq)
 
 data AutoHome = AutoHome
+  { _skipIfTrusted :: Bool
+  }
   deriving (Show, Eq)
 
 data GCodeCmd
@@ -132,11 +134,14 @@ gcodeToRaw cmd =
                   ('F',) . ArgInt <$> f
                 ]
         }
-    GAutoHome _ ->
+    GAutoHome (AutoHome _skipIfTrusted) ->
       RawGCodeCmd
         { cmdId = 'G',
           cmdNum = 28,
-          cmdArgs = Map.empty
+          cmdArgs =
+            Map.fromList
+              [ ('O', ArgFlag _skipIfTrusted)
+              ]
         }
     MSetBedTemperature (SetBedTemperature t) ->
       RawGCodeCmd

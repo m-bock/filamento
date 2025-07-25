@@ -25,6 +25,24 @@ print:
          -F "file=@out/myprint.gcode" \
          "${OCTOPRINT_URL:-http://localhost:5000}/api/files/local"
 
+octo-connect-printer:
+    curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
+         -H "Content-Type: application/json" \
+         -X POST \
+         "${OCTOPRINT_URL:-http://localhost:5000}/api/connection" \
+         -d '{"command": "connect"}'
+
+octo-disconnect-printer:
+    curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
+         -H "Content-Type: application/json" \
+         -X POST \
+         "${OCTOPRINT_URL:-http://localhost:5000}/api/connection" \
+         -d '{"command": "disconnect"}'
+
+octo-status:
+    curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
+         "${OCTOPRINT_URL:-http://localhost:5000}/api/connection"
+
 show:
     code out/myprint.gcode
 
