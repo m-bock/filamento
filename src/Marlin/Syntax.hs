@@ -6,7 +6,7 @@ import Relude
 import Text.Printf (printf)
 
 -- | A single G‑code or M‑code command.
-data Cmd = Cmd
+data RawGCodeCmd = RawGCodeCmd
   { cmdId :: Char,
     cmdNum :: Int,
     cmdArgs :: Map Char ArgValue
@@ -21,7 +21,7 @@ data ArgValue
 
 -- | A parsed line of G‑code, possibly with a comment.
 data GCodeLine = GCodeLine
-  { cmd :: Maybe Cmd,
+  { cmd :: Maybe RawGCodeCmd,
     comment :: Maybe Text
   }
   deriving (Show, Eq, Generic)
@@ -31,8 +31,8 @@ instance ToText ArgValue where
   toText (ArgInt i) = T.pack (show i)
   toText (ArgDouble d) = T.pack (printf "%.*f" (3 :: Int) d)
 
-instance ToText Cmd where
-  toText (Cmd cid num args) =
+instance ToText RawGCodeCmd where
+  toText (RawGCodeCmd cid num args) =
     let headText = T.singleton cid <> T.pack (show num)
         argsText =
           args

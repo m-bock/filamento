@@ -2,8 +2,9 @@
 
 module Marlin.Core where
 
+-- See: https://marlinfw.org/meta/gcode/
+
 import qualified Data.Map.Strict as Map
-import Data.Semigroup (Arg)
 import Marlin.Syntax
 import Relude
 
@@ -26,96 +27,117 @@ data WaitForBedTemperature = WaitForBedTemperature
   }
   deriving (Show, Eq)
 
-data GCode
-  = GMillimeterUnits
-  | GInchUnits
-  | -- | SetAbsolutePositioning
-    -- | SetExtruderToAbsolute
-    GSetBedTemperature SetBedTemperature
-  | GWaitForBedTemperature WaitForBedTemperature
-  | -- | SetHotendTemperature (Maybe Int)
-    -- | WaitForHotendTemperature (Maybe Int)
-    -- | AutoHome
-    GLinearMove LinearMove
-  deriving
-    ( -- | SetPosition (Maybe Double)
-      -- | ArcMove (Maybe Double) (Maybe Double) (Maybe Double) (Maybe Double) (Maybe Double) (Maybe Int)
-      -- | SetHotendTemperatureOff
-      -- | SetBedTemperatureOff
-      -- | DisableSteppers
-      -- | Comment String
-      -- | PlayTone (Maybe Int) (Maybe Int)  -- ^ PlayTone: frequency (Hz), duration (ms)
-      Show,
-      Eq
-    )
-
-toGCodeLine :: GCode -> GCodeLine
-toGCodeLine c = define $ case c of
-  GMillimeterUnits ->
-    ( G,
-      21,
-      [],
-      "MillimeterUnits"
-    )
-  GInchUnits ->
-    ( G,
-      20,
-      [],
-      "InchUnits"
-    )
-  GSetBedTemperature (SetBedTemperature t) ->
-    ( M,
-      140,
-      [j S ArgInt t],
-      "SetBedTemperature"
-    )
-  GWaitForBedTemperature (WaitForBedTemperature t) ->
-    ( M,
-      190,
-      [j S ArgInt t],
-      "WaitForBedTemperature"
-    )
-  GLinearMove (LinearMove x y z e f) ->
-    ( G,
-      1,
-      [ j X ArgDouble x,
-        j Y ArgDouble y,
-        j Z ArgDouble z,
-        j E ArgDouble e,
-        j F ArgInt f
-      ],
-      "LinearMove"
-    )
-
-j :: Argument -> (a -> ArgValue) -> Maybe a -> Maybe (Argument, ArgValue)
-j arg mkVal val = case val of
-  Just v -> Just (arg, mkVal v)
-  Nothing -> Nothing
-
-data CmdCode = G | M
-
-cmdToChar :: CmdCode -> Char
-cmdToChar = \case
-  G -> 'G'
-  M -> 'M'
-
-data Argument = X | Y | Z | E | F | S
+data SetHotendTemperature = SetHotendTemperature
+  { _temperature :: Maybe Int
+  }
   deriving (Show, Eq)
 
-renderArg :: Argument -> Char
-renderArg = \case
-  X -> 'X'
-  Y -> 'Y'
-  Z -> 'Z'
-  E -> 'E'
-  F -> 'F'
-  S -> 'S'
+data WaitForHotendTemperature = WaitForHotendTemperature
+  { _temperature :: Maybe Int
+  }
+  deriving (Show, Eq)
 
-define :: (CmdCode, Int, [Maybe (Argument, ArgValue)], Text) -> GCodeLine
-define (ch, i, args, com) =
-  GCodeLine
-    { cmd = Just $ Cmd (cmdToChar ch) i argMap,
-      comment = Just com
-    }
-  where
-    argMap = Map.fromList $ map (\(arg, val) -> (renderArg arg, val)) $ catMaybes args
+data GCodeCmd
+  = GMillimeterUnits
+  | GInchUnits
+  | GLinearMove LinearMove
+  | MSetBedTemperature SetBedTemperature
+  | MWaitForBedTemperature WaitForBedTemperature
+  | MSSetHotendTemperature SetHotendTemperature
+  | MWaitForHotendTemperature WaitForHotendTemperature
+  deriving (Show, Eq)
+
+gcodeToComment :: GCodeCmd -> Text
+gcodeToComment cmd =
+  case cmd of
+    GMillimeterUnits -> "Set units to millimeters"
+    GInchUnits -> "Set units to inches"
+    GLinearMove (LinearMove x y z e f) ->
+      "Linear move to "
+        <> maybe "" (\v -> "X" <> show v) x
+        <> maybe "" (\v -> " Y" <> show v) y
+        <> maybe "" (\v -> " Z" <> show v) z
+        <> maybe "" (\v -> " E" <> show v) e
+        <> maybe "" (\v -> " F" <> show v) f
+    MSetBedTemperature (SetBedTemperature t) ->
+      "Set bed temperature to "
+        <> maybe "" (\v -> "S" <> show v) t
+    MWaitForBedTemperature (WaitForBedTemperature t) ->
+      "Wait for bed temperature to reach "
+        <> maybe "" (\v -> "S" <> show v) t
+    MSSetHotendTemperature (SetHotendTemperature t) ->
+      "Set hotend temperature to "
+        <> maybe "" (\v -> "S" <> show v) t
+    MWaitForHotendTemperature (WaitForHotendTemperature t) ->
+      "Wait for hotend temperature to reach "
+        <> maybe "" (\v -> "S" <> show v) t
+
+gcodeToRaw :: GCodeCmd -> RawGCodeCmd
+gcodeToRaw cmd =
+  case cmd of
+    GMillimeterUnits ->
+      RawGCodeCmd
+        { cmdId = 'G',
+          cmdNum = 21,
+          cmdArgs = Map.empty
+        }
+    GInchUnits ->
+      RawGCodeCmd
+        { cmdId = 'G',
+          cmdNum = 20,
+          cmdArgs = Map.empty
+        }
+    GLinearMove (LinearMove x y z e f) ->
+      RawGCodeCmd
+        { cmdId = 'G',
+          cmdNum = 1,
+          cmdArgs =
+            Map.fromList
+              $ catMaybes
+                [ ('X',) . ArgDouble <$> x,
+                  ('Y',) . ArgDouble <$> y,
+                  ('Z',) . ArgDouble <$> z,
+                  ('E',) . ArgDouble <$> e,
+                  ('F',) . ArgInt <$> f
+                ]
+        }
+    MSetBedTemperature (SetBedTemperature t) ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 140,
+          cmdArgs =
+            Map.fromList
+              $ catMaybes
+                [ ('S',) . ArgInt <$> t
+                ]
+        }
+    MWaitForBedTemperature (WaitForBedTemperature t) ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 190,
+          cmdArgs =
+            Map.fromList
+              $ catMaybes
+                [ ('S',) . ArgInt <$> t
+                ]
+        }
+    MSSetHotendTemperature (SetHotendTemperature t) ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 104,
+          cmdArgs =
+            Map.fromList
+              $ catMaybes
+                [ ('S',) . ArgInt <$> t
+                ]
+        }
+    MWaitForHotendTemperature (WaitForHotendTemperature t) ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 109,
+          cmdArgs =
+            Map.fromList
+              $ catMaybes
+                [ ('S',) . ArgInt <$> t
+                ]
+        }

@@ -4,28 +4,22 @@ import Control.Monad.Writer
 import Marlin.Core
 import Relude
 
-linearMove :: LinearMove
-linearMove =
-  LinearMove
-    { _x = Nothing,
-      _y = Nothing,
-      _z = Nothing,
-      _e = Nothing,
-      _f = Nothing
-    }
+-------------------------------------------------------------------------------
+--- GCode
+-------------------------------------------------------------------------------
 
-data Units = Millimeter | Inche
+newtype GCode = GCode {runGCode :: Writer [GCodeCmd] ()}
 
-setUnits :: Units -> Writer [GCode] ()
-setUnits u = tell $ pure $ case u of
-  Millimeter -> GMillimeterUnits
-  Inche -> GInchUnits
+instance ToText GCode where
+  toText (GCode w) =
+    execWriter w
+      & map (toText . gcodeToRaw)
+      & unlines
 
-setBedTemperature :: SetBedTemperature
-setBedTemperature = SetBedTemperature {_temperature = Nothing}
+-------------------------------------------------------------------------------
 
-waitForBedTemperature :: WaitForBedTemperature
-waitForBedTemperature = WaitForBedTemperature {_temperature = Nothing}
+class IsGCode a where
+  toGCode :: a -> GCode
 
 class HasX a where
   setX :: Double -> a -> a
@@ -45,20 +39,85 @@ class HasF a where
 class HasTargetTemperature a where
   setTargetTemperature :: Int -> a -> a
 
-instance HasTargetTemperature SetBedTemperature where
-  setTargetTemperature t obj = obj {_temperature = Just t}
+-------------------------------------------------------------------------------
+
+linearMove :: LinearMove
+linearMove =
+  LinearMove
+    { _x = Nothing,
+      _y = Nothing,
+      _z = Nothing,
+      _e = Nothing,
+      _f = Nothing
+    }
+
+instance IsGCode LinearMove where
+  toGCode = gCodeFromCmd . GLinearMove
 
 instance HasX LinearMove where
   setX x' obj = obj {_x = Just x'}
 
-class IsGCode a where
-  run :: a -> GCode
+instance HasY LinearMove where
+  setY y' obj = obj {_y = Just y'}
 
-instance IsGCode LinearMove where
-  run = GLinearMove
+-------------------------------------------------------------------------------
+
+data Units = Millimeter | Inche
+
+setUnits :: Units -> GCode
+setUnits u = GCode $ tell $ pure $ case u of
+  Millimeter -> GMillimeterUnits
+  Inche -> GInchUnits
+
+-------------------------------------------------------------------------------
+
+setBedTemperature :: SetBedTemperature
+setBedTemperature = SetBedTemperature {_temperature = Nothing}
 
 instance IsGCode SetBedTemperature where
-  run = GSetBedTemperature
+  toGCode = gCodeFromCmd . MSetBedTemperature
 
-render :: [GCode] -> Text
-render = unlines . map (toText . toGCodeLine)
+instance HasTargetTemperature SetBedTemperature where
+  setTargetTemperature t obj = obj {_temperature = Just t}
+
+-------------------------------------------------------------------------------
+
+waitForBedTemperature :: WaitForBedTemperature
+waitForBedTemperature = WaitForBedTemperature {_temperature = Nothing}
+
+instance IsGCode WaitForBedTemperature where
+  toGCode = gCodeFromCmd . MWaitForBedTemperature
+
+instance HasTargetTemperature WaitForBedTemperature where
+  setTargetTemperature t obj = obj {_temperature = Just t}
+
+-------------------------------------------------------------------------------
+
+setHotendTemperature :: SetHotendTemperature
+setHotendTemperature = SetHotendTemperature {_temperature = Nothing}
+
+instance IsGCode SetHotendTemperature where
+  toGCode = gCodeFromCmd . MSSetHotendTemperature
+
+instance HasTargetTemperature SetHotendTemperature where
+  setTargetTemperature t obj = obj {_temperature = Just t}
+
+-------------------------------------------------------------------------------
+
+waitForHotendTemperature :: WaitForHotendTemperature
+waitForHotendTemperature = WaitForHotendTemperature {_temperature = Nothing}
+
+instance IsGCode WaitForHotendTemperature where
+  toGCode = gCodeFromCmd . MWaitForHotendTemperature
+
+instance HasTargetTemperature WaitForHotendTemperature where
+  setTargetTemperature t obj = obj {_temperature = Just t}
+
+-------------------------------------------------------------------------------
+--- Utils
+-------------------------------------------------------------------------------
+
+gCodeFromCmd :: GCodeCmd -> GCode
+gCodeFromCmd = GCode . tell . pure
+
+-------------------------------------------------------------------------------
