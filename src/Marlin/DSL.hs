@@ -24,6 +24,7 @@ instance ToText (GCode a) where
 
 section :: Text -> GCode a -> GCode a
 section caption gc = do
+  newline
   comment caption
   ret <- gc
   newline

@@ -70,14 +70,17 @@ layer n = do
 
   let z = 0.2 + (fromIntegral n * 0.2)
 
-  let extSpeed = if n == 0 then 500 else 1000
+  let extSpeed = if n == 0 then 500 else 2000
 
   linearMove
     & setZ z
     & setSpeed 10000
     & toGCode
 
-  for_ (enumFromTo 10 20) $ \x -> do
+  let startX = 10
+  let nStripes = 9
+
+  for_ (enumFromTo startX (startX + nStripes - 1)) $ \x -> do
     linearMove
       & setExtrude (-2)
       & toGCode
@@ -111,25 +114,39 @@ finalUpZ = do
     & setSpeed 10000
     & toGCode
 
+resume :: GCode ()
+resume = do
+  section "Resume" $ do
+    pure ()
+
+-- raw "G92 X0 Y0 Z10 E123.4"
+
 sampleProgram :: GCode ()
 sampleProgram = do
   setUnits Millimeter
   setExtruderRelative
 
   heatup 60 200 $ do
-    autoHome
-      & setSkipIfTrusted True
-      & toGCode
+    if True
+      then
+        resume
+      else
+        autoHome
+          & setSkipIfTrusted True
+          & toGCode
 
   initialTestStripes
 
   -- layer 1
   -- layer 2
   -- layer 3
-  layer 4
-  layer 5
-  layer 6
-  layer 7
+  -- layer 4
+  -- layer 5
+  -- layer 6
+  -- layer 7
+
+  forM_ [8 .. 10] $ \n -> do
+    section ("Layer " <> show n) $ layer n
 
   finalUpZ
 

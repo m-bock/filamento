@@ -40,8 +40,9 @@ octo-disconnect-printer:
          -d '{"command": "disconnect"}'
 
 octo-status:
-    curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
-         "${OCTOPRINT_URL:-http://localhost:5000}/api/connection"
+    curl --silent -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
+         "${OCTOPRINT_URL:-http://localhost:5000}/api/connection" \
+    | jq '.current.state'
 
 show:
     code out/myprint.gcode
