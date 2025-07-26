@@ -42,11 +42,20 @@ data AutoHome = AutoHome
   }
   deriving (Show, Eq)
 
+data SetPosition = SetPosition
+  { _x :: Maybe Double,
+    _y :: Maybe Double,
+    _z :: Maybe Double,
+    _e :: Maybe Double
+  }
+  deriving (Show, Eq)
+
 data GCodeCmd
   = GMillimeterUnits
   | GInchUnits
   | GLinearMove LinearMove
   | GAutoHome AutoHome
+  | GSetPosition SetPosition
   | MSetBedTemperature SetBedTemperature
   | MWaitForBedTemperature WaitForBedTemperature
   | MSSetHotendTemperature SetHotendTemperature
@@ -85,6 +94,12 @@ gcodeToComment cmd =
         <> maybe "" (\v -> " E" <> show v) e
         <> maybe "" (\v -> " F" <> show v) f
     GAutoHome _ -> "Auto home axes"
+    GSetPosition (SetPosition x y z e) ->
+      "Set position to"
+        <> maybe "" (\v -> " X" <> show v) x
+        <> maybe "" (\v -> " Y" <> show v) y
+        <> maybe "" (\v -> " Z" <> show v) z
+        <> maybe "" (\v -> " E" <> show v) e
     MSetBedTemperature (SetBedTemperature t) ->
       "Set bed temperature to "
         <> maybe "" (\v -> "S" <> show v) t
@@ -142,6 +157,19 @@ gcodeToRaw cmd =
             Map.fromList
               [ ('O', ArgFlag _skipIfTrusted)
               ]
+        }
+    GSetPosition (SetPosition x y z e) ->
+      RawGCodeCmd
+        { cmdId = 'G',
+          cmdNum = 92,
+          cmdArgs =
+            Map.fromList
+              $ catMaybes
+                [ ('X',) . ArgDouble <$> x,
+                  ('Y',) . ArgDouble <$> y,
+                  ('Z',) . ArgDouble <$> z,
+                  ('E',) . ArgDouble <$> e
+                ]
         }
     MSetBedTemperature (SetBedTemperature t) ->
       RawGCodeCmd

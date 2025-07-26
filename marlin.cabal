@@ -27,6 +27,8 @@ library
   exposed-modules:
     Marlin.Core
     Marlin.DSL
+    Marlin.Lib
+    Marlin.Math
     Marlin.Syntax
 
   build-depends:
@@ -41,6 +43,10 @@ library
 executable marlin-exe
   import: warnings
   main-is: Main.hs
+  other-modules:
+    Sketch01
+    Sketch02
+
   hs-source-dirs: app
   build-depends:
     base,

@@ -11,12 +11,41 @@ import Relude
 --- GCode
 -------------------------------------------------------------------------------
 
-newtype GCode a = GCode {runGCode :: Writer [GCodeLine] a}
-  deriving (Functor, Applicative, Monad)
+data GCodeEnv = Env
+  { moveSpeed :: Int,
+    extrudeSpeed :: Int,
+    moveSpeedFirstLayer :: Int,
+    extrudeSpeedFirstLayer :: Int,
+    startLayer :: Int,
+    bedTemperature :: Int,
+    hotendTemperature :: Int,
+    printSize :: V3 Double,
+    parkingPosition :: V3 Double,
+    sketchSize :: V3 Double
+  }
+
+defaultGCodeEnv :: GCodeEnv
+defaultGCodeEnv =
+  Env
+    { moveSpeed = 10000,
+      extrudeSpeed = 3000,
+      moveSpeedFirstLayer = 3000,
+      extrudeSpeedFirstLayer = 500,
+      startLayer = 0,
+      bedTemperature = 60,
+      hotendTemperature = 200,
+      printSize = V3 225 225 280,
+      parkingPosition = V3 0 225 120,
+      sketchSize = V3 100 100 100
+    }
+
+newtype GCode a = GCode {runGCode :: ReaderT GCodeEnv (Writer [GCodeLine]) a}
+  deriving (Functor, Applicative, Monad, MonadReader GCodeEnv)
 
 instance ToText (GCode a) where
-  toText (GCode w) =
-    execWriter w
+  toText (GCode r) =
+    runReaderT r defaultGCodeEnv
+      & execWriter
       & map gcodeLineToRaw
       & toText
 
@@ -215,3 +244,25 @@ gCodeFromCmd cmd =
       }
 
 -------------------------------------------------------------------------------
+
+setPosition :: SetPosition
+setPosition = SetPosition Nothing Nothing Nothing Nothing
+
+instance IsGCode SetPosition where
+  toGCode sp = gCodeFromCmd (GSetPosition sp)
+
+instance HasX SetPosition where
+  setX x' obj = obj {_x = Just x'}
+
+instance HasY SetPosition where
+  setY y' obj = obj {_y = Just y'}
+
+instance HasZ SetPosition where
+  setZ z' obj = obj {_z = Just z'}
+
+instance HasExtrude SetPosition where
+  setExtrude e' obj = obj {_e = Just e'}
+
+instance HasXY SetPosition
+
+instance HasXYZ SetPosition
