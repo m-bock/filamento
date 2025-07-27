@@ -127,8 +127,6 @@ sampleProgram = do
   let bedSize = V2 225.0 225.0
   let sketchSize = V2 100.0 100.0
 
-  redefineOrigin bedSize sketchSize
-
   forM_ [14 .. 17] $ \n -> do
     section ("Layer " <> show n) $ layer n
 

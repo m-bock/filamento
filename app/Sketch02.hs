@@ -9,20 +9,16 @@ import Marlin.DSL
 import Marlin.Lib
 import Relude
 
+changeEnv :: GCodeEnv -> GCodeEnv
+changeEnv env =
+  env
+    { startLayer = 2
+    }
+
 sketch :: GCode ()
-sketch = do
-  setUnits Millimeter
-  setExtruderRelative
-
-  initPrinter
-
-  moveTo3d (V3 0 0 0.2)
-
-  printTestStripes
-
-  printSquare (V2 50 50) (V2 50 50)
-
-  finalPark
+sketch = local changeEnv $ initPrinter $ do
+  moveTo3d (V3 0 0 0.6)
+  printSquare (V2 0 0) (V2 100 100)
 
 main :: IO ()
 main = do
