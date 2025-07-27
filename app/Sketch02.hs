@@ -12,16 +12,24 @@ import Relude
 changeEnv :: GCodeEnv -> GCodeEnv
 changeEnv env =
   env
-    { startLayer = 0
-    }
+
+printLayer :: Int -> GCode ()
+printLayer i = section ("Layer " <> show i) $ do
+  let countLayers = 200
+  let baseRadius = 20
+  let pct = fromIntegral i / fromIntegral countLayers
+  let pctRad = pct * 2 * pi
+
+  let radius = baseRadius + 5 * cos pctRad
+
+  printPolygon 10 (V2 100 100) radius
 
 sketch :: GCode ()
 sketch = local changeEnv $ initPrinter $ do
   env <- ask
-  forM_ [env.startLayer .. 50] $ \i -> do
-    section ("Layer " <> show i) $ do
-      moveZ (0.2 + fromIntegral i * 0.2)
-      printSquare (V2 100 100) (V2 100 100)
+  forM_ [1 .. 200] \i -> do
+    nextLayer
+    printLayer i
 
 main :: IO ()
 main = do

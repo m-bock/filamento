@@ -17,42 +17,64 @@ data GCodeEnv = Env
     extrudeSpeed :: Int,
     moveSpeedFirstLayer :: Int,
     extrudeSpeedFirstLayer :: Int,
-    startLayer :: Int,
     bedTemperature :: Int,
     hotendTemperature :: Int,
     printSize :: V3 Double,
     parkingPosition :: V3 Double,
-    sketchSize :: V3 Double
+    sketchSize :: V3 Double,
+    autoHomePosition :: V3 Double,
+    layerHeight :: Double,
+    lineWidth :: Double,
+    filamentDia :: Double
   }
+
+data PrintState = PrintState
+  { currentLayer :: Int,
+    currentPosition :: V3 Double,
+    stdgen :: StdGen
+  }
+  deriving (Show, Eq)
+
+initPrintState :: PrintState
+initPrintState =
+  PrintState
+    { currentPosition = V3 145.50 94.00 1.66,
+      stdgen = mkStdGen 0,
+      currentLayer = 0
+    }
 
 defaultGCodeEnv :: GCodeEnv
 defaultGCodeEnv =
   Env
     { moveSpeed = 10000,
-      extrudeSpeed = 3000,
+      extrudeSpeed = 2000,
       moveSpeedFirstLayer = 3000,
-      extrudeSpeedFirstLayer = 500,
-      startLayer = 0,
+      extrudeSpeedFirstLayer = 300,
       bedTemperature = 60,
       hotendTemperature = 200,
       printSize = V3 225 225 280,
       parkingPosition = V3 0 225 120,
-      sketchSize = V3 100 100 100
+      sketchSize = V3 100 100 100,
+      autoHomePosition = V3 145.50 94.00 1.66,
+      layerHeight = 0.2,
+      lineWidth = 0.4,
+      filamentDia = 1.75
     }
 
 newtype GCode a = GCode
-  { runGCode :: StateT StdGen (ReaderT GCodeEnv (Writer [GCodeLine])) a
+  { runGCode :: StateT PrintState (ReaderT GCodeEnv (Writer [GCodeLine])) a
   }
   deriving
     ( Functor,
       Applicative,
       Monad,
-      MonadReader GCodeEnv
+      MonadReader GCodeEnv,
+      MonadState PrintState
     )
 
 instance ToText (GCode a) where
   toText (GCode m) =
-    evalStateT m (mkStdGen 0)
+    evalStateT m initPrintState
       & (`runReaderT` defaultGCodeEnv)
       & execWriter
       & map gcodeLineToRaw
@@ -60,7 +82,17 @@ instance ToText (GCode a) where
 
 -- | Random value for any type that implements `Random`
 rand :: (Random a) => GCode a
-rand = GCode $ state random
+rand = GCode $ state $ \st ->
+  let (value, newGen) = random st.stdgen
+      st' = st {stdgen = newGen}
+   in (value, st')
+
+updatePos :: V3 (Maybe Double) -> GCode ()
+updatePos (V3 mx my mz) = GCode $ do
+  st <- get
+  let (V3 x y z) = st.currentPosition
+      newPos = V3 (fromMaybe x mx) (fromMaybe y my) (fromMaybe z mz)
+  put $ st {currentPosition = newPos}
 
 -------------------------------------------------------------------------------
 
@@ -136,7 +168,9 @@ linearMove =
     }
 
 instance IsGCode LinearMove where
-  toGCode = gCodeFromCmd . GLinearMove
+  toGCode val = do
+    updatePos (V3 val._x val._y val._z)
+    gCodeFromCmd $ GLinearMove val
 
 instance HasX LinearMove where
   setX x' obj = obj {_x = Just x'}
@@ -219,7 +253,10 @@ autoHome_ :: GCode ()
 autoHome_ = toGCode autoHome
 
 instance IsGCode AutoHome where
-  toGCode = gCodeFromCmd . GAutoHome
+  toGCode val = do
+    env <- ask
+    gCodeFromCmd $ GAutoHome val
+    updatePos (fmap Just env.parkingPosition)
 
 instance HasSkipIfTrusted AutoHome where
   setSkipIfTrusted skip obj = obj {_skipIfTrusted = skip}

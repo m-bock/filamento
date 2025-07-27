@@ -1,6 +1,8 @@
 module Marlin.Lib where
 
 import Linear (V2 (..), V3 (..))
+import Linear.Metric
+import Linear.V (V)
 import Marlin.Core
 import Marlin.DSL
 import Marlin.Math
@@ -9,9 +11,10 @@ import Relude
 extrudeTo :: V2 Double -> GCode ()
 extrudeTo v1 = do
   extrudeSpeed <- getExtrudeSpeed
+  extrudeLength <- getExtrudeLength v1
   linearMove
     & setXY v1
-    & setExtrude 10
+    & setExtrude extrudeLength
     & setSpeed extrudeSpeed
     & toGCode
 
@@ -22,6 +25,14 @@ extrude s = do
     & setExtrude s
     & setSpeed extrudeSpeed
     & toGCode
+
+getExtrudeLength :: V2 Double -> GCode Double
+getExtrudeLength v = do
+  extrudeMM <- getExtrudeMM
+  st <- get
+  let V3 curX curY _ = st.currentPosition
+  let lineLength = distance (V2 curX curY) v
+  pure (lineLength * extrudeMM)
 
 moveTo :: V2 Double -> GCode ()
 moveTo v = do
@@ -35,27 +46,40 @@ moveTo v = do
 
 moveZ :: Double -> GCode ()
 moveZ z = do
+  withRetract $ moveZDirectly z
+
+moveZDirectly :: Double -> GCode ()
+moveZDirectly z = do
   speed <- getSpeed
 
-  withRetract $ do
-    linearMove
-      & setZ z
-      & setSpeed speed
-      & toGCode
+  linearMove
+    & setZ z
+    & setSpeed speed
+    & toGCode
+
+nextLayer :: GCode ()
+nextLayer = do
+  st <- get
+  env <- ask
+  let newLayer = st.currentLayer + 1
+  put $ st {currentLayer = newLayer}
+  moveZ (env.layerHeight * fromIntegral newLayer)
 
 getSpeed :: GCode Int
 getSpeed = do
+  b <- isFirstLayers
   env <- ask
   pure
-    $ if env.startLayer == 0
+    $ if b
       then env.moveSpeedFirstLayer
       else env.moveSpeed
 
 getExtrudeSpeed :: GCode Int
 getExtrudeSpeed = do
+  b <- isFirstLayers
   env <- ask
   pure
-    $ if env.startLayer == 0
+    $ if b
       then env.extrudeSpeedFirstLayer
       else env.extrudeSpeed
 
@@ -104,6 +128,8 @@ printTestStripes :: GCode ()
 printTestStripes = section "Test Stripes" $ do
   moveTo3d (V3 0 0 0.2)
 
+  -- extrude (-5)
+
   let v1 = V2 5.0 20.0
   let v2 = V2 5.0 150.0
   let v3 = V2 10.0 20.0
@@ -123,9 +149,10 @@ finalPark = do
 
 homeOrResume :: GCode ()
 homeOrResume = do
+  st <- get
   env <- ask
 
-  if env.startLayer == 0
+  if st.currentLayer == 0
     then do
       section "autoHome" $ do
         autoHome
@@ -206,3 +233,27 @@ getOriginVec = do
 
   let v = V2 x y
   pure v
+
+isFirstLayers :: GCode Bool
+isFirstLayers = do
+  st <- get
+  let (V3 _ _ z) = st.currentPosition
+  pure (z <= 0.3)
+
+getExtrudeMM :: GCode Double
+getExtrudeMM = do
+  env <- ask
+  let vPerMm = env.layerHeight * env.lineWidth
+      aFil = pi * (env.filamentDia ^ 2) / 4
+  pure (vPerMm / aFil)
+
+printPolygon :: Int -> V2 Double -> Double -> GCode ()
+printPolygon n v s
+  | n < 3 = pure () -- Polygons need at least 3 sides
+  | s <= 0 = pure () -- Side length must be positive
+  | otherwise = do
+      let angle = 2 * pi / fromIntegral n
+          points = [v + V2 (s * cos (angle * fromIntegral i)) (s * sin (angle * fromIntegral i)) | i <- [0 .. n - 1]]
+      case viaNonEmpty head points of
+        Nothing -> pure ()
+        Just firstPoint -> printPolyLine (points ++ [firstPoint])
