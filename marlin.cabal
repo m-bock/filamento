@@ -35,6 +35,7 @@ library
     base ^>=4.17.2.1,
     linear,
     mtl,
+    random,
     relude,
 
   hs-source-dirs: src
@@ -53,6 +54,7 @@ executable marlin-exe
     linear,
     marlin,
     mtl,
+    random,
     relude,
 
   default-language: Haskell2010

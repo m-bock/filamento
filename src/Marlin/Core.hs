@@ -50,6 +50,12 @@ data SetPosition = SetPosition
   }
   deriving (Show, Eq)
 
+data PlayTone = PlayTone
+  { _frequency :: Maybe Int,
+    _duration :: Maybe Int
+  }
+  deriving (Show, Eq)
+
 data GCodeCmd
   = GMillimeterUnits
   | GInchUnits
@@ -66,6 +72,7 @@ data GCodeCmd
   | MSetBedOff
   | MSetFanOff
   | MMotorsOff
+  | MPlayTone PlayTone
   | GPause Int -- G4 with seconds parameter
   deriving (Show, Eq)
 
@@ -118,6 +125,7 @@ gcodeToComment cmd =
     MSetBedOff -> "Turn bed off"
     MSetFanOff -> "Turn fan off"
     MMotorsOff -> "Turn all motors off"
+    MPlayTone (PlayTone f d) -> "Play tone at frequency " <> show f <> " for " <> show d <> " milliseconds"
     GPause s -> "Pause for " <> show s <> " seconds"
 
 gcodeToRaw :: GCodeCmd -> RawGCodeCmd
@@ -246,6 +254,17 @@ gcodeToRaw cmd =
         { cmdId = 'M',
           cmdNum = 84,
           cmdArgs = Map.empty
+        }
+    MPlayTone (PlayTone f d) ->
+      RawGCodeCmd
+        { cmdId = 'M',
+          cmdNum = 300,
+          cmdArgs =
+            Map.fromList
+              $ catMaybes
+                [ ('F',) . ArgInt <$> f,
+                  ('D',) . ArgInt <$> d
+                ]
         }
     GPause s ->
       RawGCodeCmd

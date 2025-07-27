@@ -6,6 +6,7 @@ import Control.Monad.Writer
 import Linear (V2 (..), V3 (..))
 import Marlin.Core
 import Relude
+import System.Random
 
 -------------------------------------------------------------------------------
 --- GCode
@@ -39,15 +40,27 @@ defaultGCodeEnv =
       sketchSize = V3 100 100 100
     }
 
-newtype GCode a = GCode {runGCode :: ReaderT GCodeEnv (Writer [GCodeLine]) a}
-  deriving (Functor, Applicative, Monad, MonadReader GCodeEnv)
+newtype GCode a = GCode
+  { runGCode :: StateT StdGen (ReaderT GCodeEnv (Writer [GCodeLine])) a
+  }
+  deriving
+    ( Functor,
+      Applicative,
+      Monad,
+      MonadReader GCodeEnv
+    )
 
 instance ToText (GCode a) where
-  toText (GCode r) =
-    runReaderT r defaultGCodeEnv
+  toText (GCode m) =
+    evalStateT m (mkStdGen 0)
+      & (`runReaderT` defaultGCodeEnv)
       & execWriter
       & map gcodeLineToRaw
       & toText
+
+-- | Random value for any type that implements `Random`
+rand :: (Random a) => GCode a
+rand = GCode $ state random
 
 -------------------------------------------------------------------------------
 
@@ -103,6 +116,12 @@ class HasTargetTemperature a where
 
 class HasSkipIfTrusted a where
   setSkipIfTrusted :: Bool -> a -> a
+
+class HasFrequency a where
+  setFrequency :: Int -> a -> a
+
+class HasDuration a where
+  setDuration :: Int -> a -> a
 
 -------------------------------------------------------------------------------
 
@@ -204,6 +223,20 @@ instance IsGCode AutoHome where
 
 instance HasSkipIfTrusted AutoHome where
   setSkipIfTrusted skip obj = obj {_skipIfTrusted = skip}
+
+-------------------------------------------------------------------------------
+
+playTone :: PlayTone
+playTone = PlayTone {_frequency = Nothing, _duration = Nothing}
+
+instance IsGCode PlayTone where
+  toGCode = gCodeFromCmd . MPlayTone
+
+instance HasFrequency PlayTone where
+  setFrequency f obj = obj {_frequency = Just f}
+
+instance HasDuration PlayTone where
+  setDuration d obj = obj {_duration = Just d}
 
 -------------------------------------------------------------------------------
 

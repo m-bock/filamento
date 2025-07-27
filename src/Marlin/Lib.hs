@@ -33,19 +33,29 @@ moveTo v = do
       & setSpeed speed
       & toGCode
 
+moveZ :: Double -> GCode ()
+moveZ z = do
+  speed <- getSpeed
+
+  withRetract $ do
+    linearMove
+      & setZ z
+      & setSpeed speed
+      & toGCode
+
 getSpeed :: GCode Int
 getSpeed = do
   env <- ask
-  pure $
-    if env.startLayer == 0
+  pure
+    $ if env.startLayer == 0
       then env.moveSpeedFirstLayer
       else env.moveSpeed
 
 getExtrudeSpeed :: GCode Int
 getExtrudeSpeed = do
   env <- ask
-  pure $
-    if env.startLayer == 0
+  pure
+    $ if env.startLayer == 0
       then env.extrudeSpeedFirstLayer
       else env.extrudeSpeed
 
@@ -129,6 +139,8 @@ homeOrResume = do
 
 initPrinter :: GCode a -> GCode a
 initPrinter inner = do
+  env <- ask
+
   setUnits Millimeter
 
   setExtruderRelative
@@ -137,7 +149,7 @@ initPrinter inner = do
 
   printTestStripes
 
-  ret <- redefineOrigin inner
+  ret <- inner
 
   finalPark
 
@@ -194,26 +206,3 @@ getOriginVec = do
 
   let v = V2 x y
   pure v
-
-redefineOrigin :: GCode a -> GCode a
-redefineOrigin inner = do
-  env <- ask
-
-  v <- getOriginVec
-
-  when (env.startLayer /= 0) $ do
-    redefineOriginFromParking
-
-  moveTo (V2 0 0)
-
-  setPosition
-    & setXY v
-    & toGCode
-
-  ret <- inner
-
-  setPosition
-    & setXY (-v)
-    & toGCode
-
-  pure ret

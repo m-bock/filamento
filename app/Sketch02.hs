@@ -12,13 +12,16 @@ import Relude
 changeEnv :: GCodeEnv -> GCodeEnv
 changeEnv env =
   env
-    { startLayer = 2
+    { startLayer = 0
     }
 
 sketch :: GCode ()
 sketch = local changeEnv $ initPrinter $ do
-  moveTo3d (V3 0 0 0.6)
-  printSquare (V2 0 0) (V2 100 100)
+  env <- ask
+  forM_ [env.startLayer .. 50] $ \i -> do
+    section ("Layer " <> show i) $ do
+      moveZ (0.2 + fromIntegral i * 0.2)
+      printSquare (V2 100 100) (V2 100 100)
 
 main :: IO ()
 main = do
