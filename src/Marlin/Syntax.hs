@@ -30,7 +30,7 @@ data RawGCodeLine = RawGCodeLine
 
 instance ToText ArgValue where
   toText (ArgInt i) = T.pack (show i)
-  toText (ArgDouble d) = T.pack (printf "%.*f" (3 :: Int) d)
+  toText (ArgDouble d) = T.pack (printf "%.5f" d)
   toText (ArgFlag True) = "1"
   toText (ArgFlag False) = "0"
 

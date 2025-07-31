@@ -46,16 +46,25 @@ executable marlin-exe
   import: warnings
   main-is: Main.hs
   other-modules:
+    Filament
+    Filament2
+    Filament3
     Sketch01
     Sketch02
+    Sketch03
 
   hs-source-dirs: app
   build-depends:
+    aeson,
     base,
+    http-client,
+    lens,
+    lens-aeson,
     linear,
     marlin,
     mtl,
     random,
     relude,
+    req,
 
   default-language: Haskell2010

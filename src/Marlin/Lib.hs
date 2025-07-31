@@ -26,27 +26,23 @@ extrude s = do
     & setSpeed extrudeSpeed
     & toGCode
 
-getExtrudeLength :: V2 Double -> GCode Double
-getExtrudeLength v = do
-  extrudeMM <- getExtrudeMM
-  st <- get
-  let V3 curX curY _ = st.currentPosition
-  let lineLength = distance (V2 curX curY) v
-  pure (lineLength * extrudeMM)
-
 moveTo :: V2 Double -> GCode ()
 moveTo v = do
   speed <- getSpeed
 
-  withRetract $ do
-    linearMove
-      & setXY v
-      & setSpeed speed
-      & toGCode
+  withRetract do
+    withZHop do
+      linearMove
+        & setXY v
+        & setSpeed speed
+        & toGCode
 
 moveZ :: Double -> GCode ()
 moveZ z = do
-  withRetract $ moveZDirectly z
+  st <- get
+  let V3 _ _ curZ = st.currentPosition
+  unless (curZ == z) do
+    withRetract $ moveZDirectly z
 
 moveZDirectly :: Double -> GCode ()
 moveZDirectly z = do
@@ -95,10 +91,20 @@ moveTo3d v = do
 
 withRetract :: GCode a -> GCode a
 withRetract inner = do
-  let retractLength = 3
-  extrude (-retractLength)
+  let retractLength = 6
+
+  linearMove
+    & setExtrude (-retractLength)
+    & setSpeed 2400
+    & toGCode
+
   ret <- inner
-  extrude retractLength
+
+  linearMove
+    & setExtrude retractLength
+    & setSpeed 2400
+    & toGCode
+
   pure ret
 
 printManyPolyLines :: [[V2 Double]] -> GCode ()
@@ -109,6 +115,17 @@ printPolyLine [] = pure ()
 printPolyLine (v : vs) = do
   moveTo v
   extrudePoints vs
+
+withZHop :: GCode a -> GCode a
+withZHop inner = do
+  st <- get
+  env <- ask
+  let V3 x y z = st.currentPosition
+  let zHop = 0.6
+  moveZ (z + zHop)
+  ret <- inner
+  moveZ z
+  pure ret
 
 extrudePoints :: [V2 Double] -> GCode ()
 extrudePoints vs = do
@@ -123,6 +140,28 @@ printSquare v1 s = do
   let v5 = v4 - justY s
 
   printPolyLine [v1, v2, v3, v4, v5]
+
+getLayerCount :: GCode Int
+getLayerCount = do
+  env <- ask
+  let V3 _ _ sketchZ = env.sketchSize
+  pure (floor (sketchZ / env.layerHeight))
+
+printTestStripesLikeNeptune :: GCode ()
+printTestStripesLikeNeptune = section "Test Stripes" $ do
+  raw "G28" "Home all axes"
+  raw "G92 E0" "Reset extruder"
+  raw "G1 Z0.2 F1200" "Move to first layer height"
+  raw "G1 X10 Y5 F3000" "Move to start position"
+  raw "G1 E5 F500" "Prime nozzle"
+  raw "G1 X110 Y5 E15 F600" "Draw a long test stripe (100 mm)"
+  raw "G1 E-1 F300" "Retract a bit"
+  -- raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
+  updatePos (fmap Just $ V3 110.0 5.0 0.2)
+
+  printManyPolyLines
+    [ [V2 10.0 10.0, V2 110.0 10.0]
+    ]
 
 printTestStripes :: GCode ()
 printTestStripes = section "Test Stripes" $ do
@@ -174,7 +213,7 @@ initPrinter inner = do
 
   heatup homeOrResume
 
-  printTestStripes
+  printTestStripesLikeNeptune
 
   ret <- inner
 
@@ -238,7 +277,15 @@ isFirstLayers :: GCode Bool
 isFirstLayers = do
   st <- get
   let (V3 _ _ z) = st.currentPosition
-  pure (z <= 0.3)
+  pure (z <= 0.4)
+
+getExtrudeLength :: V2 Double -> GCode Double
+getExtrudeLength v = do
+  extrudeMM <- getExtrudeMM
+  st <- get
+  let V3 curX curY _ = st.currentPosition
+  let lineLength = distance (V2 curX curY) v
+  pure (lineLength * extrudeMM)
 
 getExtrudeMM :: GCode Double
 getExtrudeMM = do
@@ -257,3 +304,51 @@ printPolygon n v s
       case viaNonEmpty head points of
         Nothing -> pure ()
         Just firstPoint -> printPolyLine (points ++ [firstPoint])
+
+filamentChange :: GCode ()
+filamentChange = do
+  section "Filament Change" $ do
+    st <- get
+
+    let prevPosition = st.currentPosition
+
+    playTone
+      & setFrequency 500
+      & setDuration 500
+      & toGCode
+
+    finalPark
+
+    playTone
+      & setFrequency 500
+      & setDuration 500
+      & toGCode
+
+    pause 20
+
+    playTone
+      & setFrequency 500
+      & setDuration 500
+      & toGCode
+
+    linearMove
+      & setSpeed 200
+      & setExtrude 50
+      & toGCode
+
+    linearMove
+      & setSpeed 800
+      & setExtrude 200
+      & toGCode
+
+    linearMove
+      & setSpeed 200
+      & setExtrude 50
+      & toGCode
+
+    playTone
+      & setFrequency 500
+      & setDuration 500
+      & toGCode
+
+    moveTo3d prevPosition

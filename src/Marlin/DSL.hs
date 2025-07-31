@@ -24,6 +24,7 @@ data GCodeEnv = Env
     sketchSize :: V3 Double,
     autoHomePosition :: V3 Double,
     layerHeight :: Double,
+    firstLayerHeight :: Double,
     lineWidth :: Double,
     filamentDia :: Double
   }
@@ -38,7 +39,7 @@ data PrintState = PrintState
 initPrintState :: PrintState
 initPrintState =
   PrintState
-    { currentPosition = V3 145.50 94.00 1.66,
+    { currentPosition = V3 145.50 94.00 1.56,
       stdgen = mkStdGen 0,
       currentLayer = 0
     }
@@ -48,15 +49,16 @@ defaultGCodeEnv =
   Env
     { moveSpeed = 10000,
       extrudeSpeed = 2000,
-      moveSpeedFirstLayer = 3000,
-      extrudeSpeedFirstLayer = 300,
-      bedTemperature = 60,
-      hotendTemperature = 200,
+      moveSpeedFirstLayer = 1000,
+      extrudeSpeedFirstLayer = 800,
+      bedTemperature = 65,
+      hotendTemperature = 230,
       printSize = V3 225 225 280,
       parkingPosition = V3 0 225 120,
       sketchSize = V3 100 100 100,
-      autoHomePosition = V3 145.50 94.00 1.66,
-      layerHeight = 0.2,
+      autoHomePosition = V3 145.50 94.00 1.56,
+      layerHeight = 0.4,
+      firstLayerHeight = 0.2,
       lineWidth = 0.4,
       filamentDia = 1.75
     }
