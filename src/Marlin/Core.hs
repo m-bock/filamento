@@ -163,9 +163,10 @@ gcodeToRaw cmd =
           cmdNum = 28,
           cmdArgs =
             Map.fromList
-              [ ('O', ArgFlag _skipIfTrusted)
-              ]
+              []
         }
+    -- ('O', ArgFlag _skipIfTrusted)
+
     GSetPosition (SetPosition x y z e) ->
       RawGCodeCmd
         { cmdId = 'G',

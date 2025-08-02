@@ -18,6 +18,13 @@ cancel-print:
 
     sleep 2
 
+octo-upload:
+    curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
+         -F "select=true" \
+         -F "print=false" \
+         -F "file=@out/myprint.gcode" \
+         "${OCTOPRINT_URL:-http://localhost:5000}/api/files/local"
+
 print:
     curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
          -F "select=true" \
@@ -47,7 +54,10 @@ octo-status:
 show:
     code out/myprint.gcode
 
-dev1: gen cancel-print print show
+dev1: gen cancel-print print
+
+dev2: gen octo-upload
+
 
 start-octo:
     nix-shell -p octoprint --run "octoprint serve"

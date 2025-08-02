@@ -26,7 +26,8 @@ data GCodeEnv = Env
     layerHeight :: Double,
     firstLayerHeight :: Double,
     lineWidth :: Double,
-    filamentDia :: Double
+    filamentDia :: Double,
+    transpose :: V2 Double
   }
 
 data PrintState = PrintState
@@ -51,8 +52,8 @@ defaultGCodeEnv =
       extrudeSpeed = 2000,
       moveSpeedFirstLayer = 1000,
       extrudeSpeedFirstLayer = 800,
-      bedTemperature = 65,
-      hotendTemperature = 230,
+      bedTemperature = 60,
+      hotendTemperature = 210,
       printSize = V3 225 225 280,
       parkingPosition = V3 0 225 120,
       sketchSize = V3 100 100 100,
@@ -60,7 +61,8 @@ defaultGCodeEnv =
       layerHeight = 0.4,
       firstLayerHeight = 0.2,
       lineWidth = 0.4,
-      filamentDia = 1.75
+      filamentDia = 1.75,
+      transpose = V2 0 0
     }
 
 newtype GCode a = GCode

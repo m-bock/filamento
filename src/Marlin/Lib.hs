@@ -1,8 +1,11 @@
 module Marlin.Lib where
 
+import Data.Aeson (FromJSON, ToJSON, encodeFile)
+import Data.Aeson.Decoding (decodeStrict)
 import Linear (V2 (..), V3 (..))
 import Linear.Metric
-import Linear.V (V)
+import Linear.V (V, _V)
+import Linear.Vector ((^*))
 import Marlin.Core
 import Marlin.DSL
 import Marlin.Math
@@ -11,12 +14,51 @@ import Relude
 extrudeTo :: V2 Double -> GCode ()
 extrudeTo v1 = do
   extrudeSpeed <- getExtrudeSpeed
+
   extrudeLength <- getExtrudeLength v1
+
   linearMove
     & setXY v1
     & setExtrude extrudeLength
     & setSpeed extrudeSpeed
     & toGCode
+
+extrudeToFinal :: V2 Double -> GCode ()
+extrudeToFinal v1 = do
+  extrudeSpeed <- getExtrudeSpeed
+
+  st <- get
+
+  let V3 curX curY _ = st.currentPosition
+
+  let cur = V2 curX curY
+
+  let diff = v1 - cur
+
+  let v' = shortenVecBy diff (pure 3)
+
+  let v'' = cur + v'
+
+  extrudeLength <- getExtrudeLength v''
+
+  linearMove
+    & setXY v''
+    & setExtrude extrudeLength
+    & setSpeed extrudeSpeed
+    & toGCode
+
+  linearMove
+    & setXY v1
+    & setSpeed extrudeSpeed
+    & toGCode
+
+shortenVecBy :: V2 Double -> V2 Double -> V2 Double
+shortenVecBy v amount =
+  let len = norm v
+      d = norm amount
+   in if len > d
+        then v - normalize v ^* d
+        else v
 
 extrude :: Double -> GCode ()
 extrude s = do
@@ -30,22 +72,20 @@ moveTo :: V2 Double -> GCode ()
 moveTo v = do
   speed <- getSpeed
 
-  withRetract do
-    withZHop do
-      linearMove
-        & setXY v
-        & setSpeed speed
-        & toGCode
+  linearMove
+    & setXY v
+    & setSpeed speed
+    & toGCode
+
+-- moveZ :: Double -> GCode ()
+-- moveZ z = do
+--   st <- get
+--   let V3 _ _ curZ = st.currentPosition
+--   unless (curZ == z) do
+--     withRetract $ moveZDirectly z
 
 moveZ :: Double -> GCode ()
 moveZ z = do
-  st <- get
-  let V3 _ _ curZ = st.currentPosition
-  unless (curZ == z) do
-    withRetract $ moveZDirectly z
-
-moveZDirectly :: Double -> GCode ()
-moveZDirectly z = do
   speed <- getSpeed
 
   linearMove
@@ -91,7 +131,7 @@ moveTo3d v = do
 
 withRetract :: GCode a -> GCode a
 withRetract inner = do
-  let retractLength = 6
+  let retractLength = 4
 
   linearMove
     & setExtrude (-retractLength)
@@ -107,6 +147,16 @@ withRetract inner = do
 
   pure ret
 
+withZHop :: GCode a -> GCode a
+withZHop inner = do
+  st <- get
+  let V3 _ _ z = st.currentPosition
+  let zHop = 0.4
+  moveZ (z + zHop)
+  ret <- inner
+  moveZ z
+  pure ret
+
 printManyPolyLines :: [[V2 Double]] -> GCode ()
 printManyPolyLines = mapM_ printPolyLine
 
@@ -115,17 +165,6 @@ printPolyLine [] = pure ()
 printPolyLine (v : vs) = do
   moveTo v
   extrudePoints vs
-
-withZHop :: GCode a -> GCode a
-withZHop inner = do
-  st <- get
-  env <- ask
-  let V3 x y z = st.currentPosition
-  let zHop = 0.6
-  moveZ (z + zHop)
-  ret <- inner
-  moveZ z
-  pure ret
 
 extrudePoints :: [V2 Double] -> GCode ()
 extrudePoints vs = do
@@ -149,18 +188,18 @@ getLayerCount = do
 
 printTestStripesLikeNeptune :: GCode ()
 printTestStripesLikeNeptune = section "Test Stripes" $ do
-  raw "G28" "Home all axes"
+  -- raw "G28" "Home all axes"
   raw "G92 E0" "Reset extruder"
   raw "G1 Z0.2 F1200" "Move to first layer height"
   raw "G1 X10 Y5 F3000" "Move to start position"
   raw "G1 E5 F500" "Prime nozzle"
-  raw "G1 X110 Y5 E15 F600" "Draw a long test stripe (100 mm)"
+  raw "G1 X215 Y5 E15 F600" "Draw a long test stripe"
   raw "G1 E-1 F300" "Retract a bit"
   -- raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
   updatePos (fmap Just $ V3 110.0 5.0 0.2)
 
   printManyPolyLines
-    [ [V2 10.0 10.0, V2 110.0 10.0]
+    [ [V2 10.0 10.0, V2 215.0 10.0]
     ]
 
 printTestStripes :: GCode ()
@@ -195,7 +234,7 @@ homeOrResume = do
     then do
       section "autoHome" $ do
         autoHome
-          & setSkipIfTrusted True
+          --   & setSkipIfTrusted True
           & toGCode
     else do
       section "Resume" $ do
@@ -211,7 +250,13 @@ initPrinter inner = do
 
   setExtruderRelative
 
+  setPosition & setXYZ (V3 0 0 0) & toGCode
+
   heatup homeOrResume
+
+  do
+    moveTo env.transpose
+    setPosition & setXY (V2 0 0) & toGCode
 
   printTestStripesLikeNeptune
 
@@ -352,3 +397,24 @@ filamentChange = do
       & toGCode
 
     moveTo3d prevPosition
+
+data PersistentState = PersistentState
+  {count :: Int}
+  deriving (Show, Eq, Generic)
+
+instance FromJSON PersistentState
+
+instance ToJSON PersistentState
+
+readPersistentState :: IO PersistentState
+readPersistentState = do
+  let persistentFile = "persistent-state.json"
+  c <- readFileBS persistentFile
+  v <- case decodeStrict c of
+    Just x -> pure x
+    Nothing -> error "Failed to decode printing-state.json"
+
+  let v' = v {count = v.count + 1}
+  encodeFile persistentFile v'
+
+  pure v
