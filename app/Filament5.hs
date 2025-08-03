@@ -77,28 +77,28 @@ tubeToWorld2 (Coord (V2 x y)) = Coord (V2 x' y')
   where
     Coord (V2 centerX centerY) = config.tubeCenter
     rad = un config.tubeRadius + x
-    x' = centerX + rad * cos y
-    y' = centerY + rad * sin y
+    x' = centerX + rad * cos (m + y)
+    y' = centerY + rad * sin (m + y)
+    m = 3 * (pi / 2)
 
-tubeMkLine :: Coord V2D Tube Abs -> Coord V2D Tube Rel -> [Coord V2D World Abs]
+tubeMkLine :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> [Coord V2D Tube Abs]
 tubeMkLine (Coord start) (Coord end) =
   let dist@(V2 _ distY) = end - start
 
-      countSteps = round (distY / config.arcStep) :: Int
+      countSteps = max 1 (round (abs distY / config.arcStep)) :: Int
 
       step = dist / pure (fromIntegral countSteps)
 
       mkPt i =
         let iv = pure $ fromIntegral i
             p = start + step * iv
-         in (tubeToWorld2 $ Coord p)
-   in fmap mkPt [0 .. countSteps - 1]
+         in Coord p
+   in fmap mkPt [0 .. countSteps]
 
-tubeExtrudePoints :: Coord V2D Tube Abs -> Coord V2D Tube Rel -> GCode ()
+tubeExtrudePoints :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
 tubeExtrudePoints (Coord start) (Coord end) = do
   let pts = tubeMkLine (Coord start) (Coord end)
-  forM_ pts $ \(Coord pt) -> do
-    extrudeTo pt
+  forM_ pts tubeExtrudeTo
 
 tubeMoveTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeMoveTo (Coord pt) = do
@@ -110,19 +110,23 @@ tubeExtrudeTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
   extrudeTo worldPt
 
-printRect :: Coord V2D Tube Abs -> Coord V2D Tube Rel -> GCode ()
-printRect (Coord v2taCenter) (Coord size@(V2 width depth)) = do
-  let frontLeft = v2taCenter - size / 2
-      frontRight = addX frontLeft width
-      backRight = addY frontRight depth
-      backLeft = subX backRight width
+printRect :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
+printRect (Coord frontLeft) (Coord backRight) = do
+  let size = backRight - frontLeft
+      frontRight = frontLeft + justX size
+      backLeft = backRight - justX size
 
   tubeMoveTo (Coord frontLeft)
+  section "Print Rect" do
+    section "Front" do
+      tubeExtrudePoints (Coord frontLeft) (Coord frontRight)
+    section "Right" do
+      tubeExtrudePoints (Coord frontRight) (Coord backRight)
+    section "Back" do
+      tubeExtrudePoints (Coord backRight) (Coord backLeft)
 
--- tubeDrawLineAlongX (Coord frontLeft) (Coord width)
--- tubeDrawLineAlongY (Coord frontRight) (Coord depth)
--- tubeDrawLineAlongX (Coord backRight) (Coord (backLeft ^. _x))
--- tubeDrawLineAlongY (Coord backLeft) (Coord (frontLeft ^. _y))
+    section "Left" do
+      tubeExtrudePoints (Coord backLeft) (Coord frontLeft)
 
 printLayer :: Double -> Double -> GCode ()
 printLayer centerRad height = undefined
@@ -134,17 +138,31 @@ printWave centerRad = forM_ [0 .. 10] \i -> do
 
 sketch :: GCode ()
 sketch = initPrinter do
-  tubeMoveTo (Coord $ V2 0 0)
-  tubeExtrudePoints (Coord $ V2 0 0) (Coord $ V2 0 (pi))
+  let l = 10 * (pi / 60)
 
-  tubeMoveTo (Coord $ V2 (-10) 0)
-  tubeExtrudePoints (Coord $ V2 (-10) 0) (Coord $ V2 (-10) (pi))
+  forM_ [0 .. 10] \i -> do
+    let di = fromIntegral i
+    printRect (Coord $ V2 (-5) (di * l)) (Coord $ V2 5 ((di + 1) * l))
 
-  tubeMoveTo (Coord $ V2 (10) 0)
-  tubeExtrudePoints (Coord $ V2 (10) 0) (Coord $ V2 (10) (pi))
+  -- tubeMoveTo (Coord $ V2 0 0)
+  -- tubeExtrudePoints (Coord $ V2 0 0) (Coord $ V2 0 (20 * (pi / 60)))
 
-  tubeMoveTo (Coord $ V2 (10) 0)
-  tubeExtrudePoints (Coord $ V2 (10) 0) (Coord $ V2 (-10) (pi))
+  -- tubeMoveTo (Coord $ V2 10 0)
+  -- tubeExtrudePoints (Coord $ V2 10 0) (Coord $ V2 10 (20 * (pi / 60)))
+
+  -- tubeMoveTo (Coord $ V2 0 0)
+  -- tubeExtrudePoints (Coord $ V2 0 0) (Coord $ V2 10 0)
+
+  pure ()
+
+-- tubeMoveTo (Coord $ V2 (-10) 0)
+-- tubeExtrudePoints (Coord $ V2 (-10) 0) (Coord $ V2 (-10) (pi))
+
+-- tubeMoveTo (Coord $ V2 (10) 0)
+-- tubeExtrudePoints (Coord $ V2 (10) 0) (Coord $ V2 (10) (pi))
+
+-- tubeMoveTo (Coord $ V2 (10) 0)
+-- tubeExtrudePoints (Coord $ V2 (10) 0) (Coord $ V2 (-10) (pi))
 
 main :: IO ()
 main = do
@@ -156,7 +174,7 @@ main = do
             layerHeight = 0.2,
             hotendTemperature = 200,
             bedTemperature = 65,
-            transpose = V2 0 (150 - fromIntegral count * 50)
+            transpose = V2 0 0 -- (150 - fromIntegral count * 50)
           }
   let codeStr = toText $ local mkEnv sketch
   writeFileText "out/myprint.gcode" codeStr
