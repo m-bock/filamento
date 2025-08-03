@@ -7,6 +7,7 @@ import Linear (V3 (..))
 import Linear.V2 (V2 (..))
 import Marlin.DSL
 import Marlin.Lib
+import Marlin.Math (justX, justY)
 import Relude
 
 spoolRadius = 90.0
@@ -25,8 +26,8 @@ angleToVec :: Double -> V2 Double
 angleToVec a =
   V2 (cos a) (sin a)
 
-printLayer :: Bool -> Int -> GCode ()
-printLayer color n = section ("Layer " <> T.pack (show n)) $ do
+printLayerOld :: Bool -> Int -> GCode ()
+printLayerOld color n = section ("Layer " <> T.pack (show n)) $ do
   let pct = fromIntegral n / fromIntegral countLayers
   let pctRad = pct * pi
 
@@ -70,8 +71,31 @@ printPolygon' color i n n' start v s
 
             extrudeToFinal vec2
 
+printRect :: V2 Double -> V2 Double -> GCode ()
+printRect v1 s = do
+  let v2 = v1 + justX s
+  let v3 = v2 + justY s
+  let v4 = v3 - justX s
+  let v5 = v4 - justY s
+
+  moveTo v1
+
+  printPolyLine [v1, v2, v3, v4, v5]
+
+printLayer :: Double -> Double -> GCode ()
+printLayer centerRad height = undefined
+
+printWave :: Double -> GCode ()
+printWave centerRad = forM_ [0 .. 10] \i -> do
+  let pct = fromIntegral i / 10
+  (printLayer centerRad pct)
+
 sketch :: GCode ()
-sketch = initPrinter $ do
+sketch = do
+  forM_ [0 .. 10] printWave
+
+sketchOld :: GCode ()
+sketchOld = initPrinter $ do
   env <- ask
 
   when False do
@@ -99,10 +123,10 @@ sketch = initPrinter $ do
     nextLayer
 
     forM_ [firstLayer .. firstLayer + nLayers - 1] \i -> do
-      printLayer True i
+      printLayerOld True i
 
     forM_ [firstLayer .. firstLayer + nLayers - 1] \i -> do
-      printLayer False i
+      printLayerOld False i
 
 -- when (i == 2) $ do
 --   filamentChange

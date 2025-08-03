@@ -52,6 +52,7 @@ executable marlin-exe
     Filament2
     Filament3
     Filament4
+    Filament5
     Sketch01
     Sketch02
     Sketch03

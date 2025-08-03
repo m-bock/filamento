@@ -13,3 +13,15 @@ linspace :: Double -> Double -> Int -> [Double]
 linspace start end n =
   let step = (end - start) / fromIntegral (n - 1)
    in [start + fromIntegral i * step | i <- [0 .. n - 1]]
+
+addX :: V2 Double -> Double -> V2 Double
+addX (V2 x y) dx = V2 (x + dx) y
+
+addY :: V2 Double -> Double -> V2 Double
+addY (V2 x y) dy = V2 x (y + dy)
+
+subX :: V2 Double -> Double -> V2 Double
+subX (V2 x y) dx = V2 (x - dx) y
+
+subY :: V2 Double -> Double -> V2 Double
+subY (V2 x y) dy = V2 x (y - dy)
