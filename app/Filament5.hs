@@ -43,27 +43,51 @@ data World
 ---
 
 data Config = Config
-  { tubeCenter :: Coord V2D Tube Abs,
-    tubeDia :: Coord Double Tube Rel,
-    tubeRadius :: Coord Double Tube Rel,
+  { tubeCenter :: Coord V2D World Abs,
+    tubeDiameter :: Double,
+    tubeRadius :: Double,
+    tubeCircumference :: Double,
     countArcSteps :: Int,
-    arcStep :: Double
+    arcStep :: Double,
+    lineWidth :: Double,
+    countWaves :: Int,
+    depthWave :: Double,
+    spoolDiameter :: Double,
+    layerCount :: Int,
+    idealLayerHeight :: Double,
+    realLayerHeight :: Double
   }
 
 config :: Config
 config =
   Config
     { tubeCenter,
-      tubeDia,
-      tubeRadius = Coord (un tubeDia / 2),
-      countArcSteps = countArcSteps,
-      arcStep
+      tubeDiameter,
+      tubeRadius,
+      countArcSteps,
+      arcStep,
+      lineWidth = 0.4,
+      tubeCircumference,
+      depthWave,
+      countWaves,
+      spoolDiameter,
+      layerCount,
+      idealLayerHeight,
+      realLayerHeight
     }
   where
     tubeCenter = Coord (V2 120 120)
-    tubeDia = Coord 200
+    tubeDiameter = 200
+    tubeRadius = tubeDiameter / 2
+    tubeCircumference = pi * tubeDiameter
     countArcSteps = 50
     arcStep = 2 * pi / fromIntegral countArcSteps
+    countWaves = 20
+    spoolDiameter = 5.0
+    depthWave = tubeCircumference / fromIntegral countWaves
+    idealLayerHeight = 0.2
+    layerCount = round (spoolDiameter / idealLayerHeight)
+    realLayerHeight = spoolDiameter / fromIntegral layerCount
 
 ---
 
@@ -76,9 +100,10 @@ tubeToWorld2 :: Coord V2D Tube b -> Coord V2D World b
 tubeToWorld2 (Coord (V2 x y)) = Coord (V2 x' y')
   where
     Coord (V2 centerX centerY) = config.tubeCenter
-    rad = un config.tubeRadius + x
-    x' = centerX + rad * cos (m + y)
-    y' = centerY + rad * sin (m + y)
+    radius = un config.tubeRadius + x
+    x' = centerX + radius * cos (m + rad)
+    y' = centerY + radius * sin (m + rad)
+    rad = y / un config.tubeRadius
     m = 3 * (pi / 2)
 
 tubeMkLine :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> [Coord V2D Tube Abs]
@@ -128,21 +153,68 @@ printRect (Coord frontLeft) (Coord backRight) = do
     section "Left" do
       tubeExtrudePoints (Coord backLeft) (Coord frontLeft)
 
-printLayer :: Double -> Double -> GCode ()
-printLayer centerRad height = undefined
+printSnake :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
+printSnake (Coord frontLeft) (Coord backRight) = do
+  let size = backRight - frontLeft
+      frontRight = frontLeft + justX size
+      backLeft = backRight - justX size
 
-printWave :: Double -> GCode ()
-printWave centerRad = forM_ [0 .. 10] \i -> do
-  let pct = fromIntegral i / 10
-  (printLayer centerRad pct)
+  let step = config.lineWidth
+
+  forM_ [0 .. 1] \i -> do
+    let di = fromIntegral i
+        plus = (di + 0.5) * step
+        minus = -plus
+        frontLeft' = frontLeft + V2 plus plus
+        frontRight' = frontRight + V2 minus plus
+        backRight' = backRight + V2 minus minus
+        backLeft' = backLeft + V2 plus minus
+
+    tubeMoveTo (Coord frontLeft')
+    section ("Snake " <> show i) do
+      section "Front" do
+        tubeExtrudePoints (Coord frontLeft') (Coord frontRight')
+      section "Right" do
+        tubeExtrudePoints (Coord frontRight') (Coord backRight')
+      section "Back" do
+        tubeExtrudePoints (Coord backRight') (Coord backLeft')
+      section "Left" do
+        tubeExtrudePoints (Coord backLeft') (Coord frontLeft')
+
+printWaveLayer :: Int -> Int -> GCode ()
+printWaveLayer waveIndex layerIndex = do
+  let spoolRadius = config.spoolDiameter / 2
+      pct = fromIntegral layerIndex / fromIntegral config.layerCount
+      pct' = ((pct * 2) - 1)
+      depth = (acos pct' / (pi)) * config.depthWave
+
+      frontLeft = V2 (-spoolRadius) ((fromIntegral waveIndex * config.depthWave) + (config.depthWave / 2 - depth / 2))
+      backRight = V2 (spoolRadius) (((fromIntegral waveIndex) * config.depthWave) + (config.depthWave / 2 + depth / 2))
+
+  printSnake (Coord frontLeft) (Coord backRight)
+
+printWave :: Int -> GCode ()
+printWave waveIndex = do
+  env <- ask
+
+  local (\e -> e {layerHeight = config.realLayerHeight}) do
+    forM_ [0 .. config.layerCount - 1] \layerIndex -> do
+      moveZ (fromIntegral layerIndex * config.realLayerHeight)
+      printWaveLayer waveIndex layerIndex
+
+printWaves :: GCode ()
+printWaves = do
+  forM_ [0 .. config.countWaves - 1] printWave
 
 sketch :: GCode ()
 sketch = initPrinter do
-  let l = 10 * (pi / 60)
+  printWaves
 
-  forM_ [0 .. 10] \i -> do
-    let di = fromIntegral i
-    printRect (Coord $ V2 (-5) (di * l)) (Coord $ V2 5 ((di + 1) * l))
+  --  printRect (Coord $ V2 (-5) (-5)) (Coord $ V2 5 50)
+
+  -- forM_ [0 .. 0] \i -> do
+  --   let di = fromIntegral i
+  --   printSnake (Coord $ V2 (-5) (di * l)) (Coord $ V2 5 ((di + 1) * l))
 
   -- tubeMoveTo (Coord $ V2 0 0)
   -- tubeExtrudePoints (Coord $ V2 0 0) (Coord $ V2 0 (20 * (pi / 60)))
@@ -178,4 +250,5 @@ main = do
           }
   let codeStr = toText $ local mkEnv sketch
   writeFileText "out/myprint.gcode" codeStr
-  putStrLn $ T.unpack codeStr
+
+-- putStrLn $ T.unpack codeStr
