@@ -195,8 +195,10 @@ printTestStripesLikeNeptune = section "Test Stripes" $ do
   raw "G1 E5 F500" "Prime nozzle"
   raw "G1 X215 Y5 E15 F600" "Draw a long test stripe"
   raw "G1 E-1 F300" "Retract a bit"
-  -- raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
-  updatePos (fmap Just $ V3 110.0 5.0 0.2)
+  raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
+  updatePos (fmap Just $ V3 215.0 5.0 1.0)
+
+  moveZ 0.2
 
   printManyPolyLines
     [ [V2 10.0 10.0, V2 215.0 10.0]
@@ -257,6 +259,10 @@ initPrinter inner = do
   do
     moveTo env.transpose
     setPosition & setXY (V2 0 0) & toGCode
+
+  do
+    moveTo (V2 (-1) 0)
+    pause 10
 
   printTestStripesLikeNeptune
 

@@ -14,6 +14,7 @@ import Marlin.Lib
 import Marlin.Math (addX, addY, justX, justY, subX)
 import Relude
 import Relude.Extra (un, wrap)
+import Sketch01 (parkPosition)
 
 newtype Coord a b c = Coord a
   deriving (Show, Eq, Num)
@@ -49,9 +50,12 @@ data Config = Config
     tubeCircumference :: Double,
     countArcSteps :: Int,
     arcStep :: Double,
-    lineWidth :: Double,
-    countWaves :: Int,
-    depthWave :: Double,
+    idealLineWidth :: Double,
+    countHills :: Int,
+    countPrintedHills :: Int,
+    countPrintedValleys :: Int,
+    countPrintedLayers :: Int,
+    depthHill :: Double,
     spoolDiameter :: Double,
     layerCount :: Int,
     idealLayerHeight :: Double,
@@ -66,10 +70,13 @@ config =
       tubeRadius,
       countArcSteps,
       arcStep,
-      lineWidth = 0.4,
+      idealLineWidth = 0.4,
       tubeCircumference,
-      depthWave,
-      countWaves,
+      depthHill,
+      countHills,
+      countPrintedHills,
+      countPrintedValleys,
+      countPrintedLayers = 10,
       spoolDiameter,
       layerCount,
       idealLayerHeight,
@@ -82,9 +89,11 @@ config =
     tubeCircumference = pi * tubeDiameter
     countArcSteps = 50
     arcStep = 2 * pi / fromIntegral countArcSteps
-    countWaves = 20
-    spoolDiameter = 5.0
-    depthWave = tubeCircumference / fromIntegral countWaves
+    countHills = 20
+    countPrintedHills = 3
+    countPrintedValleys = 1
+    spoolDiameter = 1.75
+    depthHill = tubeCircumference / fromIntegral countHills
     idealLayerHeight = 0.2
     layerCount = round (spoolDiameter / idealLayerHeight)
     realLayerHeight = spoolDiameter / fromIntegral layerCount
@@ -159,7 +168,7 @@ printSnake (Coord frontLeft) (Coord backRight) = do
       frontRight = frontLeft + justX size
       backLeft = backRight - justX size
 
-  let step = config.lineWidth
+  let step = config.idealLineWidth
 
   forM_ [0 .. 1] \i -> do
     let di = fromIntegral i
@@ -170,7 +179,9 @@ printSnake (Coord frontLeft) (Coord backRight) = do
         backRight' = backRight + V2 minus minus
         backLeft' = backLeft + V2 plus minus
 
-    tubeMoveTo (Coord frontLeft')
+    withRetract $ withZHop $ tubeMoveTo (Coord frontLeft')
+
+    -- tubeMoveTo (Coord frontLeft')
     section ("Snake " <> show i) do
       section "Front" do
         tubeExtrudePoints (Coord frontLeft') (Coord frontRight')
@@ -181,60 +192,95 @@ printSnake (Coord frontLeft) (Coord backRight) = do
       section "Left" do
         tubeExtrudePoints (Coord backLeft') (Coord frontLeft')
 
-printWaveLayer :: Int -> Int -> GCode ()
-printWaveLayer waveIndex layerIndex = do
+printFilling :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
+printFilling (Coord frontLeft) (Coord backRight) = do
+  let (V2 sizeX sizeY) = backRight - frontLeft
+
+  let count = round (sizeX / config.idealLineWidth)
+  let lineWidth = sizeX / fromIntegral count
+
+  local (\e -> e {lineWidth}) do
+    forM_ [0 .. count - 1] \i -> do
+      let di = fromIntegral i
+          p1 = frontLeft + V2 (di * lineWidth) 0
+          p2 = frontLeft + V2 (di * lineWidth) sizeY
+      tubeMoveTo (Coord p1)
+      tubeExtrudePoints (Coord p1) (Coord p2)
+
+data Phase = Hill | Valley
+
+printPhaseLayer :: Phase -> Int -> Int -> GCode ()
+printPhaseLayer phase hillIndex layerIndex = do
   let spoolRadius = config.spoolDiameter / 2
       pct = fromIntegral layerIndex / fromIntegral config.layerCount
-      pct' = ((pct * 2) - 1)
-      depth = (acos pct' / (pi)) * config.depthWave
+      pct' = case phase of
+        Hill -> pct
+        Valley -> 1 - pct
+      pct'' = (pct' * 2) - 1
 
-      frontLeft = V2 (-spoolRadius) ((fromIntegral waveIndex * config.depthWave) + (config.depthWave / 2 - depth / 2))
-      backRight = V2 (spoolRadius) (((fromIntegral waveIndex) * config.depthWave) + (config.depthWave / 2 + depth / 2))
+      depth = (acos pct'' / pi) * config.depthHill
+
+      extra = case phase of
+        Hill -> 0
+        Valley -> config.depthHill / 2
+
+  let x1 = -spoolRadius
+      y1 = extra + (fromIntegral hillIndex * config.depthHill) + (config.depthHill / 2 - depth / 2)
+
+  let x2 = spoolRadius
+      y2 = extra + (fromIntegral hillIndex * config.depthHill) + (config.depthHill / 2 + depth / 2)
+
+      frontLeft = V2 x1 y1
+      backRight = V2 x2 y2
 
   printSnake (Coord frontLeft) (Coord backRight)
 
-printWave :: Int -> GCode ()
-printWave waveIndex = do
+printHill :: Int -> GCode ()
+printHill hillIndex = do
   env <- ask
 
-  local (\e -> e {layerHeight = config.realLayerHeight}) do
-    forM_ [0 .. config.layerCount - 1] \layerIndex -> do
-      moveZ (fromIntegral layerIndex * config.realLayerHeight)
-      printWaveLayer waveIndex layerIndex
+  moveZ 2.2
+  let v = V2 0 (fromIntegral hillIndex * config.depthHill)
+  withRetract $ withZHop $ tubeMoveTo (Coord v)
 
-printWaves :: GCode ()
-printWaves = do
-  forM_ [0 .. config.countWaves - 1] printWave
+  local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
+    forM_ [1 .. config.countPrintedLayers] \layerIndex -> do
+      if layerIndex == 1
+        then raw "M106 S0" "Turn off fan"
+        else raw "M106 S255" "Turn on fan"
+
+      moveZ (fromIntegral layerIndex * config.realLayerHeight)
+      printPhaseLayer Hill hillIndex layerIndex
+
+printValley :: Int -> GCode ()
+printValley hillIndex = do
+  env <- ask
+
+  moveZ 2.2
+  let v = V2 0 (fromIntegral hillIndex * 1.5 * config.depthHill)
+  tubeMoveTo (Coord v)
+
+  local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
+    forM_ [1 .. config.countPrintedLayers] \layerIndex -> do
+      if layerIndex == 1
+        then raw "M106 S0" "Turn off fan"
+        else raw "M106 S255" "Turn on fan"
+
+      moveZ (fromIntegral layerIndex * config.realLayerHeight)
+      printPhaseLayer Valley hillIndex layerIndex
+
+printFilament :: GCode ()
+printFilament = do
+  raw "T0" "Select tool 0"
+  forM_ [0 .. config.countPrintedHills - 1] printHill
+
+-- raw "T1" "Select tool 1"
+-- forM_ [0 .. config.countPrintedValleys - 1] printValley
 
 sketch :: GCode ()
 sketch = initPrinter do
-  printWaves
-
-  --  printRect (Coord $ V2 (-5) (-5)) (Coord $ V2 5 50)
-
-  -- forM_ [0 .. 0] \i -> do
-  --   let di = fromIntegral i
-  --   printSnake (Coord $ V2 (-5) (di * l)) (Coord $ V2 5 ((di + 1) * l))
-
-  -- tubeMoveTo (Coord $ V2 0 0)
-  -- tubeExtrudePoints (Coord $ V2 0 0) (Coord $ V2 0 (20 * (pi / 60)))
-
-  -- tubeMoveTo (Coord $ V2 10 0)
-  -- tubeExtrudePoints (Coord $ V2 10 0) (Coord $ V2 10 (20 * (pi / 60)))
-
-  -- tubeMoveTo (Coord $ V2 0 0)
-  -- tubeExtrudePoints (Coord $ V2 0 0) (Coord $ V2 10 0)
-
+  printFilament
   pure ()
-
--- tubeMoveTo (Coord $ V2 (-10) 0)
--- tubeExtrudePoints (Coord $ V2 (-10) 0) (Coord $ V2 (-10) (pi))
-
--- tubeMoveTo (Coord $ V2 (10) 0)
--- tubeExtrudePoints (Coord $ V2 (10) 0) (Coord $ V2 (10) (pi))
-
--- tubeMoveTo (Coord $ V2 (10) 0)
--- tubeExtrudePoints (Coord $ V2 (10) 0) (Coord $ V2 (-10) (pi))
 
 main :: IO ()
 main = do
@@ -246,9 +292,8 @@ main = do
             layerHeight = 0.2,
             hotendTemperature = 200,
             bedTemperature = 65,
-            transpose = V2 0 0 -- (150 - fromIntegral count * 50)
+            transpose = V2 0 (150 - fromIntegral count * 50),
+            parkingPosition = V3 0 0 30
           }
   let codeStr = toText $ local mkEnv sketch
   writeFileText "out/myprint.gcode" codeStr
-
--- putStrLn $ T.unpack codeStr
