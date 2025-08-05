@@ -88,11 +88,11 @@ config =
     tubeDiameter = 200
     tubeRadius = tubeDiameter / 2
     tubeCircumference = pi * tubeDiameter
-    countArcSteps = 50
-    arcStep = 2 * pi / fromIntegral countArcSteps
-    countHills = 60
-    countPrintedHills = 20 -- 20
-    countPrintedValleys = countPrintedHills - 1
+    countArcSteps = 100
+    arcStep = tubeCircumference / fromIntegral countArcSteps
+    countHills = 100
+    countPrintedHills = 15 -- countHills
+    countPrintedValleys = 14 -- countPrintedHills
     spoolDiameter = 1.65
     depthHill = tubeCircumference / fromIntegral countHills
     idealLayerHeight = 0.1
@@ -194,7 +194,7 @@ printSnake (Coord frontLeft) (Coord backRight) = section "Print Snake" $ do
         frontRight' = frontRight + V2 minus plus
         backRight' = backRight + V2 minus minus
         backLeft' = backLeft + V2 plus minus
-    withRetract $ withZHop $ tubeMoveTo (Coord frontLeft')
+    tubeMoveTo (Coord frontLeft')
 
     -- tubeMoveTo (Coord frontLeft')
     local (\e -> e {lineWidth = step}) do
@@ -208,20 +208,20 @@ printSnake (Coord frontLeft) (Coord backRight) = section "Print Snake" $ do
         section "Left" do
           tubeExtrudePoints (Coord backLeft') (Coord frontLeft')
 
-printFilling :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
-printFilling (Coord frontLeft) (Coord backRight) = do
-  let (V2 sizeX sizeY) = backRight - frontLeft
+-- printFilling :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
+-- printFilling (Coord frontLeft) (Coord backRight) = do
+--   let (V2 sizeX sizeY) = backRight - frontLeft
 
-  let count = round (sizeX / config.idealLineWidth)
-  let lineWidth = sizeX / fromIntegral count
+--   let count = round (sizeX / config.idealLineWidth)
+--   let lineWidth = sizeX / fromIntegral count
 
-  local (\e -> e {lineWidth}) do
-    forM_ [0 .. count - 1] \i -> do
-      let di = fromIntegral i
-          p1 = frontLeft + V2 (di * lineWidth) 0
-          p2 = frontLeft + V2 (di * lineWidth) sizeY
-      tubeMoveTo (Coord p1)
-      tubeExtrudePoints (Coord p1) (Coord p2)
+--   local (\e -> e {lineWidth}) do
+--     forM_ [0 .. count - 1] \i -> do
+--       let di = fromIntegral i
+--           p1 = frontLeft + V2 (di * lineWidth) 0
+--           p2 = frontLeft + V2 (di * lineWidth) sizeY
+--       tubeMoveTo (Coord p1)
+--       tubeExtrudePoints (Coord p1) (Coord p2)
 
 data Phase = Hill | Valley
   deriving (Show, Eq)
@@ -267,13 +267,15 @@ printHill hillIndex = section ("Print Hill " <> show hillIndex) $ do
   let v = V2 0 (fromIntegral hillIndex * config.depthHill)
   withRetract $ tubeMoveTo (Coord v)
 
+  withRetract $ moveZ 0.1
+
   local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
     forM_ [0 .. config.countPrintedLayers - 1] \layerIndex -> do
       if layerIndex == 0
         then raw "M106 S0" "Turn off fan"
         else raw "M106 S255" "Turn on fan"
 
-      withRetract $ moveZ (0.1 + fromIntegral layerIndex * config.realLayerHeight)
+      moveZ (0.1 + fromIntegral layerIndex * config.realLayerHeight)
       printPhaseLayer Hill hillIndex layerIndex
 
 printValley :: Int -> GCode ()
@@ -284,13 +286,15 @@ printValley hillIndex = section ("Print Valley " <> show hillIndex) $ do
   let v = V2 0 ((1 + fromIntegral hillIndex) * config.depthHill)
   withRetract $ tubeMoveTo (Coord v)
 
+  withRetract $ moveZ 0.1
+
   local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
     forM_ [0 .. config.countPrintedLayers - 1] \layerIndex -> do
       if layerIndex == 0
         then raw "M106 S0" "Turn off fan"
         else raw "M106 S255" "Turn on fan"
 
-      withRetract $ moveZ (0.1 + fromIntegral layerIndex * config.realLayerHeight)
+      moveZ (0.1 + fromIntegral layerIndex * config.realLayerHeight)
       printPhaseLayer Valley hillIndex layerIndex
 
 printFilament :: GCode ()
@@ -308,9 +312,21 @@ printFilament = do
 
 ironFinishing :: GCode ()
 ironFinishing = section "Iron Finishing" $ do
+  env <- ask
+  let ironHeight = 0.1 + (fromIntegral config.countPrintedLayers - 1) * config.realLayerHeight
+
   raw "M106 S255" "Turn on fan"
-  raw "G1 Z2.0 F1200" "Lift nozzle to avoid dragging"
-  updatePos (fmap Just $ V3 0 0 2.0)
+
+  moveZ ironHeight
+  tubeMoveTo (Coord $ V2 0 0)
+
+  let step = config.tubeCircumference / fromIntegral config.countArcSteps
+
+  forM_ [0 .. config.countArcSteps - 1] \i -> do
+    let x = 0
+        y = fromIntegral i * step
+
+    tubeMoveTo (Coord $ V2 x y)
 
 sketch :: GCode ()
 sketch = initPrinter do
@@ -344,6 +360,7 @@ main = do
             transpose = V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
             parkingPosition = V3 0 0 30,
             moveSpeed = 2000,
+            extrudeSpeed = 2500,
             retractLength = 1.5
           }
   let codeStr = toText $ local mkEnv sketch

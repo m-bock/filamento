@@ -198,6 +198,11 @@ printTestStripesLikeNeptune = section "Test Stripes" $ do
   raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
   updatePos (fmap Just $ V3 215.0 5.0 1.0)
 
+  playTone
+    & setFrequency 500
+    & setDuration 500
+    & toGCode
+
   withRetract $ moveTo (V2 10.0 10.0)
 
   moveZ 0.2
@@ -377,12 +382,11 @@ filamentChange = do
       & setDuration 500
       & toGCode
 
-    pause 20
+    raw "M0" "Pause for filament change"
 
-    playTone
-      & setFrequency 500
-      & setDuration 500
-      & toGCode
+    extrude 5
+
+    pause 2
 
     linearMove
       & setSpeed 200
@@ -399,12 +403,22 @@ filamentChange = do
       & setExtrude 50
       & toGCode
 
+    linearMove
+      & setSpeed 200
+      & setExtrude (-1)
+      & toGCode
+
+    linearMove
+      & setSpeed 200
+      & setExtrude 1
+      & toGCode
+
     playTone
       & setFrequency 500
       & setDuration 500
       & toGCode
 
-    moveTo3d prevPosition
+-- moveTo3d prevPosition
 
 data PersistentState = PersistentState
   {count :: Int}
