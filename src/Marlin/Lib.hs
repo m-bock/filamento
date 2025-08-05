@@ -131,18 +131,18 @@ moveTo3d v = do
 
 withRetract :: GCode a -> GCode a
 withRetract inner = do
-  let retractLength = 4
+  env <- ask
 
   linearMove
-    & setExtrude (-retractLength)
-    & setSpeed 2400
+    & setExtrude (-env.retractLength)
+    & setSpeed env.retractSpeed
     & toGCode
 
   ret <- inner
 
   linearMove
-    & setExtrude retractLength
-    & setSpeed 2400
+    & setExtrude env.retractLength
+    & setSpeed env.retractSpeed
     & toGCode
 
   pure ret
@@ -150,9 +150,9 @@ withRetract inner = do
 withZHop :: GCode a -> GCode a
 withZHop inner = do
   st <- get
+  env <- ask
   let V3 _ _ z = st.currentPosition
-  let zHop = 0.4
-  moveZ (z + zHop)
+  moveZ (z + env.zHop)
   ret <- inner
   moveZ z
   pure ret
@@ -197,6 +197,8 @@ printTestStripesLikeNeptune = section "Test Stripes" $ do
   raw "G1 E-1 F300" "Retract a bit"
   raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
   updatePos (fmap Just $ V3 215.0 5.0 1.0)
+
+  withRetract $ moveTo (V2 10.0 10.0)
 
   moveZ 0.2
 

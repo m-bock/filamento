@@ -6,6 +6,7 @@
 module Filament5 where
 
 import Control.Lens ((^.))
+import Data.List ((!!))
 import qualified Data.Text as T
 import Linear (V3 (..))
 import Linear.V2 (V2 (..), _x, _y)
@@ -76,7 +77,7 @@ config =
       countHills,
       countPrintedHills,
       countPrintedValleys,
-      countPrintedLayers = 10,
+      countPrintedLayers,
       spoolDiameter,
       layerCount,
       idealLayerHeight,
@@ -89,14 +90,15 @@ config =
     tubeCircumference = pi * tubeDiameter
     countArcSteps = 50
     arcStep = 2 * pi / fromIntegral countArcSteps
-    countHills = 20
-    countPrintedHills = 3
-    countPrintedValleys = 1
-    spoolDiameter = 1.75
+    countHills = 60
+    countPrintedHills = 20 -- 20
+    countPrintedValleys = countPrintedHills - 1
+    spoolDiameter = 1.65
     depthHill = tubeCircumference / fromIntegral countHills
-    idealLayerHeight = 0.2
+    idealLayerHeight = 0.1
     layerCount = round (spoolDiameter / idealLayerHeight)
     realLayerHeight = spoolDiameter / fromIntegral layerCount
+    countPrintedLayers = layerCount
 
 ---
 
@@ -162,15 +164,29 @@ printRect (Coord frontLeft) (Coord backRight) = do
     section "Left" do
       tubeExtrudePoints (Coord backLeft) (Coord frontLeft)
 
+splitInterval :: Double -> Double -> (Double, Int)
+splitInterval big small =
+  let n = round (big / small)
+      d = big / fromIntegral n
+   in (d, n)
+
 printSnake :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
-printSnake (Coord frontLeft) (Coord backRight) = do
-  let size = backRight - frontLeft
+printSnake (Coord frontLeft) (Coord backRight) = section "Print Snake" $ do
+  let size@(V2 w _) = backRight - frontLeft
       frontRight = frontLeft + justX size
       backLeft = backRight - justX size
 
-  let step = config.idealLineWidth
+  comment ("Size: " <> T.pack (show size))
+  comment ("Front Left: " <> T.pack (show frontLeft))
+  comment ("Front Right: " <> T.pack (show frontRight))
+  comment ("Back Right: " <> T.pack (show backRight))
+  comment ("Back Left: " <> T.pack (show backLeft))
 
-  forM_ [0 .. 1] \i -> do
+  let (doubleStep, count) = splitInterval (abs w) (config.idealLineWidth * 2)
+
+  let step = doubleStep / 2
+
+  forM_ [0 .. count - 1] \i -> do
     let di = fromIntegral i
         plus = (di + 0.5) * step
         minus = -plus
@@ -178,19 +194,19 @@ printSnake (Coord frontLeft) (Coord backRight) = do
         frontRight' = frontRight + V2 minus plus
         backRight' = backRight + V2 minus minus
         backLeft' = backLeft + V2 plus minus
-
     withRetract $ withZHop $ tubeMoveTo (Coord frontLeft')
 
     -- tubeMoveTo (Coord frontLeft')
-    section ("Snake " <> show i) do
-      section "Front" do
-        tubeExtrudePoints (Coord frontLeft') (Coord frontRight')
-      section "Right" do
-        tubeExtrudePoints (Coord frontRight') (Coord backRight')
-      section "Back" do
-        tubeExtrudePoints (Coord backRight') (Coord backLeft')
-      section "Left" do
-        tubeExtrudePoints (Coord backLeft') (Coord frontLeft')
+    local (\e -> e {lineWidth = step}) do
+      section ("Snake " <> show i) do
+        section "Front" do
+          tubeExtrudePoints (Coord frontLeft') (Coord frontRight')
+        section "Right" do
+          tubeExtrudePoints (Coord frontRight') (Coord backRight')
+        section "Back" do
+          tubeExtrudePoints (Coord backRight') (Coord backLeft')
+        section "Left" do
+          tubeExtrudePoints (Coord backLeft') (Coord frontLeft')
 
 printFilling :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
 printFilling (Coord frontLeft) (Coord backRight) = do
@@ -208,9 +224,10 @@ printFilling (Coord frontLeft) (Coord backRight) = do
       tubeExtrudePoints (Coord p1) (Coord p2)
 
 data Phase = Hill | Valley
+  deriving (Show, Eq)
 
 printPhaseLayer :: Phase -> Int -> Int -> GCode ()
-printPhaseLayer phase hillIndex layerIndex = do
+printPhaseLayer phase hillIndex layerIndex = section ("Print Phase Layer " <> show phase <> " hillIndex = " <> show hillIndex <> " layerIndex = " <> show layerIndex) $ do
   let spoolRadius = config.spoolDiameter / 2
       pct = fromIntegral layerIndex / fromIntegral config.layerCount
       pct' = case phase of
@@ -224,10 +241,17 @@ printPhaseLayer phase hillIndex layerIndex = do
         Hill -> 0
         Valley -> config.depthHill / 2
 
-  let x1 = -spoolRadius
+  let pctRad = 0.5 * pi + pct * pi
+      radius = spoolRadius * (((abs $ cos pctRad) + 1) / 2)
+
+  comment ("pct = " <> T.pack (show pct))
+  comment ("radius = " <> T.pack (show radius))
+  comment ("pctRad = " <> T.pack (show pctRad))
+
+  let x1 = -radius
       y1 = extra + (fromIntegral hillIndex * config.depthHill) + (config.depthHill / 2 - depth / 2)
 
-  let x2 = spoolRadius
+  let x2 = radius
       y2 = extra + (fromIntegral hillIndex * config.depthHill) + (config.depthHill / 2 + depth / 2)
 
       frontLeft = V2 x1 y1
@@ -236,51 +260,76 @@ printPhaseLayer phase hillIndex layerIndex = do
   printSnake (Coord frontLeft) (Coord backRight)
 
 printHill :: Int -> GCode ()
-printHill hillIndex = do
+printHill hillIndex = section ("Print Hill " <> show hillIndex) $ do
   env <- ask
 
-  moveZ 2.2
+  withRetract $ moveZ 2.2
   let v = V2 0 (fromIntegral hillIndex * config.depthHill)
-  withRetract $ withZHop $ tubeMoveTo (Coord v)
+  withRetract $ tubeMoveTo (Coord v)
 
   local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
-    forM_ [1 .. config.countPrintedLayers] \layerIndex -> do
-      if layerIndex == 1
+    forM_ [0 .. config.countPrintedLayers - 1] \layerIndex -> do
+      if layerIndex == 0
         then raw "M106 S0" "Turn off fan"
         else raw "M106 S255" "Turn on fan"
 
-      moveZ (fromIntegral layerIndex * config.realLayerHeight)
+      withRetract $ moveZ (0.1 + fromIntegral layerIndex * config.realLayerHeight)
       printPhaseLayer Hill hillIndex layerIndex
 
 printValley :: Int -> GCode ()
-printValley hillIndex = do
+printValley hillIndex = section ("Print Valley " <> show hillIndex) $ do
   env <- ask
 
-  moveZ 2.2
-  let v = V2 0 (fromIntegral hillIndex * 1.5 * config.depthHill)
-  tubeMoveTo (Coord v)
+  withRetract $ moveZ 2.2
+  let v = V2 0 ((1 + fromIntegral hillIndex) * config.depthHill)
+  withRetract $ tubeMoveTo (Coord v)
 
   local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
-    forM_ [1 .. config.countPrintedLayers] \layerIndex -> do
-      if layerIndex == 1
+    forM_ [0 .. config.countPrintedLayers - 1] \layerIndex -> do
+      if layerIndex == 0
         then raw "M106 S0" "Turn off fan"
         else raw "M106 S255" "Turn on fan"
 
-      moveZ (fromIntegral layerIndex * config.realLayerHeight)
+      withRetract $ moveZ (0.1 + fromIntegral layerIndex * config.realLayerHeight)
       printPhaseLayer Valley hillIndex layerIndex
 
 printFilament :: GCode ()
 printFilament = do
   raw "T0" "Select tool 0"
-  forM_ [0 .. config.countPrintedHills - 1] printHill
+  forM_ [0 .. config.countPrintedHills - 1] \i -> do
+    printHill i
 
--- raw "T1" "Select tool 1"
--- forM_ [0 .. config.countPrintedValleys - 1] printValley
+  filamentChange
+
+  raw "T1" "Select tool 1"
+  forM_ [0 .. config.countPrintedValleys - 1] printValley
+
+  ironFinishing
+
+ironFinishing :: GCode ()
+ironFinishing = section "Iron Finishing" $ do
+  raw "M106 S255" "Turn on fan"
+  raw "G1 Z2.0 F1200" "Lift nozzle to avoid dragging"
+  updatePos (fmap Just $ V3 0 0 2.0)
 
 sketch :: GCode ()
 sketch = initPrinter do
   printFilament
+  -- printTestObj
   pure ()
+
+printTestObj :: GCode ()
+printTestObj = section "Print Test Object" $ do
+  raw "M106 S0" "Turn off fan"
+
+  forM_ [0 .. 40] \i -> do
+    when (i == 1) do
+      raw "M106 S255" "Turn on fan"
+
+    printSquare (V2 10 20) (V2 50 20)
+    nextLayer
+
+isDev = False
 
 main :: IO ()
 main = do
@@ -290,10 +339,12 @@ main = do
         env
           { lineWidth = 0.4,
             layerHeight = 0.2,
-            hotendTemperature = 200,
+            hotendTemperature = 205,
             bedTemperature = 65,
-            transpose = V2 0 (150 - fromIntegral count * 50),
-            parkingPosition = V3 0 0 30
+            transpose = V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
+            parkingPosition = V3 0 0 30,
+            moveSpeed = 2000,
+            retractLength = 1.5
           }
   let codeStr = toText $ local mkEnv sketch
   writeFileText "out/myprint.gcode" codeStr

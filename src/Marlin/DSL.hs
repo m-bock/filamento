@@ -27,7 +27,10 @@ data GCodeEnv = Env
     firstLayerHeight :: Double,
     lineWidth :: Double,
     filamentDia :: Double,
-    transpose :: V2 Double
+    transpose :: V2 Double,
+    retractLength :: Double,
+    retractSpeed :: Int,
+    zHop :: Double
   }
 
 data PrintState = PrintState
@@ -62,7 +65,10 @@ defaultGCodeEnv =
       firstLayerHeight = 0.2,
       lineWidth = 0.4,
       filamentDia = 1.75,
-      transpose = V2 0 0
+      transpose = V2 0 0,
+      retractLength = 1,
+      retractSpeed = 1800,
+      zHop = 0.4
     }
 
 newtype GCode a = GCode
