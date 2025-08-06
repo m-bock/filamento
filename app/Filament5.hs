@@ -226,20 +226,18 @@ printPhaseLayer phase hillIndex layerIndex = section ("Print Phase Layer " <> sh
         Hill -> pct
         Valley -> 1 - pct
 
-  let frag = config.depthHill / 6
-
   let rampup = 5
 
   let fra = ((config.depthHill / 2) - rampup) / 2
 
-  let depth = 2 * fra + ((1 - (pct')) * rampup * 2)
+  let depth = 2 * fra + ((1 - pct') * rampup * 2)
 
       extra = case phase of
         Hill -> 0
         Valley -> config.depthHill / 2
 
   let pctRad = 0.5 * pi + pct * pi
-      radius = spoolRadius * (((abs $ cos pctRad) + 1) / 2)
+      radius = spoolRadius * ((abs (cos pctRad) + 1) / 2)
 
   comment ("pct = " <> T.pack (show pct))
   comment ("radius = " <> T.pack (show radius))
@@ -256,12 +254,16 @@ printPhaseLayer phase hillIndex layerIndex = section ("Print Phase Layer " <> sh
 
   printSnake (Coord frontLeft) (Coord backRight)
 
-printHill :: Int -> GCode ()
-printHill hillIndex = section ("Print Hill " <> show hillIndex) $ do
+printPhase :: Phase -> Int -> GCode ()
+printPhase phase hillIndex = section ("Print Phase = " <> show phase <> " hillIndex = " <> show hillIndex) $ do
   env <- ask
 
+  let offset = case phase of
+        Hill -> 0
+        Valley -> 1
+
   withRetract $ moveZ 2.2
-  let v = V2 0 (fromIntegral hillIndex * config.depthHill)
+  let v = V2 0 ((fromIntegral hillIndex + offset) * config.depthHill)
   withRetract $ tubeMoveTo (Coord v)
 
   withRetract $ moveZ 0.1
@@ -273,26 +275,7 @@ printHill hillIndex = section ("Print Hill " <> show hillIndex) $ do
         else raw "M106 S255" "Turn on fan"
 
       moveZ (0.1 + fromIntegral layerIndex * config.realLayerHeight)
-      printPhaseLayer Hill hillIndex layerIndex
-
-printValley :: Int -> GCode ()
-printValley hillIndex = section ("Print Valley " <> show hillIndex) $ do
-  env <- ask
-
-  withRetract $ moveZ 2.2
-  let v = V2 0 ((1 + fromIntegral hillIndex) * config.depthHill)
-  withRetract $ tubeMoveTo (Coord v)
-
-  withRetract $ moveZ 0.1
-
-  local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
-    forM_ [0 .. config.countPrintedLayers - 1] \layerIndex -> do
-      if layerIndex == 0
-        then raw "M106 S0" "Turn off fan"
-        else raw "M106 S255" "Turn on fan"
-
-      moveZ (0.1 + fromIntegral layerIndex * config.realLayerHeight)
-      printPhaseLayer Valley hillIndex layerIndex
+      printPhaseLayer phase hillIndex layerIndex
 
 printFilament :: GCode ()
 printFilament = do
@@ -302,21 +285,15 @@ printFilament = do
       countPrintedValleys = countPrintedHills - 1
 
   forM_ [0 .. countPrintedHills - 1] \i -> do
-    printHill i
+    printPhase Hill i
 
   filamentChange
 
   raw "T1" "Select tool 1"
-  forM_ [0 .. countPrintedValleys - 1] printValley
+  forM_ [0 .. countPrintedValleys - 1] \i -> do
+    printPhase Valley i
 
   ironFinishing
-
-  filamentChange
-
-  forM_ [0 .. 40] \i -> do
-    moveZ (0.1 + fromIntegral i * config.realLayerHeight)
-    withRetract $ withZHop $ moveTo (V2 100 100)
-    printSquare (V2 100 100) (V2 50 20)
 
 ironFinishing :: GCode ()
 ironFinishing = section "Iron Finishing" $ do
@@ -344,14 +321,12 @@ sketch = initPrinter do
 
 printTestObj :: GCode ()
 printTestObj = section "Print Test Object" $ do
-  raw "M106 S0" "Turn off fan"
+  filamentChange
 
   forM_ [0 .. 40] \i -> do
-    when (i == 1) do
-      raw "M106 S255" "Turn on fan"
-
-    printSquare (V2 10 20) (V2 50 20)
-    nextLayer
+    moveZ (0.1 + fromIntegral i * config.realLayerHeight)
+    withRetract $ withZHop $ moveTo (V2 100 100)
+    printSquare (V2 100 100) (V2 50 20)
 
 isDev = False
 
