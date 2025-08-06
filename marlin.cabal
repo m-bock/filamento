@@ -56,6 +56,7 @@ executable marlin-exe
     Sketch01
     Sketch02
     Sketch03
+    Try
 
   hs-source-dirs: app
   build-depends:

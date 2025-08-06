@@ -77,7 +77,7 @@ config =
       layerCount,
       idealLayerHeight,
       realLayerHeight,
-      printedDepth = 300
+      printedDepth = 150
     }
   where
     tubeCenter = Coord (V2 120 120)
@@ -104,11 +104,26 @@ tubeToWorld2 :: Coord V2D Tube b -> Coord V2D World b
 tubeToWorld2 (Coord (V2 x y)) = Coord (V2 x' y')
   where
     Coord (V2 centerX centerY) = config.tubeCenter
-    radius = un config.tubeRadius + x
-    x' = centerX + radius * cos (m + rad)
-    y' = centerY + radius * sin (m + rad)
-    rad = y / un config.tubeRadius
-    m = 3 * (pi / 2)
+
+    -- Use the simple fnApprox approach that works
+    arcLength = y -- y coordinate represents arc length along spiral
+    spiralConstant = -0.5 -- Increased magnitude for faster inward spiral
+    baseRadius = config.tubeRadius -- x offset from tube radius
+
+    -- Simple approximation: angle = arcLength / averageRadius
+    -- For small spiral constants, this works very well
+    averageRadius = baseRadius + spiralConstant * (arcLength / (2 * baseRadius))
+    angle = arcLength / averageRadius
+
+    -- Calculate actual spiral radius at this angle
+    spiralRadius = baseRadius + spiralConstant * angle + x
+
+    -- Convert to world coordinates
+    m = 3 * (pi / 2) -- Starting angle offset
+    finalAngle = m + angle
+
+    x' = centerX + spiralRadius * cos finalAngle
+    y' = centerY + spiralRadius * sin finalAngle
 
 tubeMkLine :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> [Coord V2D Tube Abs]
 tubeMkLine (Coord start) (Coord end) =

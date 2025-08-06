@@ -17,4 +17,6 @@ main = do
 
   Filament5.main
 
+-- testEqualDistances
+
 -- Sketch03.main
