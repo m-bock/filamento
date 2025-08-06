@@ -52,15 +52,13 @@ data Config = Config
     countArcSteps :: Int,
     arcStep :: Double,
     idealLineWidth :: Double,
-    countHills :: Int,
-    countPrintedHills :: Int,
-    countPrintedValleys :: Int,
     countPrintedLayers :: Int,
     depthHill :: Double,
     spoolDiameter :: Double,
     layerCount :: Int,
     idealLayerHeight :: Double,
-    realLayerHeight :: Double
+    realLayerHeight :: Double,
+    printedDepth :: Double
   }
 
 config :: Config
@@ -74,14 +72,12 @@ config =
       idealLineWidth = 0.4,
       tubeCircumference,
       depthHill,
-      countHills,
-      countPrintedHills,
-      countPrintedValleys,
       countPrintedLayers,
       spoolDiameter,
       layerCount,
       idealLayerHeight,
-      realLayerHeight
+      realLayerHeight,
+      printedDepth = 300
     }
   where
     tubeCenter = Coord (V2 120 120)
@@ -90,11 +86,8 @@ config =
     tubeCircumference = pi * tubeDiameter
     countArcSteps = 100
     arcStep = tubeCircumference / fromIntegral countArcSteps
-    countHills = 10
-    countPrintedHills = countHills
-    countPrintedValleys = countPrintedHills
     spoolDiameter = 1.65
-    depthHill = tubeCircumference / fromIntegral countHills
+    depthHill = 50 -- tubeCircumference / fromIntegral countHills
     idealLayerHeight = 0.1
     layerCount = round (spoolDiameter / idealLayerHeight)
     realLayerHeight = spoolDiameter / fromIntegral layerCount
@@ -196,7 +189,6 @@ printSnake (Coord frontLeft) (Coord backRight) = section "Print Snake" $ do
         backLeft' = backLeft + V2 plus minus
     tubeMoveTo (Coord frontLeft')
 
-    -- tubeMoveTo (Coord frontLeft')
     local (\e -> e {lineWidth = step}) do
       section ("Snake " <> show i) do
         section "Front" do
@@ -208,30 +200,8 @@ printSnake (Coord frontLeft) (Coord backRight) = section "Print Snake" $ do
         section "Left" do
           tubeExtrudePoints (Coord backLeft') (Coord frontLeft')
 
--- printFilling :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
--- printFilling (Coord frontLeft) (Coord backRight) = do
---   let (V2 sizeX sizeY) = backRight - frontLeft
-
---   let count = round (sizeX / config.idealLineWidth)
---   let lineWidth = sizeX / fromIntegral count
-
---   local (\e -> e {lineWidth}) do
---     forM_ [0 .. count - 1] \i -> do
---       let di = fromIntegral i
---           p1 = frontLeft + V2 (di * lineWidth) 0
---           p2 = frontLeft + V2 (di * lineWidth) sizeY
---       tubeMoveTo (Coord p1)
---       tubeExtrudePoints (Coord p1) (Coord p2)
-
 data Phase = Hill | Valley
   deriving (Show, Eq)
-
-f pct = (acos pct / pi)
-
-f2 pct | pct < 0.5 = 0.5
-f2 pct = 0.5
-
--- (1 - pct) * 0.5
 
 printPhaseLayer :: Phase -> Int -> Int -> GCode ()
 printPhaseLayer phase hillIndex layerIndex = section ("Print Phase Layer " <> show phase <> " hillIndex = " <> show hillIndex <> " layerIndex = " <> show layerIndex) $ do
@@ -240,7 +210,6 @@ printPhaseLayer phase hillIndex layerIndex = section ("Print Phase Layer " <> sh
       pct' = case phase of
         Hill -> pct
         Valley -> 1 - pct
-  -- pct'' = (pct' * 2) - 1
 
   let frag = config.depthHill / 6
 
@@ -313,13 +282,17 @@ printValley hillIndex = section ("Print Valley " <> show hillIndex) $ do
 printFilament :: GCode ()
 printFilament = do
   raw "T0" "Select tool 0"
-  forM_ [0 .. config.countPrintedHills - 1] \i -> do
+
+  let countPrintedHills = round (config.printedDepth / config.depthHill)
+      countPrintedValleys = countPrintedHills - 1
+
+  forM_ [0 .. countPrintedHills - 1] \i -> do
     printHill i
 
   filamentChange
 
   raw "T1" "Select tool 1"
-  forM_ [0 .. config.countPrintedValleys - 1] printValley
+  forM_ [0 .. countPrintedValleys - 1] printValley
 
   ironFinishing
 
