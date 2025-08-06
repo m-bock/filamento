@@ -256,10 +256,8 @@ printPhaseLayer phase hillIndex layerIndex = section ("Print Phase Layer " <> sh
 
 printPhase :: Phase -> Int -> GCode ()
 printPhase phase hillIndex = section ("Print Phase = " <> show phase <> " hillIndex = " <> show hillIndex) $ do
-  env <- ask
-
   let offset = case phase of
-        Hill -> 0
+        Hill -> 0.5
         Valley -> 1
 
   withRetract $ moveZ 2.2
@@ -297,7 +295,6 @@ printFilament = do
 
 ironFinishing :: GCode ()
 ironFinishing = section "Iron Finishing" $ do
-  env <- ask
   let ironHeight = 0.1 + (fromIntegral config.countPrintedLayers - 1) * config.realLayerHeight
 
   raw "M106 S255" "Turn on fan"
