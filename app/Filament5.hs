@@ -304,11 +304,12 @@ ironFinishing = section "Iron Finishing" $ do
 
   let step = config.tubeCircumference / fromIntegral config.countArcSteps
 
-  forM_ [0 .. config.countArcSteps - 1] \i -> do
-    let x = 0
-        y = fromIntegral i * step
+  forM_ [-(config.idealLineWidth / 2), config.idealLineWidth / 2] \offset ->
+    forM_ [0 .. config.countArcSteps - 1] \i -> do
+      let x = offset
+          y = fromIntegral i * step
 
-    tubeMoveTo (Coord $ V2 x y)
+      tubeMoveTo (Coord $ V2 x y)
 
 sketch :: GCode ()
 sketch = initPrinter do
