@@ -430,3 +430,19 @@ readPersistentState = do
   encodeFile persistentFile v'
 
   pure v
+
+-------
+
+changeColor :: Text -> GCode ()
+changeColor = undefined
+
+purge :: GCode ()
+purge = undefined
+
+type FilamentDef = [(Text, Double)]
+
+getFilamentDef :: GCode a -> FilamentDef
+getFilamentDef = undefined
+
+printFilamentDef :: FilamentDef -> GCode ()
+printFilamentDef = undefined

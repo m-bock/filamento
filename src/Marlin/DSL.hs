@@ -36,7 +36,8 @@ data GCodeEnv = Env
 data PrintState = PrintState
   { currentLayer :: Int,
     currentPosition :: V3 Double,
-    stdgen :: StdGen
+    stdgen :: StdGen,
+    filamentExtruded :: Double
   }
   deriving (Show, Eq)
 
@@ -44,6 +45,7 @@ initPrintState :: PrintState
 initPrintState =
   PrintState
     { currentPosition = V3 145.50 94.00 1.56,
+      filamentExtruded = 0,
       stdgen = mkStdGen 0,
       currentLayer = 0
     }
@@ -103,6 +105,18 @@ updatePos (V3 mx my mz) = GCode $ do
   let (V3 x y z) = st.currentPosition
       newPos = V3 (fromMaybe x mx) (fromMaybe y my) (fromMaybe z mz)
   put $ st {currentPosition = newPos}
+
+updateExtruded :: Maybe Double -> GCode ()
+updateExtruded extruded = GCode $ do
+  st <- get
+  let newExtruded = st.filamentExtruded + fromMaybe 0 extruded
+  put $ st {filamentExtruded = newExtruded}
+
+setExtruded :: Maybe Double -> GCode ()
+setExtruded extruded = GCode $ do
+  st <- get
+  for_ extruded $ \e -> do
+    put $ st {filamentExtruded = e}
 
 -------------------------------------------------------------------------------
 
@@ -180,6 +194,7 @@ linearMove =
 instance IsGCode LinearMove where
   toGCode val = do
     updatePos (V3 val._x val._y val._z)
+    updateExtruded val._e
     gCodeFromCmd $ GLinearMove val
 
 instance HasX LinearMove where
@@ -329,7 +344,10 @@ setPosition :: SetPosition
 setPosition = SetPosition Nothing Nothing Nothing Nothing
 
 instance IsGCode SetPosition where
-  toGCode sp = gCodeFromCmd (GSetPosition sp)
+  toGCode sp = do
+    updatePos (V3 sp._x sp._y sp._z)
+    setExtruded sp._e
+    gCodeFromCmd (GSetPosition sp)
 
 instance HasX SetPosition where
   setX x' obj = obj {_x = Just x'}
