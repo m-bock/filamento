@@ -90,9 +90,9 @@ config =
     tubeCircumference = pi * tubeDiameter
     countArcSteps = 100
     arcStep = tubeCircumference / fromIntegral countArcSteps
-    countHills = 100
-    countPrintedHills = 15 -- countHills
-    countPrintedValleys = 14 -- countPrintedHills
+    countHills = 10
+    countPrintedHills = countHills
+    countPrintedValleys = countPrintedHills
     spoolDiameter = 1.65
     depthHill = tubeCircumference / fromIntegral countHills
     idealLayerHeight = 0.1
@@ -226,6 +226,13 @@ printSnake (Coord frontLeft) (Coord backRight) = section "Print Snake" $ do
 data Phase = Hill | Valley
   deriving (Show, Eq)
 
+f pct = (acos pct / pi)
+
+f2 pct | pct < 0.5 = 0.5
+f2 pct = 0.5
+
+-- (1 - pct) * 0.5
+
 printPhaseLayer :: Phase -> Int -> Int -> GCode ()
 printPhaseLayer phase hillIndex layerIndex = section ("Print Phase Layer " <> show phase <> " hillIndex = " <> show hillIndex <> " layerIndex = " <> show layerIndex) $ do
   let spoolRadius = config.spoolDiameter / 2
@@ -233,9 +240,15 @@ printPhaseLayer phase hillIndex layerIndex = section ("Print Phase Layer " <> sh
       pct' = case phase of
         Hill -> pct
         Valley -> 1 - pct
-      pct'' = (pct' * 2) - 1
+  -- pct'' = (pct' * 2) - 1
 
-      depth = (acos pct'' / pi) * config.depthHill
+  let frag = config.depthHill / 6
+
+  let rampup = 5
+
+  let fra = ((config.depthHill / 2) - rampup) / 2
+
+  let depth = 2 * fra + ((1 - (pct')) * rampup * 2)
 
       extra = case phase of
         Hill -> 0
@@ -309,6 +322,13 @@ printFilament = do
   forM_ [0 .. config.countPrintedValleys - 1] printValley
 
   ironFinishing
+
+  filamentChange
+
+  forM_ [0 .. 40] \i -> do
+    moveZ (0.1 + fromIntegral i * config.realLayerHeight)
+    withRetract $ withZHop $ moveTo (V2 100 100)
+    printSquare (V2 100 100) (V2 50 20)
 
 ironFinishing :: GCode ()
 ironFinishing = section "Iron Finishing" $ do

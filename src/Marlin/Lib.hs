@@ -198,11 +198,6 @@ printTestStripesLikeNeptune = section "Test Stripes" $ do
   raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
   updatePos (fmap Just $ V3 215.0 5.0 1.0)
 
-  playTone
-    & setFrequency 500
-    & setDuration 500
-    & toGCode
-
   withRetract $ moveTo (V2 10.0 10.0)
 
   moveZ 0.2
@@ -268,6 +263,7 @@ initPrinter inner = do
     setPosition & setXY (V2 0 0) & toGCode
 
   do
+    beep
     moveTo (V2 (-1) 0)
     pause 10
 
@@ -366,21 +362,9 @@ printPolygon n v s
 filamentChange :: GCode ()
 filamentChange = do
   section "Filament Change" $ do
-    st <- get
-
-    let prevPosition = st.currentPosition
-
-    playTone
-      & setFrequency 500
-      & setDuration 500
-      & toGCode
-
     finalPark
 
-    playTone
-      & setFrequency 500
-      & setDuration 500
-      & toGCode
+    beep
 
     raw "M0" "Pause for filament change"
 
@@ -403,6 +387,8 @@ filamentChange = do
       & setExtrude 50
       & toGCode
 
+    beep
+
     linearMove
       & setSpeed 200
       & setExtrude (-1)
@@ -413,12 +399,16 @@ filamentChange = do
       & setExtrude 1
       & toGCode
 
-    playTone
-      & setFrequency 500
-      & setDuration 500
-      & toGCode
+    beep
 
 -- moveTo3d prevPosition
+
+beep :: GCode ()
+beep = do
+  playTone
+    & setFrequency 500
+    & setDuration 500
+    & toGCode
 
 data PersistentState = PersistentState
   {count :: Int}
