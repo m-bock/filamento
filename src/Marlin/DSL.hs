@@ -217,7 +217,7 @@ gCodeFromCmd cmd = do
     GSetPosition opt -> do
       updatePos (V3 opt._x opt._y opt._z)
       setExtruded opt._e
-    M140SetBedTemperature _ -> pure ()
+    MSetBedTemperature _ -> pure ()
     MWaitForBedTemperature _ -> pure ()
     MSSetHotendTemperature _ -> pure ()
     MWaitForHotendTemperature _ -> pure ()
