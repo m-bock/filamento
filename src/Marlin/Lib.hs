@@ -261,7 +261,7 @@ heatup inner = do
   env <- ask
   section "Heatup" $ do
     gCodeFromCmd
-      $ M140SetBedTemperature
+      $ MSetBedTemperature
         gcodeDef
           { sDegrees = Just env.bedTemperature
           }
