@@ -144,41 +144,6 @@ raw extra comm = GCode $ do
 class IsGCode a where
   toGCode :: a -> GCode ()
 
-class (HasX a, HasY a) => HasXY a where
-  setXY :: V2 Double -> a -> a
-  setXY (V2 x y) obj = obj & setX x & setY y
-
-class (HasX a, HasY a, HasZ a) => HasXYZ a where
-  setXYZ :: V3 Double -> a -> a
-  setXYZ (V3 x y z) obj = obj & setX x & setY y & setZ z
-
-class HasX a where
-  setX :: Double -> a -> a
-
-class HasY a where
-  setY :: Double -> a -> a
-
-class HasZ a where
-  setZ :: Double -> a -> a
-
-class HasExtrude a where
-  setExtrude :: Double -> a -> a
-
-class HasSpeed a where
-  setSpeed :: Int -> a -> a
-
-class HasTargetTemperature a where
-  setTargetTemperature :: Int -> a -> a
-
-class HasSkipIfTrusted a where
-  setSkipIfTrusted :: Bool -> a -> a
-
-class HasFrequency a where
-  setFrequency :: Int -> a -> a
-
-class HasDuration a where
-  setDuration :: Int -> a -> a
-
 -------------------------------------------------------------------------------
 
 linearMove :: LinearMove
@@ -197,25 +162,6 @@ instance IsGCode LinearMove where
     updateExtruded val._e
     gCodeFromCmd $ GLinearMove val
 
-instance HasX LinearMove where
-  setX x' obj = obj {_x = Just x'}
-
-instance HasY LinearMove where
-  setY y' obj = obj {_y = Just y'}
-
-instance HasZ LinearMove where
-  setZ z' obj = obj {_z = Just z'}
-
-instance HasExtrude LinearMove where
-  setExtrude e' obj = obj {_e = Just e'}
-
-instance HasSpeed LinearMove where
-  setSpeed f' obj = obj {_f = Just f'}
-
-instance HasXY LinearMove
-
-instance HasXYZ LinearMove
-
 -------------------------------------------------------------------------------
 
 data Units = Millimeter | Inche
@@ -228,46 +174,34 @@ setUnits u = gCodeFromCmd $ case u of
 -------------------------------------------------------------------------------
 
 setBedTemperature :: SetBedTemperature
-setBedTemperature = SetBedTemperature {_temperature = Nothing}
+setBedTemperature = SetBedTemperature {sDegrees = Nothing}
 
 instance IsGCode SetBedTemperature where
-  toGCode = gCodeFromCmd . MSetBedTemperature
-
-instance HasTargetTemperature SetBedTemperature where
-  setTargetTemperature t obj = obj {_temperature = Just t}
+  toGCode = gCodeFromCmd . M140SetBedTemperature
 
 -------------------------------------------------------------------------------
 
 waitForBedTemperature :: WaitForBedTemperature
-waitForBedTemperature = WaitForBedTemperature {_temperature = Nothing}
+waitForBedTemperature = WaitForBedTemperature {sDegrees = Nothing}
 
 instance IsGCode WaitForBedTemperature where
   toGCode = gCodeFromCmd . MWaitForBedTemperature
 
-instance HasTargetTemperature WaitForBedTemperature where
-  setTargetTemperature t obj = obj {_temperature = Just t}
-
 -------------------------------------------------------------------------------
 
 setHotendTemperature :: SetHotendTemperature
-setHotendTemperature = SetHotendTemperature {_temperature = Nothing}
+setHotendTemperature = SetHotendTemperature {sDegrees = Nothing}
 
 instance IsGCode SetHotendTemperature where
   toGCode = gCodeFromCmd . MSSetHotendTemperature
 
-instance HasTargetTemperature SetHotendTemperature where
-  setTargetTemperature t obj = obj {_temperature = Just t}
-
 -------------------------------------------------------------------------------
 
 waitForHotendTemperature :: WaitForHotendTemperature
-waitForHotendTemperature = WaitForHotendTemperature {_temperature = Nothing}
+waitForHotendTemperature = WaitForHotendTemperature {sDegrees = Nothing}
 
 instance IsGCode WaitForHotendTemperature where
   toGCode = gCodeFromCmd . MWaitForHotendTemperature
-
-instance HasTargetTemperature WaitForHotendTemperature where
-  setTargetTemperature t obj = obj {_temperature = Just t}
 
 -------------------------------------------------------------------------------
 
@@ -283,9 +217,6 @@ instance IsGCode AutoHome where
     gCodeFromCmd $ GAutoHome val
     updatePos (fmap Just env.parkingPosition)
 
-instance HasSkipIfTrusted AutoHome where
-  setSkipIfTrusted skip obj = obj {_skipIfTrusted = skip}
-
 -------------------------------------------------------------------------------
 
 playTone :: PlayTone
@@ -293,12 +224,6 @@ playTone = PlayTone {_frequency = Nothing, _duration = Nothing}
 
 instance IsGCode PlayTone where
   toGCode = gCodeFromCmd . MPlayTone
-
-instance HasFrequency PlayTone where
-  setFrequency f obj = obj {_frequency = Just f}
-
-instance HasDuration PlayTone where
-  setDuration d obj = obj {_duration = Just d}
 
 -------------------------------------------------------------------------------
 
@@ -348,19 +273,3 @@ instance IsGCode SetPosition where
     updatePos (V3 sp._x sp._y sp._z)
     setExtruded sp._e
     gCodeFromCmd (GSetPosition sp)
-
-instance HasX SetPosition where
-  setX x' obj = obj {_x = Just x'}
-
-instance HasY SetPosition where
-  setY y' obj = obj {_y = Just y'}
-
-instance HasZ SetPosition where
-  setZ z' obj = obj {_z = Just z'}
-
-instance HasExtrude SetPosition where
-  setExtrude e' obj = obj {_e = Just e'}
-
-instance HasXY SetPosition
-
-instance HasXYZ SetPosition

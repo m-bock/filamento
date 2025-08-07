@@ -211,7 +211,13 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  setPosition & setXYZ (V3 0 0 0) & toGCode
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { _x = Just 0,
+          _y = Just 0,
+          _z = Just 0
+        }
 
   heatup homeOrResume
 
@@ -241,26 +247,34 @@ heatup :: GCode a -> GCode a
 heatup inner = do
   env <- ask
   section "Heatup" $ do
-    setBedTemperature
-      & setTargetTemperature env.bedTemperature
-      & toGCode
+    gCodeFromCmd
+      $ M140SetBedTemperature
+        gcodeDef
+          { sDegrees = Just env.bedTemperature
+          }
 
-    setHotendTemperature
-      & setTargetTemperature env.hotendTemperature
-      & toGCode
+    gCodeFromCmd
+      $ MSSetHotendTemperature
+        gcodeDef
+          { sDegrees = Just env.hotendTemperature
+          }
 
   ret <-
     section "Prepare while waiting" $ do
       inner
 
   section "Wait for temperatures" $ do
-    waitForBedTemperature
-      & setTargetTemperature env.bedTemperature
-      & toGCode
+    gCodeFromCmd
+      $ MWaitForBedTemperature
+        gcodeDef
+          { sDegrees = Just env.bedTemperature
+          }
 
-    waitForHotendTemperature
-      & setTargetTemperature env.hotendTemperature
-      & toGCode
+    gCodeFromCmd
+      $ MWaitForHotendTemperature
+        gcodeDef
+          { sDegrees = Just env.hotendTemperature
+          }
 
   pure ret
 
@@ -329,10 +343,12 @@ filamentChange = do
 
 beep :: GCode ()
 beep = do
-  playTone
-    & setFrequency 500
-    & setDuration 500
-    & toGCode
+  gCodeFromCmd
+    $ MPlayTone
+      gcodeDef
+        { _frequency = Just 1000,
+          _duration = Just 500
+        }
 
 data PersistentState = PersistentState
   {count :: Int}

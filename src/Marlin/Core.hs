@@ -18,22 +18,22 @@ data LinearMove = LinearMove
   deriving (Show, Eq)
 
 data SetBedTemperature = SetBedTemperature
-  { _temperature :: Maybe Int
+  { sDegrees :: Maybe Int
   }
   deriving (Show, Eq)
 
 data WaitForBedTemperature = WaitForBedTemperature
-  { _temperature :: Maybe Int
+  { sDegrees :: Maybe Int
   }
   deriving (Show, Eq)
 
 data SetHotendTemperature = SetHotendTemperature
-  { _temperature :: Maybe Int
+  { sDegrees :: Maybe Int
   }
   deriving (Show, Eq)
 
 data WaitForHotendTemperature = WaitForHotendTemperature
-  { _temperature :: Maybe Int
+  { sDegrees :: Maybe Int
   }
   deriving (Show, Eq)
 
@@ -62,7 +62,7 @@ data GCodeCmd
   | GLinearMove LinearMove
   | GAutoHome AutoHome
   | GSetPosition SetPosition
-  | MSetBedTemperature SetBedTemperature
+  | M140SetBedTemperature SetBedTemperature
   | MWaitForBedTemperature WaitForBedTemperature
   | MSSetHotendTemperature SetHotendTemperature
   | MWaitForHotendTemperature WaitForHotendTemperature
@@ -107,7 +107,7 @@ gcodeToComment cmd =
         <> maybe "" (\v -> " Y" <> show v) y
         <> maybe "" (\v -> " Z" <> show v) z
         <> maybe "" (\v -> " E" <> show v) e
-    MSetBedTemperature (SetBedTemperature t) ->
+    M140SetBedTemperature (SetBedTemperature t) ->
       "Set bed temperature to "
         <> maybe "" (\v -> "S" <> show v) t
     MWaitForBedTemperature (WaitForBedTemperature t) ->
@@ -180,7 +180,7 @@ gcodeToRaw cmd =
                   ('E',) . ArgDouble <$> e
                 ]
         }
-    MSetBedTemperature (SetBedTemperature t) ->
+    M140SetBedTemperature (SetBedTemperature t) ->
       RawGCodeCmd
         { cmdId = 'M',
           cmdNum = 140,
@@ -280,25 +280,25 @@ class GCodeCmdOptsDefault a where
 instance GCodeCmdOptsDefault SetBedTemperature where
   gcodeDef =
     SetBedTemperature
-      { _temperature = Nothing
+      { sDegrees = Nothing
       }
 
 instance GCodeCmdOptsDefault WaitForBedTemperature where
   gcodeDef =
     WaitForBedTemperature
-      { _temperature = Nothing
+      { sDegrees = Nothing
       }
 
 instance GCodeCmdOptsDefault SetHotendTemperature where
   gcodeDef =
     SetHotendTemperature
-      { _temperature = Nothing
+      { sDegrees = Nothing
       }
 
 instance GCodeCmdOptsDefault WaitForHotendTemperature where
   gcodeDef =
     WaitForHotendTemperature
-      { _temperature = Nothing
+      { sDegrees = Nothing
       }
 
 instance GCodeCmdOptsDefault AutoHome where
