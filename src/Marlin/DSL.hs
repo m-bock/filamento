@@ -197,7 +197,7 @@ motorsOff :: GCode ()
 motorsOff = gCodeFromCmd MMotorsOff
 
 pause :: Int -> GCode ()
-pause seconds = gCodeFromCmd (GPause seconds)
+pause seconds = gCodeFromCmd $ GDwell (gcodeDef {seconds = Just seconds})
 
 -------------------------------------------------------------------------------
 --- Utils
@@ -228,7 +228,7 @@ gCodeFromCmd cmd = do
     MSetFanOff -> pure ()
     MMotorsOff -> pure ()
     MPlayTone _ -> pure ()
-    GPause _ -> pure ()
+    GDwell _ -> pure ()
 
   GCode
     $ tell

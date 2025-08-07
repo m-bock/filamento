@@ -1,12 +1,32 @@
 {-# LANGUAGE TupleSections #-}
 
-module Marlin.Core where
+module Marlin.Core
+  ( GCodeCmd (..),
+    GCodeLine (..),
+    gcodeLineToRaw,
+    gcodeToRaw,
+    gcodeToComment,
+    GCodeCmdOptsDefault (..),
+    LinearMove (..),
+    SetBedTemperature (..),
+    WaitForBedTemperature (..),
+    SetHotendTemperature (..),
+    WaitForHotendTemperature (..),
+    AutoHome (..),
+    SetPosition (..),
+    PlayTone (..),
+    Pause (..),
+    Dwell (..),
+  )
+where
 
 -- See: https://marlinfw.org/meta/gcode/
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import Marlin.Syntax
 import Relude
+import Text.Printf (printf)
 
 data LinearMove = LinearMove
   { x :: Maybe Double,
@@ -15,32 +35,32 @@ data LinearMove = LinearMove
     extrude :: Maybe Double,
     feedrate :: Maybe Int
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 data SetBedTemperature = SetBedTemperature
   { sDegrees :: Maybe Int
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 data WaitForBedTemperature = WaitForBedTemperature
   { sDegrees :: Maybe Int
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 data SetHotendTemperature = SetHotendTemperature
   { sDegrees :: Maybe Int
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 data WaitForHotendTemperature = WaitForHotendTemperature
   { sDegrees :: Maybe Int
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 data AutoHome = AutoHome
   { _skipIfTrusted :: Bool
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 data SetPosition = SetPosition
   { _x :: Maybe Double,
@@ -48,13 +68,23 @@ data SetPosition = SetPosition
     _z :: Maybe Double,
     _e :: Maybe Double
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 data PlayTone = PlayTone
   { _frequency :: Maybe Int,
     _duration :: Maybe Int
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+data Pause = Pause
+  { _seconds :: Maybe Int
+  }
+  deriving (Show, Eq, Generic)
+
+data Dwell = Dwell
+  { seconds :: Maybe Int
+  }
+  deriving (Show, Eq, Generic)
 
 data GCodeCmd
   = GMillimeterUnits
@@ -62,7 +92,7 @@ data GCodeCmd
   | GLinearMove LinearMove
   | GAutoHome AutoHome
   | GSetPosition SetPosition
-  | M140SetBedTemperature SetBedTemperature
+  | MSetBedTemperature SetBedTemperature
   | MWaitForBedTemperature WaitForBedTemperature
   | MSSetHotendTemperature SetHotendTemperature
   | MWaitForHotendTemperature WaitForHotendTemperature
@@ -73,8 +103,8 @@ data GCodeCmd
   | MSetFanOff
   | MMotorsOff
   | MPlayTone PlayTone
-  | GPause Int -- G4 with seconds parameter
-  deriving (Show, Eq)
+  | GDwell Dwell
+  deriving (Show, Eq, Generic)
 
 data GCodeLine = GCodeLine
   { cmd :: Maybe GCodeCmd,
@@ -95,19 +125,19 @@ gcodeToComment cmd =
     GInchUnits -> "Set units to inches"
     GLinearMove (LinearMove x y z e f) ->
       "Linear move to"
-        <> maybe "" (\v -> " X" <> show v) x
-        <> maybe "" (\v -> " Y" <> show v) y
-        <> maybe "" (\v -> " Z" <> show v) z
-        <> maybe "" (\v -> " E" <> show v) e
+        <> maybe "" (\v -> " X" <> printNum v) x
+        <> maybe "" (\v -> " Y" <> printNum v) y
+        <> maybe "" (\v -> " Z" <> printNum v) z
+        <> maybe "" (\v -> " E" <> printNum v) e
         <> maybe "" (\v -> " F" <> show v) f
     GAutoHome _ -> "Auto home axes"
     GSetPosition (SetPosition x y z e) ->
       "Set position to"
         <> maybe "" (\v -> " X" <> show v) x
-        <> maybe "" (\v -> " Y" <> show v) y
-        <> maybe "" (\v -> " Z" <> show v) z
-        <> maybe "" (\v -> " E" <> show v) e
-    M140SetBedTemperature (SetBedTemperature t) ->
+        <> maybe "" (\v -> " Y" <> printNum v) y
+        <> maybe "" (\v -> " Z" <> printNum v) z
+        <> maybe "" (\v -> " E" <> printNum v) e
+    MSetBedTemperature (SetBedTemperature t) ->
       "Set bed temperature to "
         <> maybe "" (\v -> "S" <> show v) t
     MWaitForBedTemperature (WaitForBedTemperature t) ->
@@ -126,17 +156,20 @@ gcodeToComment cmd =
     MSetFanOff -> "Turn fan off"
     MMotorsOff -> "Turn all motors off"
     MPlayTone (PlayTone f d) -> "Play tone at frequency " <> show f <> " for " <> show d <> " milliseconds"
-    GPause s -> "Pause for " <> show s <> " seconds"
+    GDwell (Dwell s) -> "Dwell for " <> show s <> " seconds"
+
+printNum :: Double -> Text
+printNum = T.pack . printf "%.5f"
 
 gcodeToRaw :: GCodeCmd -> RawGCodeCmd
 gcodeToRaw cmd =
   case cmd of
     GMillimeterUnits ->
-      RawGCodeCmd 'G' 21 Map.empty
+      RawGCodeCmd "G21" Map.empty
     GInchUnits ->
-      RawGCodeCmd 'G' 20 Map.empty
+      RawGCodeCmd "G20" Map.empty
     GLinearMove (LinearMove x y z e f) ->
-      RawGCodeCmd 'G' 1
+      RawGCodeCmd "G1"
         $ Map.fromList
         $ catMaybes
           [ ('X',) . ArgDouble <$> x,
@@ -146,9 +179,9 @@ gcodeToRaw cmd =
             ('F',) . ArgInt <$> f
           ]
     GAutoHome (AutoHome _skipIfTrusted) ->
-      RawGCodeCmd 'G' 28 $ Map.fromList []
+      RawGCodeCmd "G28" $ Map.fromList []
     GSetPosition (SetPosition x y z e) ->
-      RawGCodeCmd 'G' 92
+      RawGCodeCmd "G92"
         $ Map.fromList
         $ catMaybes
           [ ('X',) . ArgDouble <$> x,
@@ -156,91 +189,68 @@ gcodeToRaw cmd =
             ('Z',) . ArgDouble <$> z,
             ('E',) . ArgDouble <$> e
           ]
-    M140SetBedTemperature (SetBedTemperature t) ->
-      RawGCodeCmd 'M' 140 $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
+    MSetBedTemperature (SetBedTemperature t) ->
+      RawGCodeCmd "M140" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MWaitForBedTemperature (WaitForBedTemperature t) ->
-      RawGCodeCmd 'M' 190 $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
+      RawGCodeCmd "M190" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MSSetHotendTemperature (SetHotendTemperature t) ->
-      RawGCodeCmd 'M' 104 $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
+      RawGCodeCmd "M104" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MWaitForHotendTemperature (WaitForHotendTemperature t) ->
-      RawGCodeCmd 'M' 109 $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
+      RawGCodeCmd "M109" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MSetExtruderRelative ->
-      RawGCodeCmd 'M' 83 Map.empty
+      RawGCodeCmd "M83" Map.empty
     MSetExtruderAbsolute ->
-      RawGCodeCmd 'M' 82 Map.empty
+      RawGCodeCmd "M82" Map.empty
     MSetHotendOff ->
-      RawGCodeCmd 'M' 104 $ Map.fromList [('S', ArgInt 0)]
+      RawGCodeCmd "M104" $ Map.fromList [('S', ArgInt 0)]
     MSetBedOff ->
-      RawGCodeCmd 'M' 140 $ Map.fromList [('S', ArgInt 0)]
+      RawGCodeCmd "M140" $ Map.fromList [('S', ArgInt 0)]
     MSetFanOff ->
-      RawGCodeCmd 'M' 107 Map.empty
+      RawGCodeCmd "M107" Map.empty
     MMotorsOff ->
-      RawGCodeCmd 'M' 84 Map.empty
+      RawGCodeCmd "M84" Map.empty
     MPlayTone (PlayTone f d) ->
-      RawGCodeCmd 'M' 300
+      RawGCodeCmd "M300"
         $ Map.fromList
         $ catMaybes
           [ ('F',) . ArgInt <$> f,
             ('D',) . ArgInt <$> d
           ]
-    GPause s ->
-      RawGCodeCmd 'G' 4 $ Map.fromList [('S', ArgInt s)]
+    GDwell (Dwell s) ->
+      RawGCodeCmd "G4" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> s]
 
 class GCodeCmdOptsDefault a where
   gcodeDef :: a
 
 instance GCodeCmdOptsDefault SetBedTemperature where
-  gcodeDef =
-    SetBedTemperature
-      { sDegrees = Nothing
-      }
+  gcodeDef = SetBedTemperature Nothing
 
 instance GCodeCmdOptsDefault WaitForBedTemperature where
-  gcodeDef =
-    WaitForBedTemperature
-      { sDegrees = Nothing
-      }
+  gcodeDef = WaitForBedTemperature Nothing
 
 instance GCodeCmdOptsDefault SetHotendTemperature where
   gcodeDef =
-    SetHotendTemperature
-      { sDegrees = Nothing
-      }
+    SetHotendTemperature Nothing
 
 instance GCodeCmdOptsDefault WaitForHotendTemperature where
   gcodeDef =
-    WaitForHotendTemperature
-      { sDegrees = Nothing
-      }
+    WaitForHotendTemperature Nothing
 
 instance GCodeCmdOptsDefault AutoHome where
   gcodeDef =
-    AutoHome
-      { _skipIfTrusted = False
-      }
+    AutoHome False
 
 instance GCodeCmdOptsDefault SetPosition where
-  gcodeDef =
-    SetPosition
-      { _x = Nothing,
-        _y = Nothing,
-        _z = Nothing,
-        _e = Nothing
-      }
+  gcodeDef = SetPosition Nothing Nothing Nothing Nothing
 
 instance GCodeCmdOptsDefault PlayTone where
-  gcodeDef =
-    PlayTone
-      { _frequency = Nothing,
-        _duration = Nothing
-      }
+  gcodeDef = PlayTone Nothing Nothing
 
 instance GCodeCmdOptsDefault LinearMove where
-  gcodeDef =
-    LinearMove
-      { x = Nothing,
-        y = Nothing,
-        z = Nothing,
-        extrude = Nothing,
-        feedrate = Nothing
-      }
+  gcodeDef = LinearMove Nothing Nothing Nothing Nothing Nothing
+
+instance GCodeCmdOptsDefault Pause where
+  gcodeDef = Pause Nothing
+
+instance GCodeCmdOptsDefault Dwell where
+  gcodeDef = Dwell Nothing

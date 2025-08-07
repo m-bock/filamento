@@ -12,8 +12,7 @@ import Text.Printf (printf)
 
 -- | A single G‑code or M‑code command.
 data RawGCodeCmd = RawGCodeCmd
-  { cmdId :: Char,
-    cmdNum :: Int,
+  { cmd :: Text,
     cmdArgs :: Map Char ArgValue
   }
   deriving (Show, Eq, Generic)
@@ -40,14 +39,13 @@ instance ToText ArgValue where
   toText (ArgFlag False) = "0"
 
 instance ToText RawGCodeCmd where
-  toText (RawGCodeCmd cid num args) =
-    let headText = T.singleton cid <> T.pack (show num)
-        argsText =
+  toText (RawGCodeCmd cmd args) =
+    let argsText =
           args
             & Map.toList
             & fmap (\(k, v) -> " " <> T.singleton k <> toText v)
             & T.concat
-     in headText <> argsText
+     in cmd <> argsText
 
 instance ToText [RawGCodeLine] where
   toText lines = unlines zipped
