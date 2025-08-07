@@ -1,7 +1,7 @@
 module Marlin.Lib
   ( extrudeTo,
     extrude,
-    moveTo,
+    moveXY,
     moveZ,
     nextLayer,
     getSpeed,
@@ -56,8 +56,8 @@ extrude s = do
           feedrate = Just extrudeSpeed
         }
 
-moveTo :: V2 Double -> GCode ()
-moveTo (V2 x y) = do
+moveXY :: V2 Double -> GCode ()
+moveXY (V2 x y) = do
   speed <- getSpeed
 
   gCodeFromCmd
@@ -140,7 +140,7 @@ withZHop inner = do
 printPolyLine :: [V2 Double] -> GCode ()
 printPolyLine [] = pure ()
 printPolyLine (v : vs) = do
-  moveTo v
+  moveXY v
   extrudePoints vs
 
 extrudePoints :: [V2 Double] -> GCode ()
@@ -174,7 +174,7 @@ printTestStripes = section "Test Stripes" $ do
   --   extrude (-1)
 
   section "Thin test stripe" do
-    moveTo (V2 10.0 10.0)
+    moveXY (V2 10.0 10.0)
     extrude 5
     extrudeTo (V2 215.0 10.0)
     extrude (-1)
@@ -202,7 +202,7 @@ finalPark = do
   extrude (-3)
 
   moveZ parkZ
-  moveTo (V2 parkX parkY)
+  moveXY (V2 parkX parkY)
 
 homeOrResume :: GCode ()
 homeOrResume = do
@@ -235,7 +235,7 @@ initPrinter inner = do
   heatup homeOrResume
 
   do
-    moveTo env.transpose
+    moveXY env.transpose
     gCodeFromCmd
       $ GSetPosition
         gcodeDef
@@ -245,7 +245,7 @@ initPrinter inner = do
 
   do
     beep
-    moveTo (V2 (-1) 0)
+    moveXY (V2 (-1) 0)
     pause 10
 
   printTestStripes
