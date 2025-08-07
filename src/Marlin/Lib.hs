@@ -40,10 +40,10 @@ extrudeTo v@(V2 x y) = do
   gCodeFromCmd
     $ GLinearMove
       gcodeDef
-        { _x = Just x,
-          _y = Just y,
-          _e = Just extrudeLength,
-          _f = Just extrudeSpeed
+        { x = Just x,
+          y = Just y,
+          extrude = Just extrudeLength,
+          feedrate = Just extrudeSpeed
         }
 
 extrude :: Double -> GCode ()
@@ -52,8 +52,8 @@ extrude s = do
   gCodeFromCmd
     $ GLinearMove
       gcodeDef
-        { _e = Just s,
-          _f = Just extrudeSpeed
+        { extrude = Just s,
+          feedrate = Just extrudeSpeed
         }
 
 moveTo :: V2 Double -> GCode ()
@@ -63,9 +63,9 @@ moveTo (V2 x y) = do
   gCodeFromCmd
     $ GLinearMove
       gcodeDef
-        { _x = Just x,
-          _y = Just y,
-          _f = Just speed
+        { x = Just x,
+          y = Just y,
+          feedrate = Just speed
         }
 
 moveZ :: Double -> GCode ()
@@ -75,8 +75,8 @@ moveZ z = do
   gCodeFromCmd
     $ GLinearMove
       gcodeDef
-        { _z = Just z,
-          _f = Just speed
+        { z = Just z,
+          feedrate = Just speed
         }
 
 nextLayer :: GCode ()
@@ -112,8 +112,8 @@ withRetract inner = do
   gCodeFromCmd
     $ GLinearMove
       gcodeDef
-        { _e = Just (-env.retractLength),
-          _f = Just env.retractSpeed
+        { extrude = Just (-env.retractLength),
+          feedrate = Just env.retractSpeed
         }
 
   ret <- inner
@@ -121,8 +121,8 @@ withRetract inner = do
   gCodeFromCmd
     $ GLinearMove
       gcodeDef
-        { _e = Just env.retractLength,
-          _f = Just env.retractSpeed
+        { extrude = Just env.retractLength,
+          feedrate = Just env.retractSpeed
         }
 
   pure ret
@@ -165,20 +165,33 @@ getLayerCount = do
 
 printTestStripes :: GCode ()
 printTestStripes = section "Test Stripes" $ do
-  raw "G92 E0" "Reset extruder"
-  raw "G1 Z0.2 F1200" "Move to first layer height"
-  raw "G1 X10 Y5 F3000" "Move to start position"
-  raw "G1 E5 F500" "Prime nozzle"
-  raw "G1 X215 Y5 E15 F600" "Draw a long test stripe"
-  raw "G1 E-1 F300" "Retract a bit"
-  raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
-  updatePos (fmap Just $ V3 215.0 5.0 1.0)
-
-  withRetract $ moveTo (V2 10.0 10.0)
-
   moveZ 0.2
 
-  printPolyLine [V2 10.0 10.0, V2 215.0 10.0]
+  -- section "Thick test stripe" do
+  --   moveTo (V2 10.0 5.0)
+  --   extrude 5
+  --   extrudeTo (V2 215.0 5.0)
+  --   extrude (-1)
+
+  section "Thin test stripe" do
+    moveTo (V2 10.0 10.0)
+    extrude 5
+    extrudeTo (V2 215.0 10.0)
+    extrude (-1)
+
+-- raw "G1 Z0.2 F1200" "Move to first layer height"
+-- raw "G1 X10 Y5 F3000" "Move to start position"
+-- raw "G1 E5 F500" "Prime nozzle"
+-- raw "G1 X215 Y5 E15 F600" "Draw a long test stripe"
+-- raw "G1 E-1 F300" "Retract a bit"
+-- raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
+-- updatePos (fmap Just $ V3 215.0 5.0 1.0)
+
+-- withRetract $ moveTo (V2 10.0 10.0)
+
+-- moveZ 0.2
+
+-- printPolyLine [V2 10.0 10.0, V2 215.0 10.0]
 
 finalPark :: GCode ()
 finalPark = do
@@ -214,9 +227,9 @@ initPrinter inner = do
   gCodeFromCmd
     $ GLinearMove
       gcodeDef
-        { _x = Just 0,
-          _y = Just 0,
-          _z = Just 0
+        { x = Just 0,
+          y = Just 0,
+          z = Just 0
         }
 
   heatup homeOrResume

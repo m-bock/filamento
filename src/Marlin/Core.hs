@@ -9,11 +9,11 @@ import Marlin.Syntax
 import Relude
 
 data LinearMove = LinearMove
-  { _x :: Maybe Double,
-    _y :: Maybe Double,
-    _z :: Maybe Double,
-    _e :: Maybe Double,
-    _f :: Maybe Int
+  { x :: Maybe Double,
+    y :: Maybe Double,
+    z :: Maybe Double,
+    extrude :: Maybe Double,
+    feedrate :: Maybe Int
   }
   deriving (Show, Eq)
 
@@ -132,147 +132,59 @@ gcodeToRaw :: GCodeCmd -> RawGCodeCmd
 gcodeToRaw cmd =
   case cmd of
     GMillimeterUnits ->
-      RawGCodeCmd
-        { cmdId = 'G',
-          cmdNum = 21,
-          cmdArgs = Map.empty
-        }
+      RawGCodeCmd 'G' 21 Map.empty
     GInchUnits ->
-      RawGCodeCmd
-        { cmdId = 'G',
-          cmdNum = 20,
-          cmdArgs = Map.empty
-        }
+      RawGCodeCmd 'G' 20 Map.empty
     GLinearMove (LinearMove x y z e f) ->
-      RawGCodeCmd
-        { cmdId = 'G',
-          cmdNum = 1,
-          cmdArgs =
-            Map.fromList
-              $ catMaybes
-                [ ('X',) . ArgDouble <$> x,
-                  ('Y',) . ArgDouble <$> y,
-                  ('Z',) . ArgDouble <$> z,
-                  ('E',) . ArgDouble <$> e,
-                  ('F',) . ArgInt <$> f
-                ]
-        }
+      RawGCodeCmd 'G' 1
+        $ Map.fromList
+        $ catMaybes
+          [ ('X',) . ArgDouble <$> x,
+            ('Y',) . ArgDouble <$> y,
+            ('Z',) . ArgDouble <$> z,
+            ('E',) . ArgDouble <$> e,
+            ('F',) . ArgInt <$> f
+          ]
     GAutoHome (AutoHome _skipIfTrusted) ->
-      RawGCodeCmd
-        { cmdId = 'G',
-          cmdNum = 28,
-          cmdArgs =
-            Map.fromList
-              []
-        }
-    -- ('O', ArgFlag _skipIfTrusted)
-
+      RawGCodeCmd 'G' 28 $ Map.fromList []
     GSetPosition (SetPosition x y z e) ->
-      RawGCodeCmd
-        { cmdId = 'G',
-          cmdNum = 92,
-          cmdArgs =
-            Map.fromList
-              $ catMaybes
-                [ ('X',) . ArgDouble <$> x,
-                  ('Y',) . ArgDouble <$> y,
-                  ('Z',) . ArgDouble <$> z,
-                  ('E',) . ArgDouble <$> e
-                ]
-        }
+      RawGCodeCmd 'G' 92
+        $ Map.fromList
+        $ catMaybes
+          [ ('X',) . ArgDouble <$> x,
+            ('Y',) . ArgDouble <$> y,
+            ('Z',) . ArgDouble <$> z,
+            ('E',) . ArgDouble <$> e
+          ]
     M140SetBedTemperature (SetBedTemperature t) ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 140,
-          cmdArgs =
-            Map.fromList
-              $ catMaybes
-                [ ('S',) . ArgInt <$> t
-                ]
-        }
+      RawGCodeCmd 'M' 140 $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MWaitForBedTemperature (WaitForBedTemperature t) ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 190,
-          cmdArgs =
-            Map.fromList
-              $ catMaybes
-                [ ('S',) . ArgInt <$> t
-                ]
-        }
+      RawGCodeCmd 'M' 190 $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MSSetHotendTemperature (SetHotendTemperature t) ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 104,
-          cmdArgs =
-            Map.fromList
-              $ catMaybes
-                [ ('S',) . ArgInt <$> t
-                ]
-        }
+      RawGCodeCmd 'M' 104 $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MWaitForHotendTemperature (WaitForHotendTemperature t) ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 109,
-          cmdArgs =
-            Map.fromList
-              $ catMaybes
-                [ ('S',) . ArgInt <$> t
-                ]
-        }
+      RawGCodeCmd 'M' 109 $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MSetExtruderRelative ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 83,
-          cmdArgs = Map.empty
-        }
+      RawGCodeCmd 'M' 83 Map.empty
     MSetExtruderAbsolute ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 82,
-          cmdArgs = Map.empty
-        }
+      RawGCodeCmd 'M' 82 Map.empty
     MSetHotendOff ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 104,
-          cmdArgs = Map.fromList [('S', ArgInt 0)]
-        }
+      RawGCodeCmd 'M' 104 $ Map.fromList [('S', ArgInt 0)]
     MSetBedOff ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 140,
-          cmdArgs = Map.fromList [('S', ArgInt 0)]
-        }
+      RawGCodeCmd 'M' 140 $ Map.fromList [('S', ArgInt 0)]
     MSetFanOff ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 107,
-          cmdArgs = Map.empty
-        }
+      RawGCodeCmd 'M' 107 Map.empty
     MMotorsOff ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 84,
-          cmdArgs = Map.empty
-        }
+      RawGCodeCmd 'M' 84 Map.empty
     MPlayTone (PlayTone f d) ->
-      RawGCodeCmd
-        { cmdId = 'M',
-          cmdNum = 300,
-          cmdArgs =
-            Map.fromList
-              $ catMaybes
-                [ ('F',) . ArgInt <$> f,
-                  ('D',) . ArgInt <$> d
-                ]
-        }
+      RawGCodeCmd 'M' 300
+        $ Map.fromList
+        $ catMaybes
+          [ ('F',) . ArgInt <$> f,
+            ('D',) . ArgInt <$> d
+          ]
     GPause s ->
-      RawGCodeCmd
-        { cmdId = 'G',
-          cmdNum = 4,
-          cmdArgs = Map.fromList [('S', ArgInt s)]
-        }
+      RawGCodeCmd 'G' 4 $ Map.fromList [('S', ArgInt s)]
 
 class GCodeCmdOptsDefault a where
   gcodeDef :: a
@@ -326,9 +238,9 @@ instance GCodeCmdOptsDefault PlayTone where
 instance GCodeCmdOptsDefault LinearMove where
   gcodeDef =
     LinearMove
-      { _x = Nothing,
-        _y = Nothing,
-        _z = Nothing,
-        _e = Nothing,
-        _f = Nothing
+      { x = Nothing,
+        y = Nothing,
+        z = Nothing,
+        extrude = Nothing,
+        feedrate = Nothing
       }

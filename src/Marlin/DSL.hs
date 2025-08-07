@@ -1,6 +1,29 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Marlin.DSL where
+module Marlin.DSL
+  ( gCodeFromCmd,
+    GCode,
+    GCodeEnv (..),
+    PrintState (..),
+    initPrintState,
+    defaultGCodeEnv,
+    section,
+    newline,
+    comment,
+    raw,
+    rand,
+    setUnits,
+    Units (..),
+    autoHome,
+    setExtruderRelative,
+    setExtruderAbsolute,
+    setHotendOff,
+    setBedOff,
+    setFanOff,
+    motorsOff,
+    pause,
+  )
+where
 
 import Control.Monad.Writer
 import Linear (V2 (..), V3 (..))
@@ -141,29 +164,6 @@ raw extra comm = GCode $ do
 
 -------------------------------------------------------------------------------
 
-class IsGCode a where
-  toGCode :: a -> GCode ()
-
--------------------------------------------------------------------------------
-
-linearMove :: LinearMove
-linearMove =
-  LinearMove
-    { _x = Nothing,
-      _y = Nothing,
-      _z = Nothing,
-      _e = Nothing,
-      _f = Nothing
-    }
-
-instance IsGCode LinearMove where
-  toGCode val = do
-    updatePos (V3 val._x val._y val._z)
-    updateExtruded val._e
-    gCodeFromCmd $ GLinearMove val
-
--------------------------------------------------------------------------------
-
 data Units = Millimeter | Inche
 
 setUnits :: Units -> GCode ()
@@ -173,57 +173,8 @@ setUnits u = gCodeFromCmd $ case u of
 
 -------------------------------------------------------------------------------
 
-setBedTemperature :: SetBedTemperature
-setBedTemperature = SetBedTemperature {sDegrees = Nothing}
-
-instance IsGCode SetBedTemperature where
-  toGCode = gCodeFromCmd . M140SetBedTemperature
-
--------------------------------------------------------------------------------
-
-waitForBedTemperature :: WaitForBedTemperature
-waitForBedTemperature = WaitForBedTemperature {sDegrees = Nothing}
-
-instance IsGCode WaitForBedTemperature where
-  toGCode = gCodeFromCmd . MWaitForBedTemperature
-
--------------------------------------------------------------------------------
-
-setHotendTemperature :: SetHotendTemperature
-setHotendTemperature = SetHotendTemperature {sDegrees = Nothing}
-
-instance IsGCode SetHotendTemperature where
-  toGCode = gCodeFromCmd . MSSetHotendTemperature
-
--------------------------------------------------------------------------------
-
-waitForHotendTemperature :: WaitForHotendTemperature
-waitForHotendTemperature = WaitForHotendTemperature {sDegrees = Nothing}
-
-instance IsGCode WaitForHotendTemperature where
-  toGCode = gCodeFromCmd . MWaitForHotendTemperature
-
--------------------------------------------------------------------------------
-
-autoHome :: AutoHome
-autoHome = AutoHome {_skipIfTrusted = False}
-
-autoHome_ :: GCode ()
-autoHome_ = toGCode autoHome
-
-instance IsGCode AutoHome where
-  toGCode val = do
-    env <- ask
-    gCodeFromCmd $ GAutoHome val
-    updatePos (fmap Just env.parkingPosition)
-
--------------------------------------------------------------------------------
-
-playTone :: PlayTone
-playTone = PlayTone {_frequency = Nothing, _duration = Nothing}
-
-instance IsGCode PlayTone where
-  toGCode = gCodeFromCmd . MPlayTone
+autoHome :: GCode ()
+autoHome = gCodeFromCmd $ GAutoHome gcodeDef {_skipIfTrusted = False}
 
 -------------------------------------------------------------------------------
 
@@ -253,23 +204,37 @@ pause seconds = gCodeFromCmd (GPause seconds)
 -------------------------------------------------------------------------------
 
 gCodeFromCmd :: GCodeCmd -> GCode ()
-gCodeFromCmd cmd =
+gCodeFromCmd cmd = do
+  case cmd of
+    GMillimeterUnits -> pure ()
+    GInchUnits -> pure ()
+    GLinearMove opt -> do
+      updatePos (V3 opt.x opt.y opt.z)
+      updateExtruded opt.extrude
+    GAutoHome _ -> do
+      env <- ask
+      updatePos (fmap Just env.autoHomePosition)
+    GSetPosition opt -> do
+      updatePos (V3 opt._x opt._y opt._z)
+      setExtruded opt._e
+    M140SetBedTemperature _ -> pure ()
+    MWaitForBedTemperature _ -> pure ()
+    MSSetHotendTemperature _ -> pure ()
+    MWaitForHotendTemperature _ -> pure ()
+    MSetExtruderRelative -> pure ()
+    MSetExtruderAbsolute -> pure ()
+    MSetHotendOff -> pure ()
+    MSetBedOff -> pure ()
+    MSetFanOff -> pure ()
+    MMotorsOff -> pure ()
+    MPlayTone _ -> pure ()
+    GPause _ -> pure ()
+
   GCode
     $ tell
     $ pure
     $ GCodeLine
-      { cmd = (Just cmd),
+      { cmd = Just cmd,
         rawExtra = "",
-        comment = (Just (gcodeToComment cmd))
+        comment = Just (gcodeToComment cmd)
       }
-
--------------------------------------------------------------------------------
-
-setPosition :: SetPosition
-setPosition = SetPosition Nothing Nothing Nothing Nothing
-
-instance IsGCode SetPosition where
-  toGCode sp = do
-    updatePos (V3 sp._x sp._y sp._z)
-    setExtruded sp._e
-    gCodeFromCmd (GSetPosition sp)

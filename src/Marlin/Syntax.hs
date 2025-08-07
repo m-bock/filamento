@@ -1,4 +1,9 @@
-module Marlin.Syntax where
+module Marlin.Syntax
+  ( RawGCodeCmd (..),
+    ArgValue (..),
+    RawGCodeLine (..),
+  )
+where
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
