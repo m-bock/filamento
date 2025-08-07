@@ -38,46 +38,46 @@ data LinearMove = LinearMove
   deriving (Show, Eq, Generic)
 
 data SetBedTemperature = SetBedTemperature
-  { sDegrees :: Maybe Int
+  { degrees :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
 data WaitForBedTemperature = WaitForBedTemperature
-  { sDegrees :: Maybe Int
+  { degrees :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
 data SetHotendTemperature = SetHotendTemperature
-  { sDegrees :: Maybe Int
+  { degrees :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
 data WaitForHotendTemperature = WaitForHotendTemperature
-  { sDegrees :: Maybe Int
+  { degrees :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
 data AutoHome = AutoHome
-  { _skipIfTrusted :: Bool
+  { skipIfTrusted :: Bool
   }
   deriving (Show, Eq, Generic)
 
 data SetPosition = SetPosition
-  { _x :: Maybe Double,
-    _y :: Maybe Double,
-    _z :: Maybe Double,
-    _e :: Maybe Double
+  { x :: Maybe Double,
+    y :: Maybe Double,
+    z :: Maybe Double,
+    extrude :: Maybe Double
   }
   deriving (Show, Eq, Generic)
 
 data PlayTone = PlayTone
-  { _frequency :: Maybe Int,
-    _duration :: Maybe Int
+  { frequency :: Maybe Int,
+    milliseconds :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
 data Pause = Pause
-  { _seconds :: Maybe Int
+  { seconds :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 

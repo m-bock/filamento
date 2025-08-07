@@ -239,8 +239,8 @@ initPrinter inner = do
     gCodeFromCmd
       $ GSetPosition
         gcodeDef
-          { _x = Just 0,
-            _y = Just 0
+          { x = Just 0,
+            y = Just 0
           }
 
   do
@@ -263,13 +263,13 @@ heatup inner = do
     gCodeFromCmd
       $ MSetBedTemperature
         gcodeDef
-          { sDegrees = Just env.bedTemperature
+          { degrees = Just env.bedTemperature
           }
 
     gCodeFromCmd
       $ MSSetHotendTemperature
         gcodeDef
-          { sDegrees = Just env.hotendTemperature
+          { degrees = Just env.hotendTemperature
           }
 
   ret <-
@@ -280,13 +280,13 @@ heatup inner = do
     gCodeFromCmd
       $ MWaitForBedTemperature
         gcodeDef
-          { sDegrees = Just env.bedTemperature
+          { degrees = Just env.bedTemperature
           }
 
     gCodeFromCmd
       $ MWaitForHotendTemperature
         gcodeDef
-          { sDegrees = Just env.hotendTemperature
+          { degrees = Just env.hotendTemperature
           }
 
   pure ret
@@ -359,8 +359,8 @@ beep = do
   gCodeFromCmd
     $ MPlayTone
       gcodeDef
-        { _frequency = Just 1000,
-          _duration = Just 500
+        { frequency = Just 1000,
+          milliseconds = Just 500
         }
 
 data PersistentState = PersistentState

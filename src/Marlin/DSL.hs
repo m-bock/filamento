@@ -174,7 +174,7 @@ setUnits u = gCodeFromCmd $ case u of
 -------------------------------------------------------------------------------
 
 autoHome :: GCode ()
-autoHome = gCodeFromCmd $ GAutoHome gcodeDef {_skipIfTrusted = False}
+autoHome = gCodeFromCmd $ GAutoHome gcodeDef {skipIfTrusted = False}
 
 -------------------------------------------------------------------------------
 
@@ -215,8 +215,8 @@ gCodeFromCmd cmd = do
       env <- ask
       updatePos (fmap Just env.autoHomePosition)
     GSetPosition opt -> do
-      updatePos (V3 opt._x opt._y opt._z)
-      setExtruded opt._e
+      updatePos (V3 opt.x opt.y opt.z)
+      setExtruded opt.extrude
     MSetBedTemperature _ -> pure ()
     MWaitForBedTemperature _ -> pure ()
     MSSetHotendTemperature _ -> pure ()
