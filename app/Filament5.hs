@@ -5,17 +5,13 @@
 
 module Filament5 where
 
-import Control.Lens ((^.))
-import Data.List ((!!))
 import qualified Data.Text as T
 import Linear (V3 (..))
-import Linear.V2 (V2 (..), _x, _y)
+import Linear.V2 (V2 (..))
 import Marlin.DSL
 import Marlin.Lib
-import Marlin.Math (addX, addY, justX, justY, subX)
+import Marlin.Math (justX)
 import Relude
-import Relude.Extra (un, wrap)
-import Sketch01 (parkPosition)
 
 newtype Coord a b c = Coord a
   deriving (Show, Eq, Num)
@@ -306,7 +302,7 @@ printTestObj = section "Print Test Object" $ do
   forM_ [0 .. 40] \i -> do
     moveZ (0.1 + fromIntegral i * config.realLayerHeight)
     withRetract $ withZHop $ moveTo (V2 100 100)
-    printSquare (V2 100 100) (V2 50 20)
+    printRect (V2 100 100) (V2 50 20)
 
 isDev = False
 

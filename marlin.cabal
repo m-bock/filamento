@@ -31,8 +31,8 @@ library
     Marlin.DSL
     Marlin.Lib
     Marlin.Math
-    Marlin.Syntax
     Marlin.MkFilament.V1
+    Marlin.Syntax
 
   build-depends:
     aeson ^>=2.2.3.0,
@@ -50,8 +50,6 @@ executable marlin-exe
   main-is: Main.hs
   other-modules:
     Filament5
-    Sketch01
-    Sketch02
     Sketch03
     Try
 

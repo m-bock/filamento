@@ -273,3 +273,62 @@ gcodeToRaw cmd =
           cmdNum = 4,
           cmdArgs = Map.fromList [('S', ArgInt s)]
         }
+
+class GCodeCmdOptsDefault a where
+  gcodeDef :: a
+
+instance GCodeCmdOptsDefault SetBedTemperature where
+  gcodeDef =
+    SetBedTemperature
+      { _temperature = Nothing
+      }
+
+instance GCodeCmdOptsDefault WaitForBedTemperature where
+  gcodeDef =
+    WaitForBedTemperature
+      { _temperature = Nothing
+      }
+
+instance GCodeCmdOptsDefault SetHotendTemperature where
+  gcodeDef =
+    SetHotendTemperature
+      { _temperature = Nothing
+      }
+
+instance GCodeCmdOptsDefault WaitForHotendTemperature where
+  gcodeDef =
+    WaitForHotendTemperature
+      { _temperature = Nothing
+      }
+
+instance GCodeCmdOptsDefault AutoHome where
+  gcodeDef =
+    AutoHome
+      { _skipIfTrusted = False
+      }
+
+instance GCodeCmdOptsDefault SetPosition where
+  gcodeDef =
+    SetPosition
+      { _x = Nothing,
+        _y = Nothing,
+        _z = Nothing,
+        _e = Nothing
+      }
+
+instance GCodeCmdOptsDefault PlayTone where
+  gcodeDef =
+    PlayTone
+      { _frequency = Nothing,
+        _duration = Nothing
+      }
+
+instance GCodeCmdOptsDefault LinearMove where
+  gcodeDef =
+    LinearMove
+      { _x = Nothing,
+        _y = Nothing,
+        _z = Nothing,
+        _e = Nothing,
+        _f = Nothing
+      }

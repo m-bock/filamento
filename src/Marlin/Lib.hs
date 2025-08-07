@@ -1,97 +1,83 @@
-module Marlin.Lib where
+module Marlin.Lib
+  ( extrudeTo,
+    extrude,
+    moveTo,
+    moveZ,
+    nextLayer,
+    getSpeed,
+    getExtrudeSpeed,
+    withRetract,
+    withZHop,
+    printPolyLine,
+    extrudePoints,
+    printRect,
+    getLayerCount,
+    printTestStripes,
+    finalPark,
+    homeOrResume,
+    initPrinter,
+    readPersistentState,
+    filamentChange,
+    PersistentState (..),
+  )
+where
 
 import Data.Aeson (FromJSON, ToJSON, encodeFile)
 import Data.Aeson.Decoding (decodeStrict)
 import Linear (V2 (..), V3 (..))
 import Linear.Metric
-import Linear.V (V, _V)
-import Linear.Vector ((^*))
 import Marlin.Core
 import Marlin.DSL
 import Marlin.Math
 import Relude
 
 extrudeTo :: V2 Double -> GCode ()
-extrudeTo v1 = do
+extrudeTo v@(V2 x y) = do
   extrudeSpeed <- getExtrudeSpeed
 
-  extrudeLength <- getExtrudeLength v1
+  extrudeLength <- getExtrudeLength v
 
-  linearMove
-    & setXY v1
-    & setExtrude extrudeLength
-    & setSpeed extrudeSpeed
-    & toGCode
-
-extrudeToFinal :: V2 Double -> GCode ()
-extrudeToFinal v1 = do
-  extrudeSpeed <- getExtrudeSpeed
-
-  st <- get
-
-  let V3 curX curY _ = st.currentPosition
-
-  let cur = V2 curX curY
-
-  let diff = v1 - cur
-
-  let v' = shortenVecBy diff (pure 3)
-
-  let v'' = cur + v'
-
-  extrudeLength <- getExtrudeLength v''
-
-  linearMove
-    & setXY v''
-    & setExtrude extrudeLength
-    & setSpeed extrudeSpeed
-    & toGCode
-
-  linearMove
-    & setXY v1
-    & setSpeed extrudeSpeed
-    & toGCode
-
-shortenVecBy :: V2 Double -> V2 Double -> V2 Double
-shortenVecBy v amount =
-  let len = norm v
-      d = norm amount
-   in if len > d
-        then v - normalize v ^* d
-        else v
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { _x = Just x,
+          _y = Just y,
+          _e = Just extrudeLength,
+          _f = Just extrudeSpeed
+        }
 
 extrude :: Double -> GCode ()
 extrude s = do
   extrudeSpeed <- getExtrudeSpeed
-  linearMove
-    & setExtrude s
-    & setSpeed extrudeSpeed
-    & toGCode
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { _e = Just s,
+          _f = Just extrudeSpeed
+        }
 
 moveTo :: V2 Double -> GCode ()
-moveTo v = do
+moveTo (V2 x y) = do
   speed <- getSpeed
 
-  linearMove
-    & setXY v
-    & setSpeed speed
-    & toGCode
-
--- moveZ :: Double -> GCode ()
--- moveZ z = do
---   st <- get
---   let V3 _ _ curZ = st.currentPosition
---   unless (curZ == z) do
---     withRetract $ moveZDirectly z
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { _x = Just x,
+          _y = Just y,
+          _f = Just speed
+        }
 
 moveZ :: Double -> GCode ()
 moveZ z = do
   speed <- getSpeed
 
-  linearMove
-    & setZ z
-    & setSpeed speed
-    & toGCode
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { _z = Just z,
+          _f = Just speed
+        }
 
 nextLayer :: GCode ()
 nextLayer = do
@@ -119,31 +105,25 @@ getExtrudeSpeed = do
       then env.extrudeSpeedFirstLayer
       else env.extrudeSpeed
 
-moveTo3d :: V3 Double -> GCode ()
-moveTo3d v = do
-  speed <- getSpeed
-
-  withRetract $ do
-    linearMove
-      & setXYZ v
-      & setSpeed speed
-      & toGCode
-
 withRetract :: GCode a -> GCode a
 withRetract inner = do
   env <- ask
 
-  linearMove
-    & setExtrude (-env.retractLength)
-    & setSpeed env.retractSpeed
-    & toGCode
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { _e = Just (-env.retractLength),
+          _f = Just env.retractSpeed
+        }
 
   ret <- inner
 
-  linearMove
-    & setExtrude env.retractLength
-    & setSpeed env.retractSpeed
-    & toGCode
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { _e = Just env.retractLength,
+          _f = Just env.retractSpeed
+        }
 
   pure ret
 
@@ -157,9 +137,6 @@ withZHop inner = do
   moveZ z
   pure ret
 
-printManyPolyLines :: [[V2 Double]] -> GCode ()
-printManyPolyLines = mapM_ printPolyLine
-
 printPolyLine :: [V2 Double] -> GCode ()
 printPolyLine [] = pure ()
 printPolyLine (v : vs) = do
@@ -171,8 +148,8 @@ extrudePoints vs = do
   forM_ vs $ \v -> do
     extrudeTo v
 
-printSquare :: V2 Double -> V2 Double -> GCode ()
-printSquare v1 s = do
+printRect :: V2 Double -> V2 Double -> GCode ()
+printRect v1 s = do
   let v2 = v1 + justX s
   let v3 = v2 + justY s
   let v4 = v3 - justX s
@@ -186,9 +163,8 @@ getLayerCount = do
   let V3 _ _ sketchZ = env.sketchSize
   pure (floor (sketchZ / env.layerHeight))
 
-printTestStripesLikeNeptune :: GCode ()
-printTestStripesLikeNeptune = section "Test Stripes" $ do
-  -- raw "G28" "Home all axes"
+printTestStripes :: GCode ()
+printTestStripes = section "Test Stripes" $ do
   raw "G92 E0" "Reset extruder"
   raw "G1 Z0.2 F1200" "Move to first layer height"
   raw "G1 X10 Y5 F3000" "Move to start position"
@@ -202,49 +178,30 @@ printTestStripesLikeNeptune = section "Test Stripes" $ do
 
   moveZ 0.2
 
-  printManyPolyLines
-    [ [V2 10.0 10.0, V2 215.0 10.0]
-    ]
-
-printTestStripes :: GCode ()
-printTestStripes = section "Test Stripes" $ do
-  moveTo3d (V3 0 0 0.2)
-
-  -- extrude (-5)
-
-  let v1 = V2 5.0 20.0
-  let v2 = V2 5.0 150.0
-  let v3 = V2 10.0 20.0
-  let v4 = V2 10.0 150.0
-
-  printManyPolyLines
-    [ [v1, v2],
-      [v3, v4]
-    ]
+  printPolyLine [V2 10.0 10.0, V2 215.0 10.0]
 
 finalPark :: GCode ()
 finalPark = do
   env <- ask
 
+  let V3 parkX parkY parkZ = env.parkingPosition
+
   extrude (-3)
-  moveTo3d env.parkingPosition
+
+  moveZ parkZ
+  moveTo (V2 parkX parkY)
 
 homeOrResume :: GCode ()
 homeOrResume = do
   st <- get
-  env <- ask
 
   if st.currentLayer == 0
     then do
       section "autoHome" $ do
-        autoHome
-          --   & setSkipIfTrusted True
-          & toGCode
+        gCodeFromCmd $ GAutoHome gcodeDef
     else do
       section "Resume" $ do
-        setPosition
-          & setXYZ env.parkingPosition
-          & toGCode
+        gCodeFromCmd $ GSetPosition gcodeDef
 
 initPrinter :: GCode a -> GCode a
 initPrinter inner = do
@@ -260,14 +217,19 @@ initPrinter inner = do
 
   do
     moveTo env.transpose
-    setPosition & setXY (V2 0 0) & toGCode
+    gCodeFromCmd
+      $ GSetPosition
+        gcodeDef
+          { _x = Just 0,
+            _y = Just 0
+          }
 
   do
     beep
     moveTo (V2 (-1) 0)
     pause 10
 
-  printTestStripesLikeNeptune
+  printTestStripes
 
   ret <- inner
 
@@ -301,31 +263,6 @@ heatup inner = do
       & toGCode
 
   pure ret
-
-redefineOriginFromParking :: GCode ()
-redefineOriginFromParking = do
-  env <- ask
-
-  let (V3 parkX parkY _) = env.parkingPosition
-
-  let v = V2 parkX parkY
-
-  setPosition
-    & setXY v
-    & toGCode
-
-getOriginVec :: GCode (V2 Double)
-getOriginVec = do
-  env <- ask
-
-  let (V3 bedX bedY _) = env.printSize
-  let (V3 sketchX sketchY _) = env.sketchSize
-
-  let x = -((bedX / 2) - (sketchX / 2))
-  let y = -((bedY / 2) - (sketchY / 2))
-
-  let v = V2 x y
-  pure v
 
 isFirstLayers :: GCode Bool
 isFirstLayers = do
@@ -372,36 +309,23 @@ filamentChange = do
 
     pause 2
 
-    linearMove
-      & setSpeed 200
-      & setExtrude 50
-      & toGCode
+    local (\env -> env {extrudeSpeed = 200}) $ do
+      extrude 10
 
-    linearMove
-      & setSpeed 800
-      & setExtrude 200
-      & toGCode
+    local (\env -> env {extrudeSpeed = 800}) $ do
+      extrude 200
 
-    linearMove
-      & setSpeed 200
-      & setExtrude 50
-      & toGCode
+    local (\env -> env {extrudeSpeed = 200}) $ do
+      extrude 50
+      extrude (-1)
 
     beep
 
-    linearMove
-      & setSpeed 200
-      & setExtrude (-1)
-      & toGCode
-
-    linearMove
-      & setSpeed 200
-      & setExtrude 1
-      & toGCode
+    local (\env -> env {extrudeSpeed = 200}) $ do
+      extrude (-1)
+      extrude 1
 
     beep
-
--- moveTo3d prevPosition
 
 beep :: GCode ()
 beep = do
