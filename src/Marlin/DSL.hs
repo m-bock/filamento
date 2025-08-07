@@ -22,11 +22,28 @@ module Marlin.DSL
     setFanOff,
     motorsOff,
     pause,
+    extrudeXY,
+    extrude,
+    moveXY,
+    moveXYZ,
+    moveZ,
+    playTone,
+    playTone_,
+    setBedTemperature,
+    setHotendTemperature,
+    waitForBedTemperature,
+    waitForHotendTemperature,
+    Temperature (..),
+    Frequency (..),
+    Duration (..),
+    setPositionXYZ,
+    setPositionXY,
   )
 where
 
 import Control.Monad.Writer
 import Linear (V2 (..), V3 (..))
+import Linear.Metric (Metric (..))
 import Marlin.Core
 import Relude
 import System.Random
@@ -40,8 +57,8 @@ data GCodeEnv = Env
     extrudeSpeed :: Int,
     moveSpeedFirstLayer :: Int,
     extrudeSpeedFirstLayer :: Int,
-    bedTemperature :: Int,
-    hotendTemperature :: Int,
+    bedTemperature :: Temperature,
+    hotendTemperature :: Temperature,
     printSize :: V3 Double,
     parkingPosition :: V3 Double,
     sketchSize :: V3 Double,
@@ -80,8 +97,8 @@ defaultGCodeEnv =
       extrudeSpeed = 2000,
       moveSpeedFirstLayer = 1000,
       extrudeSpeedFirstLayer = 800,
-      bedTemperature = 60,
-      hotendTemperature = 210,
+      bedTemperature = Temperature 60,
+      hotendTemperature = Temperature 210,
       printSize = V3 225 225 280,
       parkingPosition = V3 0 225 120,
       sketchSize = V3 100 100 100,
@@ -199,9 +216,111 @@ motorsOff = gCodeFromCmd MMotorsOff
 pause :: Int -> GCode ()
 pause seconds = gCodeFromCmd $ GDwell (gcodeDef {seconds = Just seconds})
 
+--------------------------------------------------------------------------------
+
+extrudeXY :: V2 Double -> GCode ()
+extrudeXY v@(V2 x y) = do
+  extrudeSpeed <- getExtrudeSpeed
+
+  extrudeLength <- getExtrudeLength v
+
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { x = Just x,
+          y = Just y,
+          extrude = Just extrudeLength,
+          feedrate = Just extrudeSpeed
+        }
+
+extrude :: Double -> GCode ()
+extrude s = do
+  extrudeSpeed <- getExtrudeSpeed
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { extrude = Just s,
+          feedrate = Just extrudeSpeed
+        }
+
+moveXY :: V2 Double -> GCode ()
+moveXY (V2 x y) = do
+  speed <- getSpeed
+
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { x = Just x,
+          y = Just y,
+          feedrate = Just speed
+        }
+
+moveXYZ :: V3 Double -> GCode ()
+moveXYZ (V3 x y z) = do
+  speed <- getSpeed
+
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { x = Just x,
+          y = Just y,
+          z = Just z,
+          feedrate = Just speed
+        }
+
+moveZ :: Double -> GCode ()
+moveZ z = do
+  speed <- getSpeed
+
+  gCodeFromCmd
+    $ GLinearMove
+      gcodeDef
+        { z = Just z,
+          feedrate = Just speed
+        }
+
 -------------------------------------------------------------------------------
 --- Utils
 -------------------------------------------------------------------------------
+
+getSpeed :: GCode Int
+getSpeed = do
+  b <- isFirstLayers
+  env <- ask
+  pure
+    $ if b
+      then env.moveSpeedFirstLayer
+      else env.moveSpeed
+
+getExtrudeLength :: V2 Double -> GCode Double
+getExtrudeLength v = do
+  extrudeMM <- getExtrudeMM
+  st <- get
+  let V3 curX curY _ = st.currentPosition
+  let lineLength = distance (V2 curX curY) v
+  pure (lineLength * extrudeMM)
+
+getExtrudeMM :: GCode Double
+getExtrudeMM = do
+  env <- ask
+  let vPerMm = env.layerHeight * env.lineWidth
+      aFil = pi * (env.filamentDia ^ 2) / 4
+  pure (vPerMm / aFil)
+
+isFirstLayers :: GCode Bool
+isFirstLayers = do
+  st <- get
+  let (V3 _ _ z) = st.currentPosition
+  pure (z <= 0.4)
+
+getExtrudeSpeed :: GCode Int
+getExtrudeSpeed = do
+  b <- isFirstLayers
+  env <- ask
+  pure
+    $ if b
+      then env.extrudeSpeedFirstLayer
+      else env.extrudeSpeed
 
 gCodeFromCmd :: GCodeCmd -> GCode ()
 gCodeFromCmd cmd = do
@@ -238,3 +357,75 @@ gCodeFromCmd cmd = do
         rawExtra = "",
         comment = Just (gcodeToComment cmd)
       }
+
+newtype Frequency = Frequency {hz :: Int}
+  deriving (Show, Eq, Generic)
+
+newtype Duration = Duration {ms :: Int}
+  deriving (Show, Eq, Generic)
+
+newtype Temperature = Temperature {degrees :: Int}
+  deriving (Show, Eq, Generic)
+
+playTone :: Frequency -> Duration -> GCode ()
+playTone (Frequency freq) (Duration dur) = do
+  gCodeFromCmd
+    $ MPlayTone
+      gcodeDef
+        { frequency = Just freq,
+          milliseconds = Just dur
+        }
+
+playTone_ :: GCode ()
+playTone_ = playTone (Frequency 2600) (Duration 1)
+
+setBedTemperature :: Temperature -> GCode ()
+setBedTemperature (Temperature degrees) = do
+  gCodeFromCmd
+    $ MSetBedTemperature
+      gcodeDef
+        { degrees = Just degrees
+        }
+
+setHotendTemperature :: Temperature -> GCode ()
+setHotendTemperature (Temperature temp) = do
+  gCodeFromCmd
+    $ MSSetHotendTemperature
+      gcodeDef
+        { degrees = Just temp
+        }
+
+waitForBedTemperature :: Temperature -> GCode ()
+waitForBedTemperature (Temperature temp) = do
+  gCodeFromCmd
+    $ MWaitForBedTemperature
+      gcodeDef
+        { degrees = Just temp
+        }
+
+waitForHotendTemperature :: Temperature -> GCode ()
+waitForHotendTemperature (Temperature temp) = do
+  gCodeFromCmd
+    $ MWaitForHotendTemperature
+      gcodeDef
+        { degrees = Just temp
+        }
+
+setPositionXYZ :: V3 Double -> GCode ()
+setPositionXYZ (V3 x y z) = do
+  gCodeFromCmd
+    $ GSetPosition
+      gcodeDef
+        { x = Just x,
+          y = Just y,
+          z = Just z
+        }
+
+setPositionXY :: V2 Double -> GCode ()
+setPositionXY (V2 x y) = do
+  gCodeFromCmd
+    $ GSetPosition
+      gcodeDef
+        { x = Just x,
+          y = Just y
+        }

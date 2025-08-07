@@ -1,11 +1,9 @@
 module Marlin.Lib
-  ( extrudeTo,
+  ( extrudeXY,
     extrude,
     moveXY,
     moveZ,
     nextLayer,
-    getSpeed,
-    getExtrudeSpeed,
     withRetract,
     withZHop,
     printPolyLine,
@@ -25,59 +23,9 @@ where
 import Data.Aeson (FromJSON, ToJSON, encodeFile)
 import Data.Aeson.Decoding (decodeStrict)
 import Linear (V2 (..), V3 (..))
-import Linear.Metric
-import Marlin.Core
 import Marlin.DSL
 import Marlin.Math
 import Relude
-
-extrudeTo :: V2 Double -> GCode ()
-extrudeTo v@(V2 x y) = do
-  extrudeSpeed <- getExtrudeSpeed
-
-  extrudeLength <- getExtrudeLength v
-
-  gCodeFromCmd
-    $ GLinearMove
-      gcodeDef
-        { x = Just x,
-          y = Just y,
-          extrude = Just extrudeLength,
-          feedrate = Just extrudeSpeed
-        }
-
-extrude :: Double -> GCode ()
-extrude s = do
-  extrudeSpeed <- getExtrudeSpeed
-  gCodeFromCmd
-    $ GLinearMove
-      gcodeDef
-        { extrude = Just s,
-          feedrate = Just extrudeSpeed
-        }
-
-moveXY :: V2 Double -> GCode ()
-moveXY (V2 x y) = do
-  speed <- getSpeed
-
-  gCodeFromCmd
-    $ GLinearMove
-      gcodeDef
-        { x = Just x,
-          y = Just y,
-          feedrate = Just speed
-        }
-
-moveZ :: Double -> GCode ()
-moveZ z = do
-  speed <- getSpeed
-
-  gCodeFromCmd
-    $ GLinearMove
-      gcodeDef
-        { z = Just z,
-          feedrate = Just speed
-        }
 
 nextLayer :: GCode ()
 nextLayer = do
@@ -87,43 +35,15 @@ nextLayer = do
   put $ st {currentLayer = newLayer}
   moveZ (env.layerHeight * fromIntegral newLayer)
 
-getSpeed :: GCode Int
-getSpeed = do
-  b <- isFirstLayers
-  env <- ask
-  pure
-    $ if b
-      then env.moveSpeedFirstLayer
-      else env.moveSpeed
-
-getExtrudeSpeed :: GCode Int
-getExtrudeSpeed = do
-  b <- isFirstLayers
-  env <- ask
-  pure
-    $ if b
-      then env.extrudeSpeedFirstLayer
-      else env.extrudeSpeed
-
 withRetract :: GCode a -> GCode a
 withRetract inner = do
   env <- ask
 
-  gCodeFromCmd
-    $ GLinearMove
-      gcodeDef
-        { extrude = Just (-env.retractLength),
-          feedrate = Just env.retractSpeed
-        }
+  extrude (-env.retractLength)
 
   ret <- inner
 
-  gCodeFromCmd
-    $ GLinearMove
-      gcodeDef
-        { extrude = Just env.retractLength,
-          feedrate = Just env.retractSpeed
-        }
+  extrude env.retractLength
 
   pure ret
 
@@ -146,7 +66,7 @@ printPolyLine (v : vs) = do
 extrudePoints :: [V2 Double] -> GCode ()
 extrudePoints vs = do
   forM_ vs $ \v -> do
-    extrudeTo v
+    extrudeXY v
 
 printRect :: V2 Double -> V2 Double -> GCode ()
 printRect v1 s = do
@@ -176,7 +96,7 @@ printTestStripes = section "Test Stripes" $ do
   section "Thin test stripe" do
     moveXY (V2 10.0 10.0)
     extrude 5
-    extrudeTo (V2 215.0 10.0)
+    extrudeXY (V2 215.0 10.0)
     extrude (-1)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
@@ -206,15 +126,16 @@ finalPark = do
 
 homeOrResume :: GCode ()
 homeOrResume = do
+  env <- ask
   st <- get
 
   if st.currentLayer == 0
     then do
       section "autoHome" $ do
-        gCodeFromCmd $ GAutoHome gcodeDef
+        autoHome
     else do
       section "Resume" $ do
-        gCodeFromCmd $ GSetPosition gcodeDef
+        setPositionXYZ env.parkingPosition
 
 initPrinter :: GCode a -> GCode a
 initPrinter inner = do
@@ -224,27 +145,16 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  gCodeFromCmd
-    $ GLinearMove
-      gcodeDef
-        { x = Just 0,
-          y = Just 0,
-          z = Just 0
-        }
+  moveXYZ (V3 0 0 0)
 
   heatup homeOrResume
 
   do
     moveXY env.transpose
-    gCodeFromCmd
-      $ GSetPosition
-        gcodeDef
-          { x = Just 0,
-            y = Just 0
-          }
+    setPositionXY (V2 0 0)
 
   do
-    beep
+    playTone_
     moveXY (V2 (-1) 0)
     pause 10
 
@@ -260,57 +170,18 @@ heatup :: GCode a -> GCode a
 heatup inner = do
   env <- ask
   section "Heatup" $ do
-    gCodeFromCmd
-      $ MSetBedTemperature
-        gcodeDef
-          { degrees = Just env.bedTemperature
-          }
-
-    gCodeFromCmd
-      $ MSSetHotendTemperature
-        gcodeDef
-          { degrees = Just env.hotendTemperature
-          }
+    setBedTemperature env.bedTemperature
+    setHotendTemperature env.hotendTemperature
 
   ret <-
     section "Prepare while waiting" $ do
       inner
 
   section "Wait for temperatures" $ do
-    gCodeFromCmd
-      $ MWaitForBedTemperature
-        gcodeDef
-          { degrees = Just env.bedTemperature
-          }
-
-    gCodeFromCmd
-      $ MWaitForHotendTemperature
-        gcodeDef
-          { degrees = Just env.hotendTemperature
-          }
+    waitForBedTemperature env.bedTemperature
+    waitForHotendTemperature env.hotendTemperature
 
   pure ret
-
-isFirstLayers :: GCode Bool
-isFirstLayers = do
-  st <- get
-  let (V3 _ _ z) = st.currentPosition
-  pure (z <= 0.4)
-
-getExtrudeLength :: V2 Double -> GCode Double
-getExtrudeLength v = do
-  extrudeMM <- getExtrudeMM
-  st <- get
-  let V3 curX curY _ = st.currentPosition
-  let lineLength = distance (V2 curX curY) v
-  pure (lineLength * extrudeMM)
-
-getExtrudeMM :: GCode Double
-getExtrudeMM = do
-  env <- ask
-  let vPerMm = env.layerHeight * env.lineWidth
-      aFil = pi * (env.filamentDia ^ 2) / 4
-  pure (vPerMm / aFil)
 
 printPolygon :: Int -> V2 Double -> Double -> GCode ()
 printPolygon n v s
@@ -328,7 +199,7 @@ filamentChange = do
   section "Filament Change" $ do
     finalPark
 
-    beep
+    playTone_
 
     raw "M0" "Pause for filament change"
 
@@ -346,22 +217,13 @@ filamentChange = do
       extrude 50
       extrude (-1)
 
-    beep
+    playTone_
 
     local (\env -> env {extrudeSpeed = 200}) $ do
       extrude (-1)
       extrude 1
 
-    beep
-
-beep :: GCode ()
-beep = do
-  gCodeFromCmd
-    $ MPlayTone
-      gcodeDef
-        { frequency = Just 1000,
-          milliseconds = Just 500
-        }
+    playTone_
 
 data PersistentState = PersistentState
   {count :: Int}
