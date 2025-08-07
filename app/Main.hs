@@ -3,10 +3,6 @@
 
 module Main where
 
-import qualified Filament
-import qualified Filament2
-import qualified Filament3
-import qualified Filament4
 import qualified Filament5
 import Relude
 import qualified Sketch03

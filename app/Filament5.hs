@@ -154,24 +154,6 @@ tubeExtrudeTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
   extrudeTo worldPt
 
-printRect :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> GCode ()
-printRect (Coord frontLeft) (Coord backRight) = do
-  let size = backRight - frontLeft
-      frontRight = frontLeft + justX size
-      backLeft = backRight - justX size
-
-  tubeMoveTo (Coord frontLeft)
-  section "Print Rect" do
-    section "Front" do
-      tubeExtrudePoints (Coord frontLeft) (Coord frontRight)
-    section "Right" do
-      tubeExtrudePoints (Coord frontRight) (Coord backRight)
-    section "Back" do
-      tubeExtrudePoints (Coord backRight) (Coord backLeft)
-
-    section "Left" do
-      tubeExtrudePoints (Coord backLeft) (Coord frontLeft)
-
 splitInterval :: Double -> Double -> (Double, Int)
 splitInterval big small =
   let n = round (big / small)

@@ -32,6 +32,7 @@ library
     Marlin.Lib
     Marlin.Math
     Marlin.Syntax
+    Marlin.MkFilament.V1
 
   build-depends:
     aeson ^>=2.2.3.0,
@@ -48,10 +49,6 @@ executable marlin-exe
   import: warnings
   main-is: Main.hs
   other-modules:
-    Filament
-    Filament2
-    Filament3
-    Filament4
     Filament5
     Sketch01
     Sketch02
