@@ -58,10 +58,13 @@ import Control.Monad.Writer
 import Control.Newtype
 import Data.Aeson.Encoding (double)
 import Filamento.Conversions
+import Filamento.Types.Displacement2D
+import Filamento.Types.Displacement3D
 import Filamento.Types.Distance
 import Filamento.Types.Duration
 import Filamento.Types.Frequency
-import Filamento.Types.Position
+import Filamento.Types.Position2D (Position2D)
+import Filamento.Types.Position3D
 import Filamento.Types.Speed
 import Filamento.Types.Temperature
 import Linear (V2 (..), V3 (..))
@@ -244,88 +247,95 @@ operateTool v_ speed extr = do
 
 --------------------------------------------------------------------------------
 
-moveTo :: Position -> GCode ()
-moveTo pos = do
-  speed <- getSpeed
-  operateTool (coerce $ to @(V3 MM) pos) speed 0
+moveToXYZ :: Position3D -> GCode ()
+moveToXYZ v = undefined
 
-moveToXYZ :: V3 Double -> GCode ()
-moveToXYZ v = do
-  speed <- getSpeed
-  operateTool v speed 0
+-- do
+-- speed <- getSpeed
+-- operateTool v speed 0
 
-moveToXY :: V2 Double -> GCode ()
-moveToXY (V2 x y) = moveToXYZ (V3 x y 0)
+moveToXY :: Position2D -> GCode ()
+moveToXY = undefined
+
+-- (V2 x y) = moveToXYZ (V3 x y 0)
 
 moveToX :: Double -> GCode ()
-moveToX x = moveToXYZ (V3 x 0 0)
+moveToX x = moveToXYZ (from $ fmap MM $ V3 x 0 0)
 
 moveToY :: Double -> GCode ()
-moveToY y = moveToXYZ (V3 0 y 0)
+moveToY y = moveToXYZ (from $ fmap MM $ V3 0 y 0)
 
 moveToZ :: Double -> GCode ()
-moveToZ z = moveToXYZ (V3 0 0 z)
+moveToZ z = moveToXYZ (from $ fmap MM $ V3 0 0 z)
 
 --------------------------------------------------------------------------------
 
 move :: Distance -> GCode ()
 move = undefined
 
-moveXYZ :: V3 Double -> GCode ()
-moveXYZ v = do
-  v' <- getCurrentPosition
-  moveToXYZ (v + v')
+moveXYZ :: Displacement3D -> GCode ()
+moveXYZ v = undefined
 
-moveXY :: V2 Double -> GCode ()
-moveXY (V2 x y) = moveXYZ (V3 x y 0)
+-- do
+-- v' <- getCurrentPosition
+-- moveToXYZ (v + v')
+
+moveXY :: Displacement2D -> GCode ()
+moveXY = undefined -- (V2 x y) = moveXYZ (V3 x y 0)
 
 moveX :: Double -> GCode ()
-moveX x = moveXYZ (V3 x 0 0)
+moveX x = moveXYZ (from $ fmap MM $ V3 x 0 0)
 
 moveY :: Double -> GCode ()
-moveY y = moveXYZ (V3 0 y 0)
+moveY y = moveXYZ (from $ fmap MM $ V3 0 y 0)
 
 moveZ :: Double -> GCode ()
-moveZ z = moveXYZ (V3 0 0 z)
+moveZ z = moveXYZ (from $ fmap MM $ V3 0 0 z)
 
 --------------------------------------------------------------------------------
 
-extrudeToXYZ :: V3 Double -> GCode ()
-extrudeToXYZ v = do
-  speed <- getExtrudeSpeed
-  extrudeLength <- getExtrudeLength v
-  operateTool v speed extrudeLength
+extrudeToXY :: Position2D -> GCode ()
+extrudeToXY v = undefined
 
-extrudeToXY :: V2 Double -> GCode ()
-extrudeToXY (V2 x y) = extrudeToXYZ (V3 x y 0)
+extrudeToXYZ :: Position3D -> GCode ()
+extrudeToXYZ v = undefined
+
+-- do
+-- speed <- getExtrudeSpeed
+-- extrudeLength <- getExtrudeLength v
+-- operateTool v speed extrudeLength
 
 extrudeToX :: Double -> GCode ()
-extrudeToX x = extrudeToXYZ (V3 x 0 0)
+extrudeToX x = extrudeToXYZ (from $ fmap MM $ V3 x 0 0)
 
 extrudeToY :: Double -> GCode ()
-extrudeToY y = extrudeToXYZ (V3 0 y 0)
+extrudeToY y = extrudeToXYZ (from $ fmap MM $ V3 0 y 0)
 
 extrudeToZ :: Double -> GCode ()
-extrudeToZ z = extrudeToXYZ (V3 0 0 z)
+extrudeToZ z = extrudeToXYZ (from $ fmap MM $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
-extrudeXYZ :: V3 Double -> GCode ()
-extrudeXYZ v = do
-  v' <- getCurrentPosition
-  extrudeToXYZ (v + v')
+extrudeXYZ :: Displacement3D -> GCode ()
+extrudeXYZ v = undefined
 
-extrudeXY :: V2 Double -> GCode ()
-extrudeXY (V2 x y) = extrudeXYZ (V3 x y 0)
+-- do
+-- v' <- getCurrentPosition
+-- extrudeToXYZ (v + v')
+
+extrudeXY :: Displacement2D -> GCode ()
+extrudeXY = undefined
+
+-- (V2 x y) = extrudeXYZ (V3 x y 0)
 
 extrudeX :: Double -> GCode ()
-extrudeX x = extrudeXYZ (V3 x 0 0)
+extrudeX x = extrudeXYZ (from $ fmap MM $ V3 x 0 0)
 
 extrudeY :: Double -> GCode ()
-extrudeY y = extrudeXYZ (V3 0 y 0)
+extrudeY y = extrudeXYZ (from $ fmap MM $ V3 0 y 0)
 
 extrudeZ :: Double -> GCode ()
-extrudeZ z = extrudeXYZ (V3 0 0 z)
+extrudeZ z = extrudeXYZ (from $ fmap MM $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 

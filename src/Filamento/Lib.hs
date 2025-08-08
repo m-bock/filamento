@@ -8,6 +8,7 @@ module Filamento.Lib
     withZHop,
     printPolyLine,
     extrudePoints,
+    printRect2d,
     printRect,
     printTestStripes,
     finalPark,
@@ -20,6 +21,16 @@ where
 import Filamento
 import Filamento.Conversions
 import Filamento.Math
+import Filamento.Types.Displacement2D
+import qualified Filamento.Types.Displacement2D as Disp2D
+import Filamento.Types.Displacement3D (Displacement3D)
+import qualified Filamento.Types.Displacement3D as Disp3D
+import Filamento.Types.Distance (Distance)
+import qualified Filamento.Types.Distance as Dist
+import Filamento.Types.Position2D (Position2D)
+import qualified Filamento.Types.Position2D as Pos2D
+import Filamento.Types.Position3D (Position3D)
+import qualified Filamento.Types.Position3D as Pos3D
 import Linear (V2 (..), V3 (..))
 import Relude
 
@@ -53,23 +64,26 @@ withZHop inner = do
   moveZ z
   pure ret
 
-printPolyLine :: [V2 Double] -> GCode ()
+printPolyLine :: [Position3D] -> GCode ()
 printPolyLine [] = pure ()
 printPolyLine (v : vs) = do
-  moveToXY v
+  moveToXYZ v
   extrudePoints vs
 
-extrudePoints :: [V2 Double] -> GCode ()
+extrudePoints :: [Position3D] -> GCode ()
 extrudePoints vs = do
   forM_ vs $ \v -> do
-    extrudeXY v
+    extrudeToXYZ v
 
-printRect :: V2 Double -> V2 Double -> GCode ()
-printRect v1 s = do
-  let v2 = v1 + justX s
-  let v3 = v2 + justY s
-  let v4 = v3 - justX s
-  let v5 = v4 - justY s
+printRect2d :: Position2D -> Displacement2D -> GCode ()
+printRect2d = undefined
+
+printRect :: Position3D -> Displacement3D -> GCode ()
+printRect v1 delta = do
+  let v2 = Pos3D.addDisplacement v1 (Disp3D.justX delta)
+  let v3 = Pos3D.addDisplacement v2 (Disp3D.justY delta)
+  let v4 = Pos3D.subtractDisplacement v3 (Disp3D.justX delta)
+  let v5 = Pos3D.subtractDisplacement v4 (Disp3D.justY delta)
 
   printPolyLine [v1, v2, v3, v4, v5]
 
@@ -84,9 +98,9 @@ printTestStripes = section "Test Stripes" $ do
   --   extrude (-1)
 
   section "Thin test stripe" do
-    moveToXY (V2 5 5)
+    moveToXY (fromF MM $ V2 5 5)
     extrude (from @MMPerSec 2000) 5
-    extrudeXY (V2 215.0 5)
+    extrudeXY (fromF MM $ V2 215.0 5)
     extrude (from @MMPerSec 2000) (-1)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
@@ -112,7 +126,7 @@ finalPark = do
   extrude (from @MMPerSec 2000) (-3)
 
   moveZ parkZ
-  moveToXY (V2 parkX parkY)
+  moveToXY (fromF MM $ V2 parkX parkY)
 
 homeOrResume :: GCode ()
 homeOrResume = do
@@ -129,7 +143,7 @@ homeOrResume = do
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
-  moveToXYZ (V3 0 0 2)
+  moveToXYZ (from (MM <$> V3 0 0 2))
   playTone_
   pause 10
 
@@ -139,7 +153,7 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  moveToXYZ (V3 0 0 0)
+  moveToXYZ (from (MM <$> V3 0 0 0))
 
   heatup homeOrResume
 
@@ -170,13 +184,18 @@ heatup inner = do
 
   pure ret
 
-printPolygon :: Int -> V2 Double -> Double -> GCode ()
+printPolygon :: Int -> Position3D -> Distance -> GCode ()
 printPolygon n v s
   | n < 3 = pure () -- Polygons need at least 3 sides
   | s <= 0 = pure () -- Side length must be positive
   | otherwise = do
       let angle = 2 * pi / fromIntegral n
-          points = [v + V2 (s * cos (angle * fromIntegral i)) (s * sin (angle * fromIntegral i)) | i <- [0 .. n - 1]]
+          points =
+            [ Pos3D.addDisplacement
+                v
+                (from $ V3 (Dist.scale (cos (angle * fromIntegral i)) s) (Dist.scale (sin (angle * fromIntegral i)) s) 0)
+              | i <- [0 .. n - 1]
+            ]
       case viaNonEmpty head points of
         Nothing -> pure ()
         Just firstPoint -> printPolyLine (points ++ [firstPoint])

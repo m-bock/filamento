@@ -41,11 +41,13 @@ library
     Filamento.IO
     Filamento.Lib
     Filamento.Math
-    Filamento.Types.Displacement
+    Filamento.Types.Displacement3D
+    Filamento.Types.Displacement2D
     Filamento.Types.Distance
     Filamento.Types.Duration
     Filamento.Types.Frequency
-    Filamento.Types.Position
+    Filamento.Types.Position2D
+    Filamento.Types.Position3D
     Filamento.Types.Speed
     Filamento.Types.Temperature
     Marlin.Comment

@@ -145,12 +145,12 @@ tubeExtrudePoints (Coord start) (Coord end) = do
 tubeMoveTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeMoveTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
-  moveXY worldPt
+  moveXY $ fromF MM worldPt
 
 tubeExtrudeTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeExtrudeTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
-  extrudeXY worldPt
+  extrudeXY $ fromF MM worldPt
 
 splitInterval :: Double -> Double -> (Double, Int)
 splitInterval big small =
@@ -303,8 +303,8 @@ printTestObj = section "Print Test Object" $ do
 
   forM_ [0 .. 40] \i -> do
     moveZ (0.1 + fromIntegral i * config.realLayerHeight)
-    withRetract $ withZHop $ moveToXY (V2 100 100)
-    printRect (V2 100 100) (V2 50 20)
+    withRetract $ withZHop $ moveToXY (fromF MM $ V2 100 100)
+    printRect2d (fromF MM $ V2 100 100) (fromF MM $ V2 50 20)
 
 isDev = False
 

@@ -13,8 +13,8 @@ class Convert lo hi where
 -- from' :: forall b b' a. (Convert b a, Newtype b b') => a -> b'
 -- from' = (unpack :: b -> b') . from
 
--- fromF :: (Convert a (f b'), Functor f) => (b -> b') -> f b -> a
--- fromF f val = from $ fmap f val
+fromF :: forall a b' b f. (Convert (f b') a, Functor f) => (b -> b') -> f b -> a
+fromF f val = from $ fmap f val
 
 newtype MM = MM Double
   deriving (Show, Eq, Num)

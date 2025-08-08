@@ -4,6 +4,7 @@ module Sketch03 where
 
 import qualified Data.Text as T
 import Filamento
+import Filamento.Conversions
 import Filamento.Lib
 import Linear (V3 (..))
 import Linear.V2 (V2 (..))
@@ -15,7 +16,7 @@ changeEnv env =
 
 printLayer :: Int -> GCode ()
 printLayer n = section ("Layer " <> T.pack (show n)) $ do
-  printRect (V2 100 100) (V2 50 50)
+  printRect (from (MM <$> V3 100 100 0)) (from (MM <$> V3 50 50 0))
 
 sketch :: GCode ()
 sketch = local changeEnv $ initPrinter $ do
