@@ -5,7 +5,6 @@ module Filamento.Types.Temperature
   )
 where
 
-import Filamento.Conversions
 import Relude
 
 newtype Temperature = Temperature {degrees :: Double}

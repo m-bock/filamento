@@ -1,11 +1,17 @@
-module Filamento.Types.Duration where
+module Filamento.Types.Duration
+  ( Duration,
+    fromMs,
+    toMs,
+  )
+where
 
-import Filamento.Conversions
 import Relude
 
 newtype Duration = Duration {ms :: Double}
   deriving (Show, Eq, Generic)
 
-instance Convert' Ms Double Duration where
-  from' d = Duration d
-  to' (Duration ms) = ms
+fromMs :: Double -> Duration
+fromMs d = Duration d
+
+toMs :: Duration -> Double
+toMs (Duration d) = d

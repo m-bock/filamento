@@ -36,7 +36,6 @@ library
   import: warnings
   exposed-modules:
     Filamento
-    Filamento.Conversions
     Filamento.Factory.V1
     Filamento.IO
     Filamento.Lib

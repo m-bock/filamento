@@ -4,7 +4,6 @@ module Sketch03 where
 
 import qualified Data.Text as T
 import Filamento
-import Filamento.Conversions
 import Filamento.Lib
 import Filamento.Types.Displacement3D as Disp3D
 import Filamento.Types.Position3D as Pos3D

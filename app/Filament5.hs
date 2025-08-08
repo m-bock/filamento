@@ -7,13 +7,13 @@ module Filament5 where
 
 import qualified Data.Text as T
 import Filamento
-import Filamento.Conversions
 import Filamento.IO
 import Filamento.Lib
 import Filamento.Math (justX)
-import Filamento.Types.Distance as Distance
-import Filamento.Types.Speed as Speed
-import Filamento.Types.Temperature as Temperature
+import qualified Filamento.Types.Displacement2D as Disp2D
+import qualified Filamento.Types.Distance as Distance
+import qualified Filamento.Types.Speed as Speed
+import qualified Filamento.Types.Temperature as Temperature
 import Linear (V3 (..))
 import Linear.V2 (V2 (..))
 import Relude
@@ -148,12 +148,12 @@ tubeExtrudePoints (Coord start) (Coord end) = do
 tubeMoveTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeMoveTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
-  moveXY $ fromF MM worldPt
+  moveXY $ Disp2D.fromMm worldPt
 
 tubeExtrudeTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeExtrudeTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
-  extrudeXY $ fromF MM worldPt
+  extrudeXY $ Disp2D.fromMm worldPt
 
 splitInterval :: Double -> Double -> (Double, Int)
 splitInterval big small =
@@ -307,7 +307,7 @@ printTestObj = section "Print Test Object" $ do
   forM_ [0 .. 40] \i -> do
     moveZ (0.1 + fromIntegral i * config.realLayerHeight)
     withRetract $ withZHop $ moveToXY (fromF MM $ V2 100 100)
-    printRect2d (fromF MM $ V2 100 100) (fromF MM $ V2 50 20)
+    printRect2d (fromF MM $ V2 100 100) (Disp2D.fromMm $ V2 50 20)
 
 isDev = False
 

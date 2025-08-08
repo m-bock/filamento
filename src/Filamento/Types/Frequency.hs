@@ -1,11 +1,17 @@
-module Filamento.Types.Frequency where
+module Filamento.Types.Frequency
+  ( Frequency,
+    fromHz,
+    toHz,
+  )
+where
 
-import Filamento.Conversions
 import Relude
 
 newtype Frequency = Frequency {hz :: Double}
   deriving (Show, Eq, Generic)
 
-instance Convert' Hz Double Frequency where
-  from' f = Frequency f
-  to' (Frequency f) = f
+fromHz :: Double -> Frequency
+fromHz f = Frequency f
+
+toHz :: Frequency -> Double
+toHz (Frequency f) = f

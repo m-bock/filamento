@@ -10,7 +10,6 @@ where
 
 -- Pos
 
-import Filamento.Conversions
 import Filamento.Types.Displacement3D (Displacement3D)
 import qualified Filamento.Types.Displacement3D as Disp3D
 import Filamento.Types.Distance (Distance)

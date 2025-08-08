@@ -55,14 +55,15 @@ module Filamento
 where
 
 import Control.Monad.Writer
-import Filamento.Conversions
 import Filamento.Types.Displacement2D
 import Filamento.Types.Displacement3D
 import qualified Filamento.Types.Displacement3D as Disp3D
 import Filamento.Types.Distance
 import qualified Filamento.Types.Distance as Distance
 import Filamento.Types.Duration
+import qualified Filamento.Types.Duration as Duration
 import Filamento.Types.Frequency
+import qualified Filamento.Types.Frequency as Frequency
 import Filamento.Types.Position2D as Pos2D
 import Filamento.Types.Position3D
 import Filamento.Types.Position3D as Pos3D
@@ -440,12 +441,12 @@ playTone freq dur =
   gCodeFromCmd
     $ MPlayTone
       gcodeDef
-        { frequency = Just $ round $ to' @Hz freq,
-          milliseconds = Just $ round $ to' @Ms dur
+        { frequency = Just $ round $ Frequency.toHz freq,
+          milliseconds = Just $ round $ Duration.toMs dur
         }
 
 playTone_ :: GCode ()
-playTone_ = playTone (Frequency 2600) (Duration 1)
+playTone_ = playTone (Frequency.fromHz 2600) (Duration.fromMs 1)
 
 setBedTemperature :: Temperature -> GCode ()
 setBedTemperature degrees = do

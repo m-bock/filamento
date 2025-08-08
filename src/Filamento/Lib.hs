@@ -19,7 +19,6 @@ module Filamento.Lib
 where
 
 import Filamento
-import Filamento.Conversions
 import Filamento.Math
 import Filamento.Types.Displacement2D
 import qualified Filamento.Types.Displacement2D as Disp2D
@@ -99,9 +98,9 @@ printTestStripes = section "Test Stripes" $ do
   --   extrude (-1)
 
   section "Thin test stripe" do
-    moveToXY (fromF MM $ V2 5 5)
+    moveToXY (Pos2D.fromMm $ V2 5 5)
     extrude (Speed.fromMmPerSec 2000) 5
-    extrudeXY (fromF MM $ V2 215.0 5)
+    extrudeXY (Disp2D.fromMm $ V2 215.0 5)
     extrude (Speed.fromMmPerSec 2000) (-1)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
@@ -127,7 +126,7 @@ finalPark = do
   extrude (Speed.fromMmPerSec 2000) (-3)
 
   moveZ parkZ
-  moveToXY (fromF MM $ V2 parkX parkY)
+  moveToXY (Pos2D.fromMm $ V2 parkX parkY)
 
 homeOrResume :: GCode ()
 homeOrResume = do
