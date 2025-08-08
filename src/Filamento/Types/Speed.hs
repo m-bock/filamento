@@ -1,15 +1,25 @@
-module Filamento.Types.Speed where
+module Filamento.Types.Speed
+  ( Speed,
+    fromMmPerMin,
+    toMmPerMin,
+    fromMmPerSec,
+    toMmPerSec,
+  )
+where
 
-import Filamento.Conversions
 import Relude
 
 newtype Speed = Speed {mmPerSec :: Double}
   deriving (Show, Eq, Ord)
 
-instance Convert MMPerSec Speed where
-  from (MMPerSec v) = Speed v
-  to (Speed v) = MMPerSec v
+fromMmPerMin :: Double -> Speed
+fromMmPerMin d = Speed (d / 60)
 
-instance Convert MMPerMin Speed where
-  from (MMPerMin v) = Speed (v / 60)
-  to (Speed v) = MMPerMin (v * 60)
+toMmPerMin :: Speed -> Double
+toMmPerMin (Speed s) = s * 60
+
+fromMmPerSec :: Double -> Speed
+fromMmPerSec d = Speed d
+
+toMmPerSec :: Speed -> Double
+toMmPerSec (Speed s) = s

@@ -64,9 +64,12 @@ import Filamento.Types.Distance
 import Filamento.Types.Duration
 import Filamento.Types.Frequency
 import Filamento.Types.Position2D (Position2D)
+import Filamento.Types.Position2D as Pos2D
 import Filamento.Types.Position3D
-import Filamento.Types.Speed
-import Filamento.Types.Temperature
+import Filamento.Types.Position3D as Pos3D
+import qualified Filamento.Types.Position3D as Pos3D
+import Filamento.Types.Speed as Speed
+import Filamento.Types.Temperature as Temperature
 import Linear (V2 (..), V3 (..))
 import Linear.Metric (Metric (..))
 import Marlin.Comment (gcodeToComment)
@@ -92,15 +95,15 @@ data GCodeEnv = Env
     firstLayerHeight :: Double,
     lineWidth :: Double,
     filamentDia :: Double,
-    transpose :: V3 Double -> V3 Double,
-    retractLength :: Double,
+    transpose :: Position3D -> Position3D,
+    retractLength :: Distance,
     retractSpeed :: Speed,
     zHop :: Double
   }
 
 data PrintState = PrintState
   { currentLayer :: Int,
-    currentPosition :: V3 Double,
+    currentPosition :: Position3D,
     stdgen :: StdGen,
     filament :: [(Text, Double)]
   }
@@ -109,7 +112,7 @@ data PrintState = PrintState
 initPrintState :: PrintState
 initPrintState =
   PrintState
-    { currentPosition = V3 145.50 94.00 1.56,
+    { currentPosition = fromF MM $ V3 145.50 94.00 1.56,
       stdgen = mkStdGen 0,
       currentLayer = 0,
       filament = []
@@ -118,12 +121,12 @@ initPrintState =
 defaultGCodeEnv :: GCodeEnv
 defaultGCodeEnv =
   Env
-    { moveSpeed = from @MMPerMin 10000,
-      extrudeSpeed = from @MMPerMin 2000,
-      moveSpeedFirstLayer = from @MMPerMin 1000,
-      extrudeSpeedFirstLayer = from @MMPerMin 800,
-      bedTemperature = from @Celsius 60,
-      hotendTemperature = from @Celsius 210,
+    { moveSpeed = Speed.fromMmPerMin 10000,
+      extrudeSpeed = Speed.fromMmPerMin 2000,
+      moveSpeedFirstLayer = Speed.fromMmPerMin 1000,
+      extrudeSpeedFirstLayer = Speed.fromMmPerMin 800,
+      bedTemperature = Temperature.fromCelsius 60,
+      hotendTemperature = Temperature.fromCelsius 210,
       printSize = V3 225 225 280,
       parkingPosition = V3 0 225 120,
       autoHomePosition = V3 145.50 94.00 1.56,
@@ -133,7 +136,7 @@ defaultGCodeEnv =
       filamentDia = 1.75,
       transpose = id,
       retractLength = 1,
-      retractSpeed = from @MMPerMin 1800,
+      retractSpeed = Speed.fromMmPerMin 1800,
       zHop = 0.4
     }
 
@@ -163,12 +166,13 @@ rand = GCode $ state $ \st ->
       st' = st {stdgen = newGen}
    in (value, st')
 
-updatePos :: V3 (Maybe Double) -> GCode ()
-updatePos (V3 mx my mz) = GCode $ do
-  st <- get
-  let (V3 x y z) = st.currentPosition
-      newPos = V3 (fromMaybe x mx) (fromMaybe y my) (fromMaybe z mz)
-  put $ st {currentPosition = newPos}
+-- updatePos :: V3 (Maybe Double) -> GCode ()
+-- updatePos (V3 mx my mz) =
+--   GCode $ do
+--     st <- get
+--     let (V3 x y z) = st.currentPosition
+--         newPos = V3 (fromMaybe x mx) (fromMaybe y my) (fromMaybe z mz)
+--     put $ st {currentPosition = newPos}
 
 -------------------------------------------------------------------------------
 
@@ -230,10 +234,13 @@ pause seconds = gCodeFromCmd $ GDwell (gcodeDef {seconds = Just seconds})
 
 --------------------------------------------------------------------------------
 
-operateTool :: V3 Double -> Speed -> Double -> GCode ()
+operateTool :: Position3D -> Speed -> Distance -> GCode ()
 operateTool v_ speed extr = do
   env <- ask
-  let V3 mx my mz = env.transpose v_
+
+  modify \st -> st {currentPosition = v_}
+
+  let V3 mx my mz = Pos3D.toMm $ env.transpose v_
 
   gCodeFromCmd
     $ GLinearMove
@@ -241,21 +248,21 @@ operateTool v_ speed extr = do
         { x = Just mx,
           y = Just my,
           z = Just mz,
-          feedrate = Just $ doubleToInt $ coerce $ to @MMPerMin speed,
-          extrude = Just extr
+          feedrate = Just $ round $ Speed.toMmPerMin speed,
+          extrude = Just $ coerce $ to @MM extr
         }
 
 --------------------------------------------------------------------------------
 
 moveToXYZ :: Position3D -> GCode ()
-moveToXYZ v = undefined
-
--- do
--- speed <- getSpeed
--- operateTool v speed 0
+moveToXYZ v = do
+  speed <- getSpeed
+  operateTool v speed 0
 
 moveToXY :: Position2D -> GCode ()
-moveToXY = undefined
+moveToXY pos = do
+  currentPos <- getCurrentPosition
+  undefined
 
 -- (V2 x y) = moveToXYZ (V3 x y 0)
 
@@ -339,7 +346,7 @@ extrudeZ z = extrudeXYZ (from $ fmap MM $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
-extrude :: Speed -> Double -> GCode ()
+extrude :: Speed -> Distance -> GCode ()
 extrude speed extr = do
   v <- getCurrentPosition
   operateTool v speed extr
@@ -357,12 +364,12 @@ getSpeed = do
       then env.moveSpeedFirstLayer
       else env.moveSpeed
 
-getExtrudeLength :: V3 Double -> GCode Double
+getExtrudeLength :: Position3D -> GCode Double
 getExtrudeLength target = do
   extrudeMM <- getExtrudeMM
   st <- get
-  let lineLength = distance st.currentPosition target
-  pure (lineLength * extrudeMM)
+  let lineLength = to @MM $ Pos3D.distance st.currentPosition target
+  pure (coerce lineLength * extrudeMM)
 
 getExtrudeMM :: GCode Double
 getExtrudeMM = do
@@ -374,8 +381,8 @@ getExtrudeMM = do
 isFirstLayers :: GCode Bool
 isFirstLayers = do
   st <- get
-  let (V3 _ _ z) = st.currentPosition
-  pure (z <= 0.4)
+  let (V3 _ _ z) = to @(V3 MM) st.currentPosition
+  pure (coerce z <= (0.4 :: Double))
 
 getExtrudeSpeed :: GCode Speed
 getExtrudeSpeed = do
@@ -396,14 +403,14 @@ gCodeFromCmd cmd = do
   case cmd of
     GMillimeterUnits -> pure ()
     GInchUnits -> pure ()
-    GLinearMove opt -> do
-      updatePos (V3 opt.x opt.y opt.z)
-      forM_ opt.extrude $ \e -> modify (stateUpdateExtrude e)
-    GAutoHome _ -> do
-      env <- ask
-      updatePos (fmap Just env.autoHomePosition)
-    GSetPosition opt -> do
-      updatePos (V3 opt.x opt.y opt.z)
+    GLinearMove opt -> pure ()
+    -- updatePos (V3 opt.x opt.y opt.z)
+    -- forM_ opt.extrude $ \e -> modify (stateUpdateExtrude e)
+    GAutoHome _ -> pure ()
+    -- env <- ask
+    -- updatePos (fmap Just env.autoHomePosition)
+    GSetPosition opt -> pure ()
+    -- updatePos (V3 opt.x opt.y opt.z)
     -- setExtruded opt.extrude
     MSetBedTemperature _ -> pure ()
     MWaitForBedTemperature _ -> pure ()
@@ -436,12 +443,9 @@ playTone freq dur =
   gCodeFromCmd
     $ MPlayTone
       gcodeDef
-        { frequency = Just $ doubleToInt $ coerce $ to @Hz freq,
-          milliseconds = Just $ doubleToInt $ coerce $ to @MS dur
+        { frequency = Just $ round $ to' @Hz freq,
+          milliseconds = Just $ round $ to' @Ms dur
         }
-
-doubleToInt :: Double -> Int
-doubleToInt = round
 
 playTone_ :: GCode ()
 playTone_ = playTone (Frequency 2600) (Duration 1)
@@ -451,7 +455,7 @@ setBedTemperature degrees = do
   gCodeFromCmd
     $ MSetBedTemperature
       gcodeDef
-        { degrees = Just $ doubleToInt $ coerce $ to @Celsius degrees
+        { degrees = Just $ round $ Temperature.toCelsius degrees
         }
 
 setHotendTemperature :: Temperature -> GCode ()
@@ -459,7 +463,7 @@ setHotendTemperature temp = do
   gCodeFromCmd
     $ MSSetHotendTemperature
       gcodeDef
-        { degrees = Just $ doubleToInt $ coerce $ to @Celsius temp
+        { degrees = Just $ round $ Temperature.toCelsius temp
         }
 
 waitForBedTemperature :: Temperature -> GCode ()
@@ -467,7 +471,7 @@ waitForBedTemperature temp = do
   gCodeFromCmd
     $ MWaitForBedTemperature
       gcodeDef
-        { degrees = Just $ doubleToInt $ coerce $ to @Celsius temp
+        { degrees = Just $ round $ Temperature.toCelsius temp
         }
 
 waitForHotendTemperature :: Temperature -> GCode ()
@@ -475,7 +479,7 @@ waitForHotendTemperature temp = do
   gCodeFromCmd
     $ MWaitForHotendTemperature
       gcodeDef
-        { degrees = Just $ doubleToInt $ coerce $ to @Celsius temp
+        { degrees = Just $ round $ Temperature.toCelsius temp
         }
 
 setPositionXYZ :: V3 Double -> GCode ()
@@ -505,7 +509,7 @@ changeColor colorName = do
 data FilamentStrategy = FilamentChange | PreparedFilament
   deriving (Show, Eq)
 
-getCurrentPosition :: GCode (V3 Double)
+getCurrentPosition :: GCode Position3D
 getCurrentPosition = do
   st <- get
   pure st.currentPosition

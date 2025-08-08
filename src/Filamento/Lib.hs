@@ -31,6 +31,7 @@ import Filamento.Types.Position2D (Position2D)
 import qualified Filamento.Types.Position2D as Pos2D
 import Filamento.Types.Position3D (Position3D)
 import qualified Filamento.Types.Position3D as Pos3D
+import qualified Filamento.Types.Speed as Speed
 import Linear (V2 (..), V3 (..))
 import Relude
 
@@ -46,11 +47,11 @@ withRetract :: GCode a -> GCode a
 withRetract inner = do
   env <- ask
 
-  extrude (from @MMPerSec 2000) (-env.retractLength)
+  extrude (Speed.fromMmPerSec 2000) (-env.retractLength)
 
   ret <- inner
 
-  extrude (from @MMPerSec 2000) env.retractLength
+  extrude (Speed.fromMmPerSec 2000) env.retractLength
 
   pure ret
 
@@ -58,10 +59,10 @@ withZHop :: GCode a -> GCode a
 withZHop inner = do
   st <- get
   env <- ask
-  let V3 _ _ z = st.currentPosition
-  moveZ (z + env.zHop)
+  let V3 _ _ z = to @(V3 MM) st.currentPosition
+  moveZ (coerce z + env.zHop)
   ret <- inner
-  moveZ z
+  moveZ (coerce z)
   pure ret
 
 printPolyLine :: [Position3D] -> GCode ()
@@ -99,9 +100,9 @@ printTestStripes = section "Test Stripes" $ do
 
   section "Thin test stripe" do
     moveToXY (fromF MM $ V2 5 5)
-    extrude (from @MMPerSec 2000) 5
+    extrude (Speed.fromMmPerSec 2000) 5
     extrudeXY (fromF MM $ V2 215.0 5)
-    extrude (from @MMPerSec 2000) (-1)
+    extrude (Speed.fromMmPerSec 2000) (-1)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
 -- raw "G1 X10 Y5 F3000" "Move to start position"
@@ -123,7 +124,7 @@ finalPark = do
 
   let V3 parkX parkY parkZ = env.parkingPosition
 
-  extrude (from @MMPerSec 2000) (-3)
+  extrude (Speed.fromMmPerSec 2000) (-3)
 
   moveZ parkZ
   moveToXY (fromF MM $ V2 parkX parkY)
@@ -209,25 +210,25 @@ filamentChange = do
 
     raw "M0" "Pause for filament change"
 
-    extrude (from @MMPerSec 2000) 5
+    extrude (Speed.fromMmPerSec 2000) 5
 
     pause 2
 
-    local (\env -> env {extrudeSpeed = from @MMPerSec 200}) $ do
-      extrude (from @MMPerSec 2000) 10
+    local (\env -> env {extrudeSpeed = Speed.fromMmPerSec 200}) $ do
+      extrude (Speed.fromMmPerSec 2000) 10
 
-    local (\env -> env {extrudeSpeed = from @MMPerSec 800}) $ do
-      extrude (from @MMPerSec 2000) 200
+    local (\env -> env {extrudeSpeed = Speed.fromMmPerSec 800}) $ do
+      extrude (Speed.fromMmPerSec 2000) 200
 
-    local (\env -> env {extrudeSpeed = from @MMPerSec 200}) $ do
-      extrude (from @MMPerSec 2000) 50
-      extrude (from @MMPerSec 2000) (-1)
+    local (\env -> env {extrudeSpeed = Speed.fromMmPerSec 200}) $ do
+      extrude (Speed.fromMmPerSec 2000) 50
+      extrude (Speed.fromMmPerSec 2000) (-1)
 
     playTone_
 
-    local (\env -> env {extrudeSpeed = from @MMPerSec 200}) $ do
-      extrude (from @MMPerSec 2000) (-1)
-      extrude (from @MMPerSec 2000) 1
+    local (\env -> env {extrudeSpeed = Speed.fromMmPerSec 200}) $ do
+      extrude (Speed.fromMmPerSec 2000) (-1)
+      extrude (Speed.fromMmPerSec 2000) 1
 
     playTone_
 

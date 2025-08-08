@@ -7,6 +7,10 @@ class Convert lo hi where
   to :: hi -> lo
   from :: lo -> hi
 
+class Convert' uni lo hi | uni -> lo where
+  to' :: hi -> lo
+  from' :: lo -> hi
+
 -- to' :: forall b b' a. (Convert b a, Newtype b b') => b' -> a
 -- to' = to . (pack :: b' -> b)
 
@@ -15,6 +19,14 @@ class Convert lo hi where
 
 fromF :: forall a b' b f. (Convert (f b') a, Functor f) => (b -> b') -> f b -> a
 fromF f val = from $ fmap f val
+
+data UnitMM
+
+data Hz
+
+data Celsius
+
+data Ms
 
 newtype MM = MM Double
   deriving (Show, Eq, Num)
@@ -29,13 +41,4 @@ newtype CM = CM Double
   deriving (Show, Eq, Num)
 
 newtype Sec = Sec Double
-  deriving (Show, Eq, Num)
-
-newtype MS = MS Double
-  deriving (Show, Eq, Num)
-
-newtype Celsius = Celsius Double
-  deriving (Show, Eq, Num)
-
-newtype Hz = Hz Double
   deriving (Show, Eq, Num)

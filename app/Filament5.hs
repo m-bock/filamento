@@ -11,6 +11,8 @@ import Filamento.Conversions
 import Filamento.IO
 import Filamento.Lib
 import Filamento.Math (justX)
+import Filamento.Types.Speed as Speed
+import Filamento.Types.Temperature as Temperature
 import Linear (V3 (..))
 import Linear.V2 (V2 (..))
 import Relude
@@ -316,13 +318,13 @@ main = do
         env
           { lineWidth = 0.4,
             layerHeight = 0.2,
-            hotendTemperature = from @Celsius 205,
-            bedTemperature = from @Celsius 65,
+            hotendTemperature = Temperature.fromCelsius 205,
+            bedTemperature = Temperature.fromCelsius 65,
             transpose = id, -- V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
             parkingPosition = V3 0 0 30,
-            moveSpeed = from @MMPerSec 2000,
-            extrudeSpeed = from @MMPerSec 2500,
-            retractLength = 1.5
+            moveSpeed = Speed.fromMmPerSec 2000,
+            extrudeSpeed = Speed.fromMmPerSec 2500,
+            retractLength = from @MM (MM 1.5)
           }
   let codeStr = toText $ local mkEnv sketch
   writeFileText "out/myprint.gcode" codeStr
