@@ -1,30 +1,29 @@
-module Marlin.Lib
-  ( extrudeXY,
-    extrude,
-    moveXY,
-    moveZ,
-    nextLayer,
-    withRetract,
-    withZHop,
-    printPolyLine,
-    extrudePoints,
-    printRect,
-    getLayerCount,
-    printTestStripes,
-    finalPark,
-    homeOrResume,
-    initPrinter,
-    readPersistentState,
-    filamentChange,
-    PersistentState (..),
-  )
+module Filamento.Lib (
+  extrudeXY,
+  extrude,
+  moveXY,
+  moveZ,
+  nextLayer,
+  withRetract,
+  withZHop,
+  printPolyLine,
+  extrudePoints,
+  printRect,
+  printTestStripes,
+  finalPark,
+  homeOrResume,
+  initPrinter,
+  readPersistentState,
+  filamentChange,
+  PersistentState (..),
+)
 where
 
 import Data.Aeson (FromJSON, ToJSON, encodeFile)
 import Data.Aeson.Decoding (decodeStrict)
+import Filamento
+import Filamento.Math
 import Linear (V2 (..), V3 (..))
-import Marlin.DSL
-import Marlin.Math
 import Relude
 
 nextLayer :: GCode ()
@@ -32,7 +31,7 @@ nextLayer = do
   st <- get
   env <- ask
   let newLayer = st.currentLayer + 1
-  put $ st {currentLayer = newLayer}
+  put $ st{currentLayer = newLayer}
   moveZ (env.layerHeight * fromIntegral newLayer)
 
 withRetract :: GCode a -> GCode a
@@ -77,12 +76,6 @@ printRect v1 s = do
 
   printPolyLine [v1, v2, v3, v4, v5]
 
-getLayerCount :: GCode Int
-getLayerCount = do
-  env <- ask
-  let V3 _ _ sketchZ = env.sketchSize
-  pure (floor (sketchZ / env.layerHeight))
-
 printTestStripes :: GCode ()
 printTestStripes = section "Test Stripes" $ do
   moveZ 0.2
@@ -94,9 +87,9 @@ printTestStripes = section "Test Stripes" $ do
   --   extrude (-1)
 
   section "Thin test stripe" do
-    moveXY (V2 10.0 10.0)
+    moveXY (V2 10.0 5.0)
     extrude 5
-    extrudeXY (V2 215.0 10.0)
+    extrudeXY (V2 215.0 5.0)
     extrude (-1)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
@@ -139,8 +132,6 @@ homeOrResume = do
 
 initPrinter :: GCode a -> GCode a
 initPrinter inner = do
-  env <- ask
-
   setUnits Millimeter
 
   setExtruderRelative
@@ -148,10 +139,6 @@ initPrinter inner = do
   moveXYZ (V3 0 0 0)
 
   heatup homeOrResume
-
-  do
-    moveXY env.transpose
-    setPositionXY (V2 0 0)
 
   do
     playTone_
@@ -207,19 +194,19 @@ filamentChange = do
 
     pause 2
 
-    local (\env -> env {extrudeSpeed = 200}) $ do
+    local (\env -> env{extrudeSpeed = 200}) $ do
       extrude 10
 
-    local (\env -> env {extrudeSpeed = 800}) $ do
+    local (\env -> env{extrudeSpeed = 800}) $ do
       extrude 200
 
-    local (\env -> env {extrudeSpeed = 200}) $ do
+    local (\env -> env{extrudeSpeed = 200}) $ do
       extrude 50
       extrude (-1)
 
     playTone_
 
-    local (\env -> env {extrudeSpeed = 200}) $ do
+    local (\env -> env{extrudeSpeed = 200}) $ do
       extrude (-1)
       extrude 1
 
@@ -241,15 +228,12 @@ readPersistentState = do
     Just x -> pure x
     Nothing -> error "Failed to decode printing-state.json"
 
-  let v' = v {count = v.count + 1}
+  let v' = v{count = v.count + 1}
   encodeFile persistentFile v'
 
   pure v
 
 -------
-
-changeColor :: Text -> GCode ()
-changeColor = undefined
 
 purge :: GCode ()
 purge = undefined

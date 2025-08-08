@@ -1,22 +1,17 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-
-module Marlin.MkFilament.V1
-  ( printFilament,
-    printFilament_,
-    ConfigSrc (..),
-  )
+module Filamento.Factory.V1 (
+  printFilament,
+  printFilament_,
+  ConfigSrc (..),
+)
 where
 
 import Data.List ((!!))
 import qualified Data.Text as T
+import Filamento
+import Filamento.Lib
+import Filamento.Math (addX, addY, justX, justY, subX)
 import Linear (V3 (..))
 import Linear.V2 (V2 (..), _x, _y)
-import Marlin.DSL
-import Marlin.Lib
-import Marlin.Math (addX, addY, justX, justY, subX)
 import Relude
 import Relude.Extra (un, wrap)
 
@@ -56,8 +51,8 @@ data ConfigDrv = ConfigDrv
   }
 
 data Config = Config
-  { src :: ConfigSrc,
-    drv :: ConfigDrv
+  { src :: ConfigSrc
+  , drv :: ConfigDrv
   }
 
 drvConfig :: ConfigSrc -> Config

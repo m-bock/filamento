@@ -1,23 +1,21 @@
-{-# LANGUAGE TupleSections #-}
-
-module Marlin.Core
-  ( GCodeCmd (..),
-    GCodeLine (..),
-    gcodeLineToRaw,
-    gcodeToRaw,
-    gcodeToComment,
-    GCodeCmdOptsDefault (..),
-    LinearMove (..),
-    SetBedTemperature (..),
-    WaitForBedTemperature (..),
-    SetHotendTemperature (..),
-    WaitForHotendTemperature (..),
-    AutoHome (..),
-    SetPosition (..),
-    PlayTone (..),
-    Pause (..),
-    Dwell (..),
-  )
+module Marlin.Core (
+  GCodeCmd (..),
+  GCodeLine (..),
+  gcodeLineToRaw,
+  gcodeToRaw,
+  gcodeToComment,
+  GCodeCmdOptsDefault (..),
+  LinearMove (..),
+  SetBedTemperature (..),
+  WaitForBedTemperature (..),
+  SetHotendTemperature (..),
+  WaitForHotendTemperature (..),
+  AutoHome (..),
+  SetPosition (..),
+  PlayTone (..),
+  Pause (..),
+  Dwell (..),
+)
 where
 
 -- See: https://marlinfw.org/meta/gcode/
@@ -29,11 +27,11 @@ import Relude
 import Text.Printf (printf)
 
 data LinearMove = LinearMove
-  { x :: Maybe Double,
-    y :: Maybe Double,
-    z :: Maybe Double,
-    extrude :: Maybe Double,
-    feedrate :: Maybe Int
+  { x :: Maybe Double
+  , y :: Maybe Double
+  , z :: Maybe Double
+  , extrude :: Maybe Double
+  , feedrate :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
@@ -63,16 +61,16 @@ data AutoHome = AutoHome
   deriving (Show, Eq, Generic)
 
 data SetPosition = SetPosition
-  { x :: Maybe Double,
-    y :: Maybe Double,
-    z :: Maybe Double,
-    extrude :: Maybe Double
+  { x :: Maybe Double
+  , y :: Maybe Double
+  , z :: Maybe Double
+  , extrude :: Maybe Double
   }
   deriving (Show, Eq, Generic)
 
 data PlayTone = PlayTone
-  { frequency :: Maybe Int,
-    milliseconds :: Maybe Int
+  { frequency :: Maybe Int
+  , milliseconds :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
@@ -107,16 +105,16 @@ data GCodeCmd
   deriving (Show, Eq, Generic)
 
 data GCodeLine = GCodeLine
-  { cmd :: Maybe GCodeCmd,
-    rawExtra :: Text,
-    comment :: Maybe Text
+  { cmd :: Maybe GCodeCmd
+  , rawExtra :: Text
+  , comment :: Maybe Text
   }
   deriving (Show, Eq)
 
 gcodeLineToRaw :: GCodeLine -> RawGCodeLine
-gcodeLineToRaw (GCodeLine Nothing extra Nothing) = RawGCodeLine {cmd = Nothing, rawExtra = extra, comment = Nothing}
-gcodeLineToRaw (GCodeLine Nothing extra (Just c)) = RawGCodeLine {cmd = Nothing, rawExtra = extra, comment = Just c}
-gcodeLineToRaw (GCodeLine (Just cmd) extra mComment) = RawGCodeLine {cmd = Just (gcodeToRaw cmd), rawExtra = extra, comment = mComment}
+gcodeLineToRaw (GCodeLine Nothing extra Nothing) = RawGCodeLine{cmd = Nothing, rawExtra = extra, comment = Nothing}
+gcodeLineToRaw (GCodeLine Nothing extra (Just c)) = RawGCodeLine{cmd = Nothing, rawExtra = extra, comment = Just c}
+gcodeLineToRaw (GCodeLine (Just cmd) extra mComment) = RawGCodeLine{cmd = Just (gcodeToRaw cmd), rawExtra = extra, comment = mComment}
 
 gcodeToComment :: GCodeCmd -> Text
 gcodeToComment cmd =
@@ -169,26 +167,26 @@ gcodeToRaw cmd =
     GInchUnits ->
       RawGCodeCmd "G20" Map.empty
     GLinearMove (LinearMove x y z e f) ->
-      RawGCodeCmd "G1"
-        $ Map.fromList
-        $ catMaybes
-          [ ('X',) . ArgDouble <$> x,
-            ('Y',) . ArgDouble <$> y,
-            ('Z',) . ArgDouble <$> z,
-            ('E',) . ArgDouble <$> e,
-            ('F',) . ArgInt <$> f
-          ]
+      RawGCodeCmd "G1" $
+        Map.fromList $
+          catMaybes
+            [ ('X',) . ArgDouble <$> x
+            , ('Y',) . ArgDouble <$> y
+            , ('Z',) . ArgDouble <$> z
+            , ('E',) . ArgDouble <$> e
+            , ('F',) . ArgInt <$> f
+            ]
     GAutoHome (AutoHome _skipIfTrusted) ->
       RawGCodeCmd "G28" $ Map.fromList []
     GSetPosition (SetPosition x y z e) ->
-      RawGCodeCmd "G92"
-        $ Map.fromList
-        $ catMaybes
-          [ ('X',) . ArgDouble <$> x,
-            ('Y',) . ArgDouble <$> y,
-            ('Z',) . ArgDouble <$> z,
-            ('E',) . ArgDouble <$> e
-          ]
+      RawGCodeCmd "G92" $
+        Map.fromList $
+          catMaybes
+            [ ('X',) . ArgDouble <$> x
+            , ('Y',) . ArgDouble <$> y
+            , ('Z',) . ArgDouble <$> z
+            , ('E',) . ArgDouble <$> e
+            ]
     MSetBedTemperature (SetBedTemperature t) ->
       RawGCodeCmd "M140" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MWaitForBedTemperature (WaitForBedTemperature t) ->
@@ -210,12 +208,12 @@ gcodeToRaw cmd =
     MMotorsOff ->
       RawGCodeCmd "M84" Map.empty
     MPlayTone (PlayTone f d) ->
-      RawGCodeCmd "M300"
-        $ Map.fromList
-        $ catMaybes
-          [ ('F',) . ArgInt <$> f,
-            ('D',) . ArgInt <$> d
-          ]
+      RawGCodeCmd "M300" $
+        Map.fromList $
+          catMaybes
+            [ ('F',) . ArgInt <$> f
+            , ('D',) . ArgInt <$> d
+            ]
     GDwell (Dwell s) ->
       RawGCodeCmd "G4" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> s]
 

@@ -1,0 +1,7 @@
+# fourmolu.yaml
+respectful: true # preserve your manual line breaks/blank lines
+newlines-between-decls: 1 # top-level spacing (unrelated to case branches)
+# Optional niceties:
+# indentation: 2
+# comma-style: trailing
+# column-limit: 100

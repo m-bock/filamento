@@ -12,26 +12,30 @@ common warnings
   default-extensions:
     BlockArguments
     DeriveGeneric
+    DerivingStrategies
     DuplicateRecordFields
     FlexibleContexts
     FlexibleInstances
+    GeneralizedNewtypeDeriving
     LambdaCase
+    NamedFieldPuns
     NoFieldSelectors
     NoImplicitPrelude
     OverloadedRecordDot
     OverloadedStrings
     RecordWildCards
     ScopedTypeVariables
+    TupleSections
     TypeApplications
 
 library
   import: warnings
   exposed-modules:
+    Filamento
+    Filamento.Factory.V1
+    Filamento.Lib
+    Filamento.Math
     Marlin.Core
-    Marlin.DSL
-    Marlin.Lib
-    Marlin.Math
-    Marlin.MkFilament.V1
     Marlin.Syntax
 
   build-depends:

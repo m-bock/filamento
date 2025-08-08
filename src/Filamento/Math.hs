@@ -1,4 +1,4 @@
-module Marlin.Math where
+module Filamento.Math where
 
 import Linear.V2
 import Relude
