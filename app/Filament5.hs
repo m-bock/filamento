@@ -7,6 +7,7 @@ module Filament5 where
 
 import qualified Data.Text as T
 import Filamento
+import Filamento.IO
 import Filamento.Lib
 import Filamento.Math (justX)
 import Linear (V3 (..))
@@ -41,85 +42,85 @@ data World
 ---
 
 data Config = Config
-  { tubeCenter :: Coord V2D World Abs
-  , tubeDiameter :: Double
-  , tubeRadius :: Double
-  , tubeCircumference :: Double
-  , countArcSteps :: Int
-  , arcStep :: Double
-  , idealLineWidth :: Double
-  , countPrintedLayers :: Int
-  , depthHill :: Double
-  , spoolDiameter :: Double
-  , layerCount :: Int
-  , idealLayerHeight :: Double
-  , realLayerHeight :: Double
-  , printedDepth :: Double
+  { tubeCenter :: Coord V2D World Abs,
+    tubeDiameter :: Double,
+    tubeRadius :: Double,
+    tubeCircumference :: Double,
+    countArcSteps :: Int,
+    arcStep :: Double,
+    idealLineWidth :: Double,
+    countPrintedLayers :: Int,
+    depthHill :: Double,
+    spoolDiameter :: Double,
+    layerCount :: Int,
+    idealLayerHeight :: Double,
+    realLayerHeight :: Double,
+    printedDepth :: Double
   }
 
 config :: Config
 config =
   Config
-    { tubeCenter
-    , tubeDiameter
-    , tubeRadius
-    , countArcSteps
-    , arcStep
-    , idealLineWidth = 0.4
-    , tubeCircumference
-    , depthHill
-    , countPrintedLayers
-    , spoolDiameter
-    , layerCount
-    , idealLayerHeight
-    , realLayerHeight
-    , printedDepth = 150
+    { tubeCenter,
+      tubeDiameter,
+      tubeRadius,
+      countArcSteps,
+      arcStep,
+      idealLineWidth = 0.4,
+      tubeCircumference,
+      depthHill,
+      countPrintedLayers,
+      spoolDiameter,
+      layerCount,
+      idealLayerHeight,
+      realLayerHeight,
+      printedDepth = 150
     }
- where
-  tubeCenter = Coord (V2 120 120)
-  tubeDiameter = 200
-  tubeRadius = tubeDiameter / 2
-  tubeCircumference = pi * tubeDiameter
-  countArcSteps = 100
-  arcStep = tubeCircumference / fromIntegral countArcSteps
-  spoolDiameter = 1.65
-  depthHill = 50 -- tubeCircumference / fromIntegral countHills
-  idealLayerHeight = 0.1
-  layerCount = round (spoolDiameter / idealLayerHeight)
-  realLayerHeight = spoolDiameter / fromIntegral layerCount
-  countPrintedLayers = layerCount
+  where
+    tubeCenter = Coord (V2 120 120)
+    tubeDiameter = 200
+    tubeRadius = tubeDiameter / 2
+    tubeCircumference = pi * tubeDiameter
+    countArcSteps = 100
+    arcStep = tubeCircumference / fromIntegral countArcSteps
+    spoolDiameter = 1.65
+    depthHill = 50 -- tubeCircumference / fromIntegral countHills
+    idealLayerHeight = 0.1
+    layerCount = round (spoolDiameter / idealLayerHeight)
+    realLayerHeight = spoolDiameter / fromIntegral layerCount
+    countPrintedLayers = layerCount
 
 ---
 
 tubeToWorld3 :: Coord V3D Tube b -> Coord V3D World b
 tubeToWorld3 (Coord (V3 x y z)) = Coord (V3 x' y' z)
- where
-  Coord (V2 x' y') = tubeToWorld2 (Coord $ V2 x y)
+  where
+    Coord (V2 x' y') = tubeToWorld2 (Coord $ V2 x y)
 
 tubeToWorld2 :: Coord V2D Tube b -> Coord V2D World b
 tubeToWorld2 (Coord (V2 x y)) = Coord (V2 x' y')
- where
-  Coord (V2 centerX centerY) = config.tubeCenter
+  where
+    Coord (V2 centerX centerY) = config.tubeCenter
 
-  -- Use the simple fnApprox approach that works
-  arcLength = y -- y coordinate represents arc length along spiral
-  spiralConstant = -0.5 -- Increased magnitude for faster inward spiral
-  baseRadius = config.tubeRadius -- x offset from tube radius
+    -- Use the simple fnApprox approach that works
+    arcLength = y -- y coordinate represents arc length along spiral
+    spiralConstant = -0.5 -- Increased magnitude for faster inward spiral
+    baseRadius = config.tubeRadius -- x offset from tube radius
 
-  -- Simple approximation: angle = arcLength / averageRadius
-  -- For small spiral constants, this works very well
-  averageRadius = baseRadius + spiralConstant * (arcLength / (2 * baseRadius))
-  angle = arcLength / averageRadius
+    -- Simple approximation: angle = arcLength / averageRadius
+    -- For small spiral constants, this works very well
+    averageRadius = baseRadius + spiralConstant * (arcLength / (2 * baseRadius))
+    angle = arcLength / averageRadius
 
-  -- Calculate actual spiral radius at this angle
-  spiralRadius = baseRadius + spiralConstant * angle + x
+    -- Calculate actual spiral radius at this angle
+    spiralRadius = baseRadius + spiralConstant * angle + x
 
-  -- Convert to world coordinates
-  m = 3 * (pi / 2) -- Starting angle offset
-  finalAngle = m + angle
+    -- Convert to world coordinates
+    m = 3 * (pi / 2) -- Starting angle offset
+    finalAngle = m + angle
 
-  x' = centerX + spiralRadius * cos finalAngle
-  y' = centerY + spiralRadius * sin finalAngle
+    x' = centerX + spiralRadius * cos finalAngle
+    y' = centerY + spiralRadius * sin finalAngle
 
 tubeMkLine :: Coord V2D Tube Abs -> Coord V2D Tube Abs -> [Coord V2D Tube Abs]
 tubeMkLine (Coord start) (Coord end) =
@@ -182,7 +183,7 @@ printSnake (Coord frontLeft) (Coord backRight) = section "Print Snake" $ do
         backLeft' = backLeft + V2 plus minus
     tubeMoveTo (Coord frontLeft')
 
-    local (\e -> e{lineWidth = step}) do
+    local (\e -> e {lineWidth = step}) do
       section ("Snake " <> show i) do
         section "Front" do
           tubeExtrudePoints (Coord frontLeft') (Coord frontRight')
@@ -244,7 +245,7 @@ printPhase phase hillIndex = section ("Print Phase = " <> show phase <> " hillIn
 
   withRetract $ moveZ 0.1
 
-  local (\e -> e{layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
+  local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
     forM_ [0 .. config.countPrintedLayers - 1] \layerIndex -> do
       if layerIndex == 0
         then raw "M106 S0" "Turn off fan"
@@ -301,7 +302,7 @@ printTestObj = section "Print Test Object" $ do
 
   forM_ [0 .. 40] \i -> do
     moveZ (0.1 + fromIntegral i * config.realLayerHeight)
-    withRetract $ withZHop $ moveXY (V2 100 100)
+    withRetract $ withZHop $ moveToXY (V2 100 100)
     printRect (V2 100 100) (V2 50 20)
 
 isDev = False
@@ -312,15 +313,15 @@ main = do
   let count = ps.count `mod` 4
   let mkEnv env =
         env
-          { lineWidth = 0.4
-          , layerHeight = 0.2
-          , hotendTemperature = Temperature 205
-          , bedTemperature = Temperature 65
-          , transpose = id -- V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
-          , parkingPosition = V3 0 0 30
-          , moveSpeed = 2000
-          , extrudeSpeed = 2500
-          , retractLength = 1.5
+          { lineWidth = 0.4,
+            layerHeight = 0.2,
+            hotendTemperature = Temperature 205,
+            bedTemperature = Temperature 65,
+            transpose = id, -- V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
+            parkingPosition = V3 0 0 30,
+            moveSpeed = 2000,
+            extrudeSpeed = 2500,
+            retractLength = 1.5
           }
   let codeStr = toText $ local mkEnv sketch
   writeFileText "out/myprint.gcode" codeStr

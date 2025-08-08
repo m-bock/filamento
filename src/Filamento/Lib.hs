@@ -1,26 +1,22 @@
-module Filamento.Lib (
-  extrudeXY,
-  extrude,
-  moveXY,
-  moveZ,
-  nextLayer,
-  withRetract,
-  withZHop,
-  printPolyLine,
-  extrudePoints,
-  printRect,
-  printTestStripes,
-  finalPark,
-  homeOrResume,
-  initPrinter,
-  readPersistentState,
-  filamentChange,
-  PersistentState (..),
-)
+module Filamento.Lib
+  ( extrudeXY,
+    extrude,
+    moveXY,
+    moveZ,
+    nextLayer,
+    withRetract,
+    withZHop,
+    printPolyLine,
+    extrudePoints,
+    printRect,
+    printTestStripes,
+    finalPark,
+    homeOrResume,
+    initPrinter,
+    filamentChange,
+  )
 where
 
-import Data.Aeson (FromJSON, ToJSON, encodeFile)
-import Data.Aeson.Decoding (decodeStrict)
 import Filamento
 import Filamento.Math
 import Linear (V2 (..), V3 (..))
@@ -31,18 +27,18 @@ nextLayer = do
   st <- get
   env <- ask
   let newLayer = st.currentLayer + 1
-  put $ st{currentLayer = newLayer}
+  put $ st {currentLayer = newLayer}
   moveZ (env.layerHeight * fromIntegral newLayer)
 
 withRetract :: GCode a -> GCode a
 withRetract inner = do
   env <- ask
 
-  extrude (-env.retractLength)
+  extrude 2000 (-env.retractLength)
 
   ret <- inner
 
-  extrude env.retractLength
+  extrude 2000 env.retractLength
 
   pure ret
 
@@ -59,7 +55,7 @@ withZHop inner = do
 printPolyLine :: [V2 Double] -> GCode ()
 printPolyLine [] = pure ()
 printPolyLine (v : vs) = do
-  moveXY v
+  moveToXY v
   extrudePoints vs
 
 extrudePoints :: [V2 Double] -> GCode ()
@@ -87,10 +83,10 @@ printTestStripes = section "Test Stripes" $ do
   --   extrude (-1)
 
   section "Thin test stripe" do
-    moveXY (V2 10.0 5.0)
-    extrude 5
-    extrudeXY (V2 215.0 5.0)
-    extrude (-1)
+    moveToXY (V2 5 5)
+    extrude 2000 5
+    extrudeXY (V2 215.0 5)
+    extrude 2000 (-1)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
 -- raw "G1 X10 Y5 F3000" "Move to start position"
@@ -112,10 +108,10 @@ finalPark = do
 
   let V3 parkX parkY parkZ = env.parkingPosition
 
-  extrude (-3)
+  extrude 2000 (-3)
 
   moveZ parkZ
-  moveXY (V2 parkX parkY)
+  moveToXY (V2 parkX parkY)
 
 homeOrResume :: GCode ()
 homeOrResume = do
@@ -130,20 +126,23 @@ homeOrResume = do
       section "Resume" $ do
         setPositionXYZ env.parkingPosition
 
+cleaningOpportunity :: GCode ()
+cleaningOpportunity = section "Cleaning Opportunity" do
+  moveToXYZ (V3 0 0 2)
+  playTone_
+  pause 10
+
 initPrinter :: GCode a -> GCode a
 initPrinter inner = do
   setUnits Millimeter
 
   setExtruderRelative
 
-  moveXYZ (V3 0 0 0)
+  moveToXYZ (V3 0 0 0)
 
   heatup homeOrResume
 
-  do
-    playTone_
-    moveXY (V2 (-1) 0)
-    pause 10
+  cleaningOpportunity
 
   printTestStripes
 
@@ -190,48 +189,27 @@ filamentChange = do
 
     raw "M0" "Pause for filament change"
 
-    extrude 5
+    extrude 2000 5
 
     pause 2
 
-    local (\env -> env{extrudeSpeed = 200}) $ do
-      extrude 10
+    local (\env -> env {extrudeSpeed = 200}) $ do
+      extrude 2000 10
 
-    local (\env -> env{extrudeSpeed = 800}) $ do
-      extrude 200
+    local (\env -> env {extrudeSpeed = 800}) $ do
+      extrude 2000 200
 
-    local (\env -> env{extrudeSpeed = 200}) $ do
-      extrude 50
-      extrude (-1)
-
-    playTone_
-
-    local (\env -> env{extrudeSpeed = 200}) $ do
-      extrude (-1)
-      extrude 1
+    local (\env -> env {extrudeSpeed = 200}) $ do
+      extrude 2000 50
+      extrude 2000 (-1)
 
     playTone_
 
-data PersistentState = PersistentState
-  {count :: Int}
-  deriving (Show, Eq, Generic)
+    local (\env -> env {extrudeSpeed = 200}) $ do
+      extrude 2000 (-1)
+      extrude 2000 1
 
-instance FromJSON PersistentState
-
-instance ToJSON PersistentState
-
-readPersistentState :: IO PersistentState
-readPersistentState = do
-  let persistentFile = "persistent-state.json"
-  c <- readFileBS persistentFile
-  v <- case decodeStrict c of
-    Just x -> pure x
-    Nothing -> error "Failed to decode printing-state.json"
-
-  let v' = v{count = v.count + 1}
-  encodeFile persistentFile v'
-
-  pure v
+    playTone_
 
 -------
 

@@ -33,10 +33,12 @@ library
   exposed-modules:
     Filamento
     Filamento.Factory.V1
+    Filamento.IO
     Filamento.Lib
     Filamento.Math
     Marlin.Core
     Marlin.Syntax
+    Marlin.Comment
 
   build-depends:
     aeson ^>=2.2.3.0,

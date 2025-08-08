@@ -1,21 +1,20 @@
-module Marlin.Core (
-  GCodeCmd (..),
-  GCodeLine (..),
-  gcodeLineToRaw,
-  gcodeToRaw,
-  gcodeToComment,
-  GCodeCmdOptsDefault (..),
-  LinearMove (..),
-  SetBedTemperature (..),
-  WaitForBedTemperature (..),
-  SetHotendTemperature (..),
-  WaitForHotendTemperature (..),
-  AutoHome (..),
-  SetPosition (..),
-  PlayTone (..),
-  Pause (..),
-  Dwell (..),
-)
+module Marlin.Core
+  ( GCodeCmd (..),
+    GCodeLine (..),
+    gcodeLineToRaw,
+    gcodeToRaw,
+    GCodeCmdOptsDefault (..),
+    LinearMove (..),
+    SetBedTemperature (..),
+    WaitForBedTemperature (..),
+    SetHotendTemperature (..),
+    WaitForHotendTemperature (..),
+    AutoHome (..),
+    SetPosition (..),
+    PlayTone (..),
+    Pause (..),
+    Dwell (..),
+  )
 where
 
 -- See: https://marlinfw.org/meta/gcode/
@@ -27,11 +26,11 @@ import Relude
 import Text.Printf (printf)
 
 data LinearMove = LinearMove
-  { x :: Maybe Double
-  , y :: Maybe Double
-  , z :: Maybe Double
-  , extrude :: Maybe Double
-  , feedrate :: Maybe Int
+  { x :: Maybe Double,
+    y :: Maybe Double,
+    z :: Maybe Double,
+    extrude :: Maybe Double,
+    feedrate :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
@@ -61,16 +60,16 @@ data AutoHome = AutoHome
   deriving (Show, Eq, Generic)
 
 data SetPosition = SetPosition
-  { x :: Maybe Double
-  , y :: Maybe Double
-  , z :: Maybe Double
-  , extrude :: Maybe Double
+  { x :: Maybe Double,
+    y :: Maybe Double,
+    z :: Maybe Double,
+    extrude :: Maybe Double
   }
   deriving (Show, Eq, Generic)
 
 data PlayTone = PlayTone
-  { frequency :: Maybe Int
-  , milliseconds :: Maybe Int
+  { frequency :: Maybe Int,
+    milliseconds :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
@@ -105,59 +104,16 @@ data GCodeCmd
   deriving (Show, Eq, Generic)
 
 data GCodeLine = GCodeLine
-  { cmd :: Maybe GCodeCmd
-  , rawExtra :: Text
-  , comment :: Maybe Text
+  { cmd :: Maybe GCodeCmd,
+    rawExtra :: Text,
+    comment :: Maybe Text
   }
   deriving (Show, Eq)
 
 gcodeLineToRaw :: GCodeLine -> RawGCodeLine
-gcodeLineToRaw (GCodeLine Nothing extra Nothing) = RawGCodeLine{cmd = Nothing, rawExtra = extra, comment = Nothing}
-gcodeLineToRaw (GCodeLine Nothing extra (Just c)) = RawGCodeLine{cmd = Nothing, rawExtra = extra, comment = Just c}
-gcodeLineToRaw (GCodeLine (Just cmd) extra mComment) = RawGCodeLine{cmd = Just (gcodeToRaw cmd), rawExtra = extra, comment = mComment}
-
-gcodeToComment :: GCodeCmd -> Text
-gcodeToComment cmd =
-  case cmd of
-    GMillimeterUnits -> "Set units to millimeters"
-    GInchUnits -> "Set units to inches"
-    GLinearMove (LinearMove x y z e f) ->
-      "Linear move to"
-        <> maybe "" (\v -> " X" <> printNum v) x
-        <> maybe "" (\v -> " Y" <> printNum v) y
-        <> maybe "" (\v -> " Z" <> printNum v) z
-        <> maybe "" (\v -> " E" <> printNum v) e
-        <> maybe "" (\v -> " F" <> show v) f
-    GAutoHome _ -> "Auto home axes"
-    GSetPosition (SetPosition x y z e) ->
-      "Set position to"
-        <> maybe "" (\v -> " X" <> show v) x
-        <> maybe "" (\v -> " Y" <> printNum v) y
-        <> maybe "" (\v -> " Z" <> printNum v) z
-        <> maybe "" (\v -> " E" <> printNum v) e
-    MSetBedTemperature (SetBedTemperature t) ->
-      "Set bed temperature to "
-        <> maybe "" (\v -> "S" <> show v) t
-    MWaitForBedTemperature (WaitForBedTemperature t) ->
-      "Wait for bed temperature to reach "
-        <> maybe "" (\v -> "S" <> show v) t
-    MSSetHotendTemperature (SetHotendTemperature t) ->
-      "Set hotend temperature to "
-        <> maybe "" (\v -> "S" <> show v) t
-    MWaitForHotendTemperature (WaitForHotendTemperature t) ->
-      "Wait for hotend temperature to reach "
-        <> maybe "" (\v -> "S" <> show v) t
-    MSetExtruderRelative -> "Set extruder to relative mode"
-    MSetExtruderAbsolute -> "Set extruder to absolute mode"
-    MSetHotendOff -> "Turn hotend off"
-    MSetBedOff -> "Turn bed off"
-    MSetFanOff -> "Turn fan off"
-    MMotorsOff -> "Turn all motors off"
-    MPlayTone (PlayTone f d) -> "Play tone at frequency " <> show f <> " for " <> show d <> " milliseconds"
-    GDwell (Dwell s) -> "Dwell for " <> show s <> " seconds"
-
-printNum :: Double -> Text
-printNum = T.pack . printf "%.5f"
+gcodeLineToRaw (GCodeLine Nothing extra Nothing) = RawGCodeLine {cmd = Nothing, rawExtra = extra, comment = Nothing}
+gcodeLineToRaw (GCodeLine Nothing extra (Just c)) = RawGCodeLine {cmd = Nothing, rawExtra = extra, comment = Just c}
+gcodeLineToRaw (GCodeLine (Just cmd) extra mComment) = RawGCodeLine {cmd = Just (gcodeToRaw cmd), rawExtra = extra, comment = mComment}
 
 gcodeToRaw :: GCodeCmd -> RawGCodeCmd
 gcodeToRaw cmd =
@@ -167,26 +123,26 @@ gcodeToRaw cmd =
     GInchUnits ->
       RawGCodeCmd "G20" Map.empty
     GLinearMove (LinearMove x y z e f) ->
-      RawGCodeCmd "G1" $
-        Map.fromList $
-          catMaybes
-            [ ('X',) . ArgDouble <$> x
-            , ('Y',) . ArgDouble <$> y
-            , ('Z',) . ArgDouble <$> z
-            , ('E',) . ArgDouble <$> e
-            , ('F',) . ArgInt <$> f
-            ]
+      RawGCodeCmd "G1"
+        $ Map.fromList
+        $ catMaybes
+          [ ('X',) . ArgDouble <$> x,
+            ('Y',) . ArgDouble <$> y,
+            ('Z',) . ArgDouble <$> z,
+            ('E',) . ArgDouble <$> e,
+            ('F',) . ArgInt <$> f
+          ]
     GAutoHome (AutoHome _skipIfTrusted) ->
       RawGCodeCmd "G28" $ Map.fromList []
     GSetPosition (SetPosition x y z e) ->
-      RawGCodeCmd "G92" $
-        Map.fromList $
-          catMaybes
-            [ ('X',) . ArgDouble <$> x
-            , ('Y',) . ArgDouble <$> y
-            , ('Z',) . ArgDouble <$> z
-            , ('E',) . ArgDouble <$> e
-            ]
+      RawGCodeCmd "G92"
+        $ Map.fromList
+        $ catMaybes
+          [ ('X',) . ArgDouble <$> x,
+            ('Y',) . ArgDouble <$> y,
+            ('Z',) . ArgDouble <$> z,
+            ('E',) . ArgDouble <$> e
+          ]
     MSetBedTemperature (SetBedTemperature t) ->
       RawGCodeCmd "M140" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> t]
     MWaitForBedTemperature (WaitForBedTemperature t) ->
@@ -208,12 +164,12 @@ gcodeToRaw cmd =
     MMotorsOff ->
       RawGCodeCmd "M84" Map.empty
     MPlayTone (PlayTone f d) ->
-      RawGCodeCmd "M300" $
-        Map.fromList $
-          catMaybes
-            [ ('F',) . ArgInt <$> f
-            , ('D',) . ArgInt <$> d
-            ]
+      RawGCodeCmd "M300"
+        $ Map.fromList
+        $ catMaybes
+          [ ('F',) . ArgInt <$> f,
+            ('D',) . ArgInt <$> d
+          ]
     GDwell (Dwell s) ->
       RawGCodeCmd "G4" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> s]
 
