@@ -55,23 +55,20 @@ module Filamento
 where
 
 import Control.Monad.Writer
-import Control.Newtype
-import Data.Aeson.Encoding (double)
 import Filamento.Conversions
 import Filamento.Types.Displacement2D
 import Filamento.Types.Displacement3D
+import qualified Filamento.Types.Displacement3D as Disp3D
 import Filamento.Types.Distance
+import qualified Filamento.Types.Distance as Distance
 import Filamento.Types.Duration
 import Filamento.Types.Frequency
-import Filamento.Types.Position2D (Position2D)
 import Filamento.Types.Position2D as Pos2D
 import Filamento.Types.Position3D
 import Filamento.Types.Position3D as Pos3D
-import qualified Filamento.Types.Position3D as Pos3D
 import Filamento.Types.Speed as Speed
 import Filamento.Types.Temperature as Temperature
 import Linear (V2 (..), V3 (..))
-import Linear.Metric (Metric (..))
 import Marlin.Comment (gcodeToComment)
 import Marlin.Core
 import Relude
@@ -112,7 +109,7 @@ data PrintState = PrintState
 initPrintState :: PrintState
 initPrintState =
   PrintState
-    { currentPosition = fromF MM $ V3 145.50 94.00 1.56,
+    { currentPosition = Pos3D.fromMm $ V3 145.50 94.00 1.56,
       stdgen = mkStdGen 0,
       currentLayer = 0,
       filament = []
@@ -249,7 +246,7 @@ operateTool v_ speed extr = do
           y = Just my,
           z = Just mz,
           feedrate = Just $ round $ Speed.toMmPerMin speed,
-          extrude = Just $ coerce $ to @MM extr
+          extrude = Just $ coerce $ Distance.toMm extr
         }
 
 --------------------------------------------------------------------------------
@@ -267,13 +264,13 @@ moveToXY pos = do
 -- (V2 x y) = moveToXYZ (V3 x y 0)
 
 moveToX :: Double -> GCode ()
-moveToX x = moveToXYZ (from $ fmap MM $ V3 x 0 0)
+moveToX x = moveToXYZ (Pos3D.fromMm $ V3 x 0 0)
 
 moveToY :: Double -> GCode ()
-moveToY y = moveToXYZ (from $ fmap MM $ V3 0 y 0)
+moveToY y = moveToXYZ (Pos3D.fromMm $ V3 0 y 0)
 
 moveToZ :: Double -> GCode ()
-moveToZ z = moveToXYZ (from $ fmap MM $ V3 0 0 z)
+moveToZ z = moveToXYZ (Pos3D.fromMm $ V3 0 0 z)
 
 --------------------------------------------------------------------------------
 
@@ -291,13 +288,13 @@ moveXY :: Displacement2D -> GCode ()
 moveXY = undefined -- (V2 x y) = moveXYZ (V3 x y 0)
 
 moveX :: Double -> GCode ()
-moveX x = moveXYZ (from $ fmap MM $ V3 x 0 0)
+moveX x = moveXYZ (Disp3D.fromMm $ V3 x 0 0)
 
 moveY :: Double -> GCode ()
-moveY y = moveXYZ (from $ fmap MM $ V3 0 y 0)
+moveY y = moveXYZ (Disp3D.fromMm $ V3 0 y 0)
 
 moveZ :: Double -> GCode ()
-moveZ z = moveXYZ (from $ fmap MM $ V3 0 0 z)
+moveZ z = moveXYZ (Disp3D.fromMm $ V3 0 0 z)
 
 --------------------------------------------------------------------------------
 
@@ -313,13 +310,13 @@ extrudeToXYZ v = undefined
 -- operateTool v speed extrudeLength
 
 extrudeToX :: Double -> GCode ()
-extrudeToX x = extrudeToXYZ (from $ fmap MM $ V3 x 0 0)
+extrudeToX x = extrudeToXYZ (Pos3D.fromMm $ V3 x 0 0)
 
 extrudeToY :: Double -> GCode ()
-extrudeToY y = extrudeToXYZ (from $ fmap MM $ V3 0 y 0)
+extrudeToY y = extrudeToXYZ (Pos3D.fromMm $ V3 0 y 0)
 
 extrudeToZ :: Double -> GCode ()
-extrudeToZ z = extrudeToXYZ (from $ fmap MM $ V3 0 0 z)
+extrudeToZ z = extrudeToXYZ (Pos3D.fromMm $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
@@ -336,13 +333,13 @@ extrudeXY = undefined
 -- (V2 x y) = extrudeXYZ (V3 x y 0)
 
 extrudeX :: Double -> GCode ()
-extrudeX x = extrudeXYZ (from $ fmap MM $ V3 x 0 0)
+extrudeX x = extrudeXYZ (Disp3D.fromMm $ V3 x 0 0)
 
 extrudeY :: Double -> GCode ()
-extrudeY y = extrudeXYZ (from $ fmap MM $ V3 0 y 0)
+extrudeY y = extrudeXYZ (Disp3D.fromMm $ V3 0 y 0)
 
 extrudeZ :: Double -> GCode ()
-extrudeZ z = extrudeXYZ (from $ fmap MM $ V3 0 0 z)
+extrudeZ z = extrudeXYZ (Disp3D.fromMm $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
@@ -368,8 +365,8 @@ getExtrudeLength :: Position3D -> GCode Double
 getExtrudeLength target = do
   extrudeMM <- getExtrudeMM
   st <- get
-  let lineLength = to @MM $ Pos3D.distance st.currentPosition target
-  pure (coerce lineLength * extrudeMM)
+  let lineLength = Distance.toMm $ Pos3D.distance st.currentPosition target
+  pure (lineLength * extrudeMM)
 
 getExtrudeMM :: GCode Double
 getExtrudeMM = do
@@ -381,8 +378,8 @@ getExtrudeMM = do
 isFirstLayers :: GCode Bool
 isFirstLayers = do
   st <- get
-  let (V3 _ _ z) = to @(V3 MM) st.currentPosition
-  pure (coerce z <= (0.4 :: Double))
+  let (V3 _ _ z) = Pos3D.toMm st.currentPosition
+  pure (z <= 0.4)
 
 getExtrudeSpeed :: GCode Speed
 getExtrudeSpeed = do

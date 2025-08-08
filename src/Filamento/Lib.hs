@@ -26,7 +26,7 @@ import qualified Filamento.Types.Displacement2D as Disp2D
 import Filamento.Types.Displacement3D (Displacement3D)
 import qualified Filamento.Types.Displacement3D as Disp3D
 import Filamento.Types.Distance (Distance)
-import qualified Filamento.Types.Distance as Dist
+import qualified Filamento.Types.Distance as Distance
 import Filamento.Types.Position2D (Position2D)
 import qualified Filamento.Types.Position2D as Pos2D
 import Filamento.Types.Position3D (Position3D)
@@ -59,10 +59,10 @@ withZHop :: GCode a -> GCode a
 withZHop inner = do
   st <- get
   env <- ask
-  let V3 _ _ z = to @(V3 MM) st.currentPosition
-  moveZ (coerce z + env.zHop)
+  let V3 _ _ z = Pos3D.toMm st.currentPosition
+  moveZ (z + env.zHop)
   ret <- inner
-  moveZ (coerce z)
+  moveZ z
   pure ret
 
 printPolyLine :: [Position3D] -> GCode ()
@@ -144,7 +144,7 @@ homeOrResume = do
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
-  moveToXYZ (from (MM <$> V3 0 0 2))
+  moveToXYZ (Pos3D.fromMm $ V3 0 0 2)
   playTone_
   pause 10
 
@@ -154,7 +154,7 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  moveToXYZ (from (MM <$> V3 0 0 0))
+  moveToXYZ (Pos3D.fromMm $ V3 0 0 0)
 
   heatup homeOrResume
 
@@ -186,15 +186,16 @@ heatup inner = do
   pure ret
 
 printPolygon :: Int -> Position3D -> Distance -> GCode ()
-printPolygon n v s
+printPolygon n v s'
   | n < 3 = pure () -- Polygons need at least 3 sides
-  | s <= 0 = pure () -- Side length must be positive
+  | s' <= 0 = pure () -- Side length must be positive
   | otherwise = do
       let angle = 2 * pi / fromIntegral n
+          s = Distance.toMm s'
           points =
             [ Pos3D.addDisplacement
                 v
-                (from $ V3 (Dist.scale (cos (angle * fromIntegral i)) s) (Dist.scale (sin (angle * fromIntegral i)) s) 0)
+                (Disp3D.fromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
               | i <- [0 .. n - 1]
             ]
       case viaNonEmpty head points of

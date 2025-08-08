@@ -11,8 +11,10 @@ where
 -- Pos
 
 import Filamento.Conversions
-import Filamento.Types.Displacement3D
-import Filamento.Types.Distance
+import Filamento.Types.Displacement3D (Displacement3D)
+import qualified Filamento.Types.Displacement3D as Disp3D
+import Filamento.Types.Distance (Distance)
+import qualified Filamento.Types.Distance as Distance
 import Linear hiding (distance)
 import qualified Linear as Lin
 import Relude
@@ -32,21 +34,5 @@ fromMm v = Position3D v
 toMm :: Position3D -> V3 Double
 toMm (Position3D v) = v
 
-instance Convert MM Position3D where
-  from (MM v) = Position3D (V3 v 0 0)
-  to (Position3D (V3 v _ _)) = MM v
-
-instance Convert CM Position3D where
-  from (CM v) = Position3D (V3 (v * 10) 0 0)
-  to (Position3D (V3 v _ _)) = CM (v / 10)
-
-instance Convert (V3 MM) Position3D where
-  from (V3 (MM x) (MM y) (MM z)) = Position3D (V3 x y z)
-  to (Position3D (V3 x y z)) = V3 (MM x) (MM y) (MM z)
-
-instance Convert (V3 CM) Position3D where
-  from (V3 (CM x) (CM y) (CM z)) = Position3D (V3 (x * 10) (y * 10) (z * 10))
-  to (Position3D (V3 x y z)) = V3 (CM (x / 10)) (CM (y / 10)) (CM (z / 10))
-
 distance :: Position3D -> Position3D -> Distance
-distance (Position3D v1) (Position3D v2) = from (MM $ Lin.distance v1 v2)
+distance (Position3D v1) (Position3D v2) = Distance.fromMm (Lin.distance v1 v2)

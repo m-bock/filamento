@@ -11,6 +11,7 @@ import Filamento.Conversions
 import Filamento.IO
 import Filamento.Lib
 import Filamento.Math (justX)
+import Filamento.Types.Distance as Distance
 import Filamento.Types.Speed as Speed
 import Filamento.Types.Temperature as Temperature
 import Linear (V3 (..))
@@ -324,7 +325,7 @@ main = do
             parkingPosition = V3 0 0 30,
             moveSpeed = Speed.fromMmPerSec 2000,
             extrudeSpeed = Speed.fromMmPerSec 2500,
-            retractLength = from @MM (MM 1.5)
+            retractLength = Distance.fromMm 1.5
           }
   let codeStr = toText $ local mkEnv sketch
   writeFileText "out/myprint.gcode" codeStr

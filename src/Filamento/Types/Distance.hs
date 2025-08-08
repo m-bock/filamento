@@ -1,18 +1,21 @@
 module Filamento.Types.Distance
   ( Distance,
     scale,
+    fromMm,
+    toMm,
   )
 where
 
-import Filamento.Conversions
 import Relude
 
 newtype Distance = Distance {mm :: Double}
   deriving (Show, Eq, Generic, Num, Ord)
 
-instance Convert MM Distance where
-  from (MM v) = Distance v
-  to (Distance v) = MM v
+toMm :: Distance -> Double
+toMm (Distance d) = d
+
+fromMm :: Double -> Distance
+fromMm d = Distance d
 
 scale :: Double -> Distance -> Distance
 scale factor (Distance d) = Distance (d * factor)
