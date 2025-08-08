@@ -320,8 +320,8 @@ main = do
             bedTemperature = from @Celsius 65,
             transpose = id, -- V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
             parkingPosition = V3 0 0 30,
-            moveSpeed = 2000,
-            extrudeSpeed = 2500,
+            moveSpeed = from @MMPerSec 2000,
+            extrudeSpeed = from @MMPerSec 2500,
             retractLength = 1.5
           }
   let codeStr = toText $ local mkEnv sketch

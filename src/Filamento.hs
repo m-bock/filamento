@@ -56,6 +56,7 @@ where
 
 import Control.Monad.Writer
 import Control.Newtype
+import Data.Aeson.Encoding (double)
 import Filamento.Conversions
 import Filamento.Types.Distance
 import Filamento.Types.Duration
@@ -75,10 +76,10 @@ import System.Random
 -------------------------------------------------------------------------------
 
 data GCodeEnv = Env
-  { moveSpeed :: Int,
-    extrudeSpeed :: Int,
-    moveSpeedFirstLayer :: Int,
-    extrudeSpeedFirstLayer :: Int,
+  { moveSpeed :: Speed,
+    extrudeSpeed :: Speed,
+    moveSpeedFirstLayer :: Speed,
+    extrudeSpeedFirstLayer :: Speed,
     bedTemperature :: Temperature,
     hotendTemperature :: Temperature,
     printSize :: V3 Double,
@@ -90,7 +91,7 @@ data GCodeEnv = Env
     filamentDia :: Double,
     transpose :: V3 Double -> V3 Double,
     retractLength :: Double,
-    retractSpeed :: Int,
+    retractSpeed :: Speed,
     zHop :: Double
   }
 
@@ -114,10 +115,10 @@ initPrintState =
 defaultGCodeEnv :: GCodeEnv
 defaultGCodeEnv =
   Env
-    { moveSpeed = 10000,
-      extrudeSpeed = 2000,
-      moveSpeedFirstLayer = 1000,
-      extrudeSpeedFirstLayer = 800,
+    { moveSpeed = from @MMPerMin 10000,
+      extrudeSpeed = from @MMPerMin 2000,
+      moveSpeedFirstLayer = from @MMPerMin 1000,
+      extrudeSpeedFirstLayer = from @MMPerMin 800,
       bedTemperature = from @Celsius 60,
       hotendTemperature = from @Celsius 210,
       printSize = V3 225 225 280,
@@ -129,7 +130,7 @@ defaultGCodeEnv =
       filamentDia = 1.75,
       transpose = id,
       retractLength = 1,
-      retractSpeed = 1800,
+      retractSpeed = from @MMPerMin 1800,
       zHop = 0.4
     }
 
@@ -226,7 +227,7 @@ pause seconds = gCodeFromCmd $ GDwell (gcodeDef {seconds = Just seconds})
 
 --------------------------------------------------------------------------------
 
-operateTool :: V3 Double -> Int -> Double -> GCode ()
+operateTool :: V3 Double -> Speed -> Double -> GCode ()
 operateTool v_ speed extr = do
   env <- ask
   let V3 mx my mz = env.transpose v_
@@ -237,14 +238,16 @@ operateTool v_ speed extr = do
         { x = Just mx,
           y = Just my,
           z = Just mz,
-          feedrate = Just speed,
+          feedrate = Just $ doubleToInt $ coerce $ to @MMPerMin speed,
           extrude = Just extr
         }
 
 --------------------------------------------------------------------------------
 
 moveTo :: Position -> GCode ()
-moveTo = undefined
+moveTo pos = do
+  speed <- getSpeed
+  operateTool (coerce $ to @(V3 MM) pos) speed 0
 
 moveToXYZ :: V3 Double -> GCode ()
 moveToXYZ v = do
@@ -326,7 +329,7 @@ extrudeZ z = extrudeXYZ (V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
-extrude :: Int -> Double -> GCode ()
+extrude :: Speed -> Double -> GCode ()
 extrude speed extr = do
   v <- getCurrentPosition
   operateTool v speed extr
@@ -335,7 +338,7 @@ extrude speed extr = do
 --- Utils
 -------------------------------------------------------------------------------
 
-getSpeed :: GCode Int
+getSpeed :: GCode Speed
 getSpeed = do
   b <- isFirstLayers
   env <- ask
@@ -364,7 +367,7 @@ isFirstLayers = do
   let (V3 _ _ z) = st.currentPosition
   pure (z <= 0.4)
 
-getExtrudeSpeed :: GCode Int
+getExtrudeSpeed :: GCode Speed
 getExtrudeSpeed = do
   b <- isFirstLayers
   env <- ask
@@ -419,15 +422,16 @@ gCodeFromCmd cmd = do
       }
 
 playTone :: Frequency -> Duration -> GCode ()
-playTone freq dur = undefined
+playTone freq dur =
+  gCodeFromCmd
+    $ MPlayTone
+      gcodeDef
+        { frequency = Just $ doubleToInt $ coerce $ to @Hz freq,
+          milliseconds = Just $ doubleToInt $ coerce $ to @MS dur
+        }
 
--- do
--- gCodeFromCmd
---   $ MPlayTone
---     gcodeDef
---       { frequency = Just freq,
---         milliseconds = undefined -- Just $ to @MS dur
---       }
+doubleToInt :: Double -> Int
+doubleToInt = round
 
 playTone_ :: GCode ()
 playTone_ = playTone (Frequency 2600) (Duration 1)
@@ -437,7 +441,7 @@ setBedTemperature degrees = do
   gCodeFromCmd
     $ MSetBedTemperature
       gcodeDef
-        { degrees = Just $ round $ coerce @_ @Double $ to @Celsius degrees
+        { degrees = Just $ doubleToInt $ coerce $ to @Celsius degrees
         }
 
 setHotendTemperature :: Temperature -> GCode ()
@@ -445,7 +449,7 @@ setHotendTemperature temp = do
   gCodeFromCmd
     $ MSSetHotendTemperature
       gcodeDef
-        { degrees = Just $ round $ coerce @_ @Double $ to @Celsius temp
+        { degrees = Just $ doubleToInt $ coerce $ to @Celsius temp
         }
 
 waitForBedTemperature :: Temperature -> GCode ()
@@ -453,7 +457,7 @@ waitForBedTemperature temp = do
   gCodeFromCmd
     $ MWaitForBedTemperature
       gcodeDef
-        { degrees = Just $ round $ coerce @_ @Double $ to @Celsius temp
+        { degrees = Just $ doubleToInt $ coerce $ to @Celsius temp
         }
 
 waitForHotendTemperature :: Temperature -> GCode ()
@@ -461,7 +465,7 @@ waitForHotendTemperature temp = do
   gCodeFromCmd
     $ MWaitForHotendTemperature
       gcodeDef
-        { degrees = Just $ round $ coerce @_ @Double $ to @Celsius temp
+        { degrees = Just $ doubleToInt $ coerce $ to @Celsius temp
         }
 
 setPositionXYZ :: V3 Double -> GCode ()

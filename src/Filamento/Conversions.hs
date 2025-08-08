@@ -20,13 +20,16 @@ newtype MM = MM Double
   deriving (Show, Eq, Num)
 
 newtype MMPerSec = MMPerSec Double
-  deriving (Show, Eq)
+  deriving (Show, Eq, Num)
+
+newtype MMPerMin = MMPerMin Double
+  deriving (Show, Eq, Num)
 
 newtype CM = CM Double
   deriving (Show, Eq, Num)
 
 newtype Sec = Sec Double
-  deriving (Show, Eq)
+  deriving (Show, Eq, Num)
 
 newtype MS = MS Double
   deriving (Show, Eq, Num)

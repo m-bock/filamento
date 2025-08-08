@@ -18,6 +18,7 @@ module Filamento.Lib
 where
 
 import Filamento
+import Filamento.Conversions
 import Filamento.Math
 import Linear (V2 (..), V3 (..))
 import Relude
@@ -34,11 +35,11 @@ withRetract :: GCode a -> GCode a
 withRetract inner = do
   env <- ask
 
-  extrude 2000 (-env.retractLength)
+  extrude (from @MMPerSec 2000) (-env.retractLength)
 
   ret <- inner
 
-  extrude 2000 env.retractLength
+  extrude (from @MMPerSec 2000) env.retractLength
 
   pure ret
 
@@ -84,9 +85,9 @@ printTestStripes = section "Test Stripes" $ do
 
   section "Thin test stripe" do
     moveToXY (V2 5 5)
-    extrude 2000 5
+    extrude (from @MMPerSec 2000) 5
     extrudeXY (V2 215.0 5)
-    extrude 2000 (-1)
+    extrude (from @MMPerSec 2000) (-1)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
 -- raw "G1 X10 Y5 F3000" "Move to start position"
@@ -108,7 +109,7 @@ finalPark = do
 
   let V3 parkX parkY parkZ = env.parkingPosition
 
-  extrude 2000 (-3)
+  extrude (from @MMPerSec 2000) (-3)
 
   moveZ parkZ
   moveToXY (V2 parkX parkY)
@@ -189,25 +190,25 @@ filamentChange = do
 
     raw "M0" "Pause for filament change"
 
-    extrude 2000 5
+    extrude (from @MMPerSec 2000) 5
 
     pause 2
 
-    local (\env -> env {extrudeSpeed = 200}) $ do
-      extrude 2000 10
+    local (\env -> env {extrudeSpeed = from @MMPerSec 200}) $ do
+      extrude (from @MMPerSec 2000) 10
 
-    local (\env -> env {extrudeSpeed = 800}) $ do
-      extrude 2000 200
+    local (\env -> env {extrudeSpeed = from @MMPerSec 800}) $ do
+      extrude (from @MMPerSec 2000) 200
 
-    local (\env -> env {extrudeSpeed = 200}) $ do
-      extrude 2000 50
-      extrude 2000 (-1)
+    local (\env -> env {extrudeSpeed = from @MMPerSec 200}) $ do
+      extrude (from @MMPerSec 2000) 50
+      extrude (from @MMPerSec 2000) (-1)
 
     playTone_
 
-    local (\env -> env {extrudeSpeed = 200}) $ do
-      extrude 2000 (-1)
-      extrude 2000 1
+    local (\env -> env {extrudeSpeed = from @MMPerSec 200}) $ do
+      extrude (from @MMPerSec 2000) (-1)
+      extrude (from @MMPerSec 2000) 1
 
     playTone_
 
