@@ -4,6 +4,8 @@ module Filamento.Types.Displacement2D
     justY,
     fromMm,
     toMm,
+    delta2FromMm,
+    delta2ToMm,
   )
 where
 
@@ -20,6 +22,12 @@ fromMm v = Displacement2D v
 
 toMm :: Displacement2D -> V2 Double
 toMm (Displacement2D v) = v
+
+delta2FromMm :: V2 Double -> Displacement2D
+delta2FromMm v = Displacement2D v
+
+delta2ToMm :: Displacement2D -> V2 Double
+delta2ToMm (Displacement2D v) = v
 
 justX :: Displacement2D -> Displacement2D
 justX (Displacement2D (V2 x _)) = Displacement2D (V2 x 0)

@@ -12,6 +12,8 @@ import Filamento.Lib
 import Filamento.Math (justX)
 import qualified Filamento.Types.Displacement2D as Disp2D
 import qualified Filamento.Types.Distance as Distance
+import Filamento.Types.Position2D (Position2D)
+import qualified Filamento.Types.Position2D as Pos2D
 import qualified Filamento.Types.Speed as Speed
 import qualified Filamento.Types.Temperature as Temperature
 import Linear (V3 (..))
@@ -306,8 +308,8 @@ printTestObj = section "Print Test Object" $ do
 
   forM_ [0 .. 40] \i -> do
     moveZ (0.1 + fromIntegral i * config.realLayerHeight)
-    withRetract $ withZHop $ moveToXY (fromF MM $ V2 100 100)
-    printRect2d (fromF MM $ V2 100 100) (Disp2D.fromMm $ V2 50 20)
+    withRetract $ withZHop $ moveToXY (Pos2D.fromMm $ V2 100 100)
+    printRect2d (Pos2D.fromMm $ V2 100 100) (Disp2D.fromMm $ V2 50 20)
 
 isDev = False
 

@@ -5,6 +5,8 @@ module Filamento.Types.Position3D
     distance,
     fromMm,
     toMm,
+    pos3FromMm,
+    pos3ToMm,
   )
 where
 
@@ -22,16 +24,22 @@ newtype Position3D = Position3D {mm :: V3 Double}
   deriving (Show, Eq, Num)
 
 addDisplacement :: Position3D -> Displacement3D -> Position3D
-addDisplacement = undefined
+addDisplacement pos disp = fromMm (toMm pos + Disp3D.toMm disp)
 
 subtractDisplacement :: Position3D -> Displacement3D -> Position3D
-subtractDisplacement = undefined
+subtractDisplacement pos disp = fromMm (toMm pos - Disp3D.toMm disp)
 
 fromMm :: V3 Double -> Position3D
 fromMm v = Position3D v
 
 toMm :: Position3D -> V3 Double
 toMm (Position3D v) = v
+
+pos3FromMm :: V3 Double -> Position3D
+pos3FromMm v = Position3D v
+
+pos3ToMm :: Position3D -> V3 Double
+pos3ToMm (Position3D v) = v
 
 distance :: Position3D -> Position3D -> Distance
 distance (Position3D v1) (Position3D v2) = Distance.fromMm (Lin.distance v1 v2)

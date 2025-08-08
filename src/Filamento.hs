@@ -51,11 +51,14 @@ module Filamento
     Duration (..),
     setPositionXYZ,
     setPositionXY,
+    module RePos3D,
   )
 where
 
 import Control.Monad.Writer
 import Filamento.Types.Displacement2D
+import qualified Filamento.Types.Displacement2D as Disp2D
+import qualified Filamento.Types.Displacement2D as ReDisp2D (delta2FromMm, delta2ToMm)
 import Filamento.Types.Displacement3D
 import qualified Filamento.Types.Displacement3D as Disp3D
 import Filamento.Types.Distance
@@ -64,9 +67,13 @@ import Filamento.Types.Duration
 import qualified Filamento.Types.Duration as Duration
 import Filamento.Types.Frequency
 import qualified Filamento.Types.Frequency as Frequency
+import Filamento.Types.Position (Position)
+import qualified Filamento.Types.Position as Pos
 import Filamento.Types.Position2D as Pos2D
+import qualified Filamento.Types.Position2D as RePos2D (pos2FromMm, pos2ToMm)
 import Filamento.Types.Position3D
 import Filamento.Types.Position3D as Pos3D
+import qualified Filamento.Types.Position3D as RePos3D (pos3FromMm, pos3ToMm)
 import Filamento.Types.Speed as Speed
 import Filamento.Types.Temperature as Temperature
 import Linear (V2 (..), V3 (..))
@@ -259,19 +266,31 @@ moveToXYZ v = do
 
 moveToXY :: Position2D -> GCode ()
 moveToXY pos = do
-  currentPos <- getCurrentPosition
-  undefined
+  let V2 x y = Pos2D.toMm pos
+  speed <- getSpeed
+  V3 _ _ z <- Pos3D.toMm <$> getCurrentPosition
+  operateTool (Pos3D.fromMm $ V3 x y z) speed 0
 
--- (V2 x y) = moveToXYZ (V3 x y 0)
+moveToX :: Position -> GCode ()
+moveToX pos = do
+  let x = Pos.toMm pos
+  speed <- getSpeed
+  V3 _ y z <- Pos3D.toMm <$> getCurrentPosition
+  operateTool (Pos3D.fromMm $ V3 x y z) speed 0
 
-moveToX :: Double -> GCode ()
-moveToX x = moveToXYZ (Pos3D.fromMm $ V3 x 0 0)
+moveToY :: Position -> GCode ()
+moveToY pos = do
+  let y = Pos.toMm pos
+  speed <- getSpeed
+  V3 x _ z <- Pos3D.toMm <$> getCurrentPosition
+  operateTool (Pos3D.fromMm $ V3 x y z) speed 0
 
-moveToY :: Double -> GCode ()
-moveToY y = moveToXYZ (Pos3D.fromMm $ V3 0 y 0)
-
-moveToZ :: Double -> GCode ()
-moveToZ z = moveToXYZ (Pos3D.fromMm $ V3 0 0 z)
+moveToZ :: Position -> GCode ()
+moveToZ pos = do
+  let z = Pos.toMm pos
+  speed <- getSpeed
+  V3 x y _ <- Pos3D.toMm <$> getCurrentPosition
+  operateTool (Pos3D.fromMm $ V3 x y z) speed 0
 
 --------------------------------------------------------------------------------
 
@@ -279,23 +298,27 @@ move :: Distance -> GCode ()
 move = undefined
 
 moveXYZ :: Displacement3D -> GCode ()
-moveXYZ v = undefined
-
--- do
--- v' <- getCurrentPosition
--- moveToXYZ (v + v')
+moveXYZ v = do
+  cur <- getCurrentPosition
+  speed <- getSpeed
+  operateTool (Pos3D.addDisplacement cur v) speed 0
 
 moveXY :: Displacement2D -> GCode ()
-moveXY = undefined -- (V2 x y) = moveXYZ (V3 x y 0)
+moveXY v = do
+  cur <- getCurrentPosition
+  let V3 x y z = Pos3D.toMm cur
+      V2 dx dy = Disp2D.toMm v
+  speed <- getSpeed
+  operateTool (Pos3D.fromMm $ V3 (x + dx) (y + dy) z) speed 0
 
 moveX :: Double -> GCode ()
-moveX x = moveXYZ (Disp3D.fromMm $ V3 x 0 0)
+moveX x = undefined
 
 moveY :: Double -> GCode ()
-moveY y = moveXYZ (Disp3D.fromMm $ V3 0 y 0)
+moveY y = undefined
 
 moveZ :: Double -> GCode ()
-moveZ z = moveXYZ (Disp3D.fromMm $ V3 0 0 z)
+moveZ z = undefined
 
 --------------------------------------------------------------------------------
 
