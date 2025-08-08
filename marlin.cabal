@@ -10,14 +10,17 @@ extra-doc-files: CHANGELOG.md
 common warnings
   ghc-options: -Wall
   default-extensions:
+    AllowAmbiguousTypes
     BlockArguments
     DeriveGeneric
     DerivingStrategies
     DuplicateRecordFields
     FlexibleContexts
     FlexibleInstances
+    FunctionalDependencies
     GeneralizedNewtypeDeriving
     LambdaCase
+    MultiParamTypeClasses
     NamedFieldPuns
     NoFieldSelectors
     NoImplicitPrelude
@@ -27,24 +30,34 @@ common warnings
     ScopedTypeVariables
     TupleSections
     TypeApplications
+    TypeOperators
 
 library
   import: warnings
   exposed-modules:
     Filamento
+    Filamento.Conversions
     Filamento.Factory.V1
     Filamento.IO
     Filamento.Lib
     Filamento.Math
+    Filamento.Types.Displacement
+    Filamento.Types.Distance
+    Filamento.Types.Duration
+    Filamento.Types.Frequency
+    Filamento.Types.Position
+    Filamento.Types.Speed
+    Filamento.Types.Temperature
+    Marlin.Comment
     Marlin.Core
     Marlin.Syntax
-    Marlin.Comment
 
   build-depends:
     aeson ^>=2.2.3.0,
     base ^>=4.17.2.1,
     linear,
     mtl,
+    newtype,
     random,
     relude,
 

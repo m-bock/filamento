@@ -55,6 +55,14 @@ module Filamento
 where
 
 import Control.Monad.Writer
+import Control.Newtype
+import Filamento.Conversions
+import Filamento.Types.Distance
+import Filamento.Types.Duration
+import Filamento.Types.Frequency
+import Filamento.Types.Position
+import Filamento.Types.Speed
+import Filamento.Types.Temperature
 import Linear (V2 (..), V3 (..))
 import Linear.Metric (Metric (..))
 import Marlin.Comment (gcodeToComment)
@@ -110,8 +118,8 @@ defaultGCodeEnv =
       extrudeSpeed = 2000,
       moveSpeedFirstLayer = 1000,
       extrudeSpeedFirstLayer = 800,
-      bedTemperature = Temperature 60,
-      hotendTemperature = Temperature 210,
+      bedTemperature = from @Celsius 60,
+      hotendTemperature = from @Celsius 210,
       printSize = V3 225 225 280,
       parkingPosition = V3 0 225 120,
       autoHomePosition = V3 145.50 94.00 1.56,
@@ -235,6 +243,9 @@ operateTool v_ speed extr = do
 
 --------------------------------------------------------------------------------
 
+moveTo :: Position -> GCode ()
+moveTo = undefined
+
 moveToXYZ :: V3 Double -> GCode ()
 moveToXYZ v = do
   speed <- getSpeed
@@ -253,6 +264,9 @@ moveToZ :: Double -> GCode ()
 moveToZ z = moveToXYZ (V3 0 0 z)
 
 --------------------------------------------------------------------------------
+
+move :: Distance -> GCode ()
+move = undefined
 
 moveXYZ :: V3 Double -> GCode ()
 moveXYZ v = do
@@ -404,57 +418,50 @@ gCodeFromCmd cmd = do
         comment = Just (gcodeToComment cmd)
       }
 
-newtype Frequency = Frequency {hz :: Int}
-  deriving (Show, Eq, Generic)
-
-newtype Duration = Duration {ms :: Int}
-  deriving (Show, Eq, Generic)
-
-newtype Temperature = Temperature {degrees :: Int}
-  deriving (Show, Eq, Generic)
-
 playTone :: Frequency -> Duration -> GCode ()
-playTone (Frequency freq) (Duration dur) = do
-  gCodeFromCmd
-    $ MPlayTone
-      gcodeDef
-        { frequency = Just freq,
-          milliseconds = Just dur
-        }
+playTone freq dur = undefined
+
+-- do
+-- gCodeFromCmd
+--   $ MPlayTone
+--     gcodeDef
+--       { frequency = Just freq,
+--         milliseconds = undefined -- Just $ to @MS dur
+--       }
 
 playTone_ :: GCode ()
 playTone_ = playTone (Frequency 2600) (Duration 1)
 
 setBedTemperature :: Temperature -> GCode ()
-setBedTemperature (Temperature degrees) = do
+setBedTemperature degrees = do
   gCodeFromCmd
     $ MSetBedTemperature
       gcodeDef
-        { degrees = Just degrees
+        { degrees = Just $ round $ coerce @_ @Double $ to @Celsius degrees
         }
 
 setHotendTemperature :: Temperature -> GCode ()
-setHotendTemperature (Temperature temp) = do
+setHotendTemperature temp = do
   gCodeFromCmd
     $ MSSetHotendTemperature
       gcodeDef
-        { degrees = Just temp
+        { degrees = Just $ round $ coerce @_ @Double $ to @Celsius temp
         }
 
 waitForBedTemperature :: Temperature -> GCode ()
-waitForBedTemperature (Temperature temp) = do
+waitForBedTemperature temp = do
   gCodeFromCmd
     $ MWaitForBedTemperature
       gcodeDef
-        { degrees = Just temp
+        { degrees = Just $ round $ coerce @_ @Double $ to @Celsius temp
         }
 
 waitForHotendTemperature :: Temperature -> GCode ()
-waitForHotendTemperature (Temperature temp) = do
+waitForHotendTemperature temp = do
   gCodeFromCmd
     $ MWaitForHotendTemperature
       gcodeDef
-        { degrees = Just temp
+        { degrees = Just $ round $ coerce @_ @Double $ to @Celsius temp
         }
 
 setPositionXYZ :: V3 Double -> GCode ()

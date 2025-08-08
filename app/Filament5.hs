@@ -7,6 +7,7 @@ module Filament5 where
 
 import qualified Data.Text as T
 import Filamento
+import Filamento.Conversions
 import Filamento.IO
 import Filamento.Lib
 import Filamento.Math (justX)
@@ -315,8 +316,8 @@ main = do
         env
           { lineWidth = 0.4,
             layerHeight = 0.2,
-            hotendTemperature = Temperature 205,
-            bedTemperature = Temperature 65,
+            hotendTemperature = from @Celsius 205,
+            bedTemperature = from @Celsius 65,
             transpose = id, -- V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
             parkingPosition = V3 0 0 30,
             moveSpeed = 2000,
