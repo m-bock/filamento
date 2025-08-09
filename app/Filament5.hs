@@ -10,7 +10,7 @@ import Filamento
 import Filamento.IO
 import Filamento.Lib
 import Filamento.Math (justX)
-import qualified Filamento.Types.Displacement2D as Disp2D
+import qualified Filamento.Types.Delta2D as Disp2D
 import qualified Filamento.Types.Distance as Distance
 import Filamento.Types.Position2D (Position2D)
 import qualified Filamento.Types.Position2D as Pos2D
@@ -150,12 +150,12 @@ tubeExtrudePoints (Coord start) (Coord end) = do
 tubeMoveTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeMoveTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
-  moveXY $ Disp2D.fromMm worldPt
+  moveXY $ delta2fromMm worldPt
 
 tubeExtrudeTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeExtrudeTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
-  extrudeXY $ Disp2D.fromMm worldPt
+  extrudeXY $ delta2fromMm worldPt
 
 splitInterval :: Double -> Double -> (Double, Int)
 splitInterval big small =
@@ -245,11 +245,11 @@ printPhase phase hillIndex = section ("Print Phase = " <> show phase <> " hillIn
         Hill -> 0.5
         Valley -> 1
 
-  withRetract $ moveZ 2.2
+  withRetract $ moveZ $ deltaFromMm 2.2
   let v = V2 0 ((fromIntegral hillIndex + offset) * config.depthHill)
   withRetract $ tubeMoveTo (Coord v)
 
-  withRetract $ moveZ 0.1
+  withRetract $ moveZ $ deltaFromMm 0.1
 
   local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
     forM_ [0 .. config.countPrintedLayers - 1] \layerIndex -> do
@@ -257,7 +257,7 @@ printPhase phase hillIndex = section ("Print Phase = " <> show phase <> " hillIn
         then raw "M106 S0" "Turn off fan"
         else raw "M106 S255" "Turn on fan"
 
-      moveZ (0.1 + fromIntegral layerIndex * config.realLayerHeight)
+      moveZ $ deltaFromMm (0.1 + fromIntegral layerIndex * config.realLayerHeight)
       printPhaseLayer phase hillIndex layerIndex
 
 printFilament :: GCode ()
@@ -284,7 +284,7 @@ ironFinishing = section "Iron Finishing" $ do
 
   raw "M106 S255" "Turn on fan"
 
-  moveZ ironHeight
+  moveZ $ deltaFromMm ironHeight
   tubeMoveTo (Coord $ V2 0 0)
 
   let step = config.tubeCircumference / fromIntegral config.countArcSteps
@@ -307,9 +307,9 @@ printTestObj = section "Print Test Object" $ do
   filamentChange
 
   forM_ [0 .. 40] \i -> do
-    moveZ (0.1 + fromIntegral i * config.realLayerHeight)
-    withRetract $ withZHop $ moveToXY (Pos2D.fromMm $ V2 100 100)
-    printRect2d (Pos2D.fromMm $ V2 100 100) (Disp2D.fromMm $ V2 50 20)
+    moveZ $ deltaFromMm (0.1 + fromIntegral i * config.realLayerHeight)
+    withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 100 100)
+    printRect2d (pos2FromMm $ V2 100 100) (delta2fromMm $ V2 50 20)
 
 isDev = False
 
@@ -321,13 +321,13 @@ main = do
         env
           { lineWidth = 0.4,
             layerHeight = 0.2,
-            hotendTemperature = Temperature.fromCelsius 205,
-            bedTemperature = Temperature.fromCelsius 65,
+            hotendTemperature = temperatureFromCelsius 205,
+            bedTemperature = temperatureFromCelsius 65,
             transpose = id, -- V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
-            parkingPosition = V3 0 0 30,
-            moveSpeed = Speed.fromMmPerSec 2000,
-            extrudeSpeed = Speed.fromMmPerSec 2500,
-            retractLength = Distance.fromMm 1.5
+            parkingPosition = pos3fromMm $ V3 0 0 30,
+            moveSpeed = speedFromMmPerSec 2000,
+            extrudeSpeed = speedFromMmPerSec 2500,
+            retractLength = distanceFromMm 1.5
           }
   let codeStr = toText $ local mkEnv sketch
   writeFileText "out/myprint.gcode" codeStr

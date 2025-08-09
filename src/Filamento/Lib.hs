@@ -18,19 +18,8 @@ module Filamento.Lib
   )
 where
 
-import Filamento
-import Filamento.Math
-import Filamento.Types.Displacement2D
-import qualified Filamento.Types.Displacement2D as Disp2D
-import Filamento.Types.Displacement3D (Displacement3D)
-import qualified Filamento.Types.Displacement3D as Disp3D
-import Filamento.Types.Distance (Distance)
-import qualified Filamento.Types.Distance as Distance
-import Filamento.Types.Position2D (Position2D)
-import qualified Filamento.Types.Position2D as Pos2D
-import Filamento.Types.Position3D (Position3D)
-import qualified Filamento.Types.Position3D as Pos3D
-import qualified Filamento.Types.Speed as Speed
+import Filamento.Core
+import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Relude
 
@@ -40,17 +29,17 @@ nextLayer = do
   env <- ask
   let newLayer = st.currentLayer + 1
   put $ st {currentLayer = newLayer}
-  moveZ (env.layerHeight * fromIntegral newLayer)
+  moveZ (deltaFromMm $ env.layerHeight * fromIntegral newLayer)
 
 withRetract :: GCode a -> GCode a
 withRetract inner = do
   env <- ask
 
-  extrude (Speed.fromMmPerSec 2000) (-env.retractLength)
+  extrude (speedFromMmPerSec 2000) (-env.retractLength)
 
   ret <- inner
 
-  extrude (Speed.fromMmPerSec 2000) env.retractLength
+  extrude (speedFromMmPerSec 2000) env.retractLength
 
   pure ret
 
@@ -58,10 +47,10 @@ withZHop :: GCode a -> GCode a
 withZHop inner = do
   st <- get
   env <- ask
-  let V3 _ _ z = Pos3D.toMm st.currentPosition
-  moveZ (z + env.zHop)
+  let V3 _ _ z = pos3toMm st.currentPosition
+  moveZ (deltaFromMm $ z + env.zHop)
   ret <- inner
-  moveZ z
+  moveZ (deltaFromMm z)
   pure ret
 
 printPolyLine :: [Position3D] -> GCode ()
@@ -75,21 +64,25 @@ extrudePoints vs = do
   forM_ vs $ \v -> do
     extrudeToXYZ v
 
-printRect2d :: Position2D -> Displacement2D -> GCode ()
-printRect2d = undefined
+printRect2d :: Position2D -> Delta2D -> GCode ()
+printRect2d (pos2ToMm -> V2 x y) delta = do
+  (pos3toMm -> V3 _ _ z) <- getCurrentPosition
+  let pos = pos3fromMm $ V3 x y z
+  printRect pos delta
 
-printRect :: Position3D -> Displacement3D -> GCode ()
-printRect v1 delta = do
-  let v2 = Pos3D.addDisplacement v1 (Disp3D.justX delta)
-  let v3 = Pos3D.addDisplacement v2 (Disp3D.justY delta)
-  let v4 = Pos3D.subtractDisplacement v3 (Disp3D.justX delta)
-  let v5 = Pos3D.subtractDisplacement v4 (Disp3D.justY delta)
+printRect :: Position3D -> Delta2D -> GCode ()
+printRect v1 (delta2toMm -> V2 dx dy) = do
+  let delta3 = delta3fromMm $ V3 dx dy 0
+  let v2 = pos3addDelta v1 (delta3justX delta3)
+  let v3 = pos3addDelta v2 (delta3justY delta3)
+  let v4 = pos3subDelta v3 (delta3justX delta3)
+  let v5 = pos3subDelta v4 (delta3justY delta3)
 
   printPolyLine [v1, v2, v3, v4, v5]
 
 printTestStripes :: GCode ()
 printTestStripes = section "Test Stripes" $ do
-  moveZ 0.2
+  moveZ (deltaFromMm 0.2)
 
   -- section "Thick test stripe" do
   --   moveTo (V2 10.0 5.0)
@@ -98,13 +91,13 @@ printTestStripes = section "Test Stripes" $ do
   --   extrude (-1)
 
   section "Thin test stripe" do
-    moveToXY (Pos2D.fromMm $ V2 5 5)
-    extrude (Speed.fromMmPerSec 2000) 5
-    extrudeXY (Disp2D.fromMm $ V2 215.0 5)
-    extrude (Speed.fromMmPerSec 2000) (-1)
+    moveToXY (pos2FromMm $ V2 5 5)
+    extrude (speedFromMmPerSec 2000) 5
+    extrudeToXY (pos2FromMm $ V2 215.0 5)
+    extrude (speedFromMmPerSec 2000) (-1)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
--- raw "G1 X10 Y5 F3000" "Move to start position"
+-- raw "G1 X10 Y5 F3000" "Move to start pos"
 -- raw "G1 E5 F500" "Prime nozzle"
 -- raw "G1 X215 Y5 E15 F600" "Draw a long test stripe"
 -- raw "G1 E-1 F300" "Retract a bit"
@@ -121,12 +114,12 @@ finalPark :: GCode ()
 finalPark = do
   env <- ask
 
-  let V3 parkX parkY parkZ = env.parkingPosition
+  let V3 parkX parkY parkZ = pos3toMm env.parkingPosition
 
-  extrude (Speed.fromMmPerSec 2000) (-3)
+  extrude (speedFromMmPerSec 2000) (-3)
 
-  moveZ parkZ
-  moveToXY (Pos2D.fromMm $ V2 parkX parkY)
+  moveZ (deltaFromMm parkZ)
+  moveToXY (pos2FromMm $ V2 parkX parkY)
 
 homeOrResume :: GCode ()
 homeOrResume = do
@@ -139,11 +132,11 @@ homeOrResume = do
         autoHome
     else do
       section "Resume" $ do
-        setPositionXYZ env.parkingPosition
+        setPositionXYZ (pos3toMm env.parkingPosition)
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
-  moveToXYZ (Pos3D.fromMm $ V3 0 0 2)
+  moveToXYZ (pos3fromMm $ V3 0 0 2)
   playTone_
   pause 10
 
@@ -153,7 +146,7 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  moveToXYZ (Pos3D.fromMm $ V3 0 0 0)
+  moveToXYZ (pos3fromMm $ V3 0 0 0)
 
   heatup homeOrResume
 
@@ -190,11 +183,11 @@ printPolygon n v s'
   | s' <= 0 = pure () -- Side length must be positive
   | otherwise = do
       let angle = 2 * pi / fromIntegral n
-          s = Distance.toMm s'
+          s = distanceToMm s'
           points =
-            [ Pos3D.addDisplacement
+            [ pos3addDelta
                 v
-                (Disp3D.fromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
+                (delta3fromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
               | i <- [0 .. n - 1]
             ]
       case viaNonEmpty head points of
@@ -210,25 +203,25 @@ filamentChange = do
 
     raw "M0" "Pause for filament change"
 
-    extrude (Speed.fromMmPerSec 2000) 5
+    extrude (speedFromMmPerSec 2000) 5
 
     pause 2
 
-    local (\env -> env {extrudeSpeed = Speed.fromMmPerSec 200}) $ do
-      extrude (Speed.fromMmPerSec 2000) 10
+    local (\env -> env {extrudeSpeed = speedFromMmPerSec 200}) $ do
+      extrude (speedFromMmPerSec 2000) 10
 
-    local (\env -> env {extrudeSpeed = Speed.fromMmPerSec 800}) $ do
-      extrude (Speed.fromMmPerSec 2000) 200
+    local (\env -> env {extrudeSpeed = speedFromMmPerSec 800}) $ do
+      extrude (speedFromMmPerSec 2000) 200
 
-    local (\env -> env {extrudeSpeed = Speed.fromMmPerSec 200}) $ do
-      extrude (Speed.fromMmPerSec 2000) 50
-      extrude (Speed.fromMmPerSec 2000) (-1)
+    local (\env -> env {extrudeSpeed = speedFromMmPerSec 200}) $ do
+      extrude (speedFromMmPerSec 2000) 50
+      extrude (speedFromMmPerSec 2000) (-1)
 
     playTone_
 
-    local (\env -> env {extrudeSpeed = Speed.fromMmPerSec 200}) $ do
-      extrude (Speed.fromMmPerSec 2000) (-1)
-      extrude (Speed.fromMmPerSec 2000) 1
+    local (\env -> env {extrudeSpeed = speedFromMmPerSec 200}) $ do
+      extrude (speedFromMmPerSec 2000) (-1)
+      extrude (speedFromMmPerSec 2000) 1
 
     playTone_
 

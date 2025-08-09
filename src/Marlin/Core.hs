@@ -167,8 +167,8 @@ gcodeToRaw cmd =
       RawGCodeCmd "M300"
         $ Map.fromList
         $ catMaybes
-          [ ('F',) . ArgInt <$> f,
-            ('D',) . ArgInt <$> d
+          [ ('S',) . ArgInt <$> f,
+            ('P',) . ArgInt <$> d
           ]
     GDwell (Dwell s) ->
       RawGCodeCmd "G4" $ Map.fromList $ catMaybes [('S',) . ArgInt <$> s]

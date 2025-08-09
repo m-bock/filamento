@@ -5,7 +5,6 @@ module Sketch03 where
 import qualified Data.Text as T
 import Filamento
 import Filamento.Lib
-import Filamento.Types.Displacement3D as Disp3D
 import Filamento.Types.Position3D as Pos3D
 import Filamento.Types.Speed as Speed
 import Filamento.Types.Temperature as Temperature
@@ -19,7 +18,7 @@ changeEnv env =
 
 printLayer :: Int -> GCode ()
 printLayer n = section ("Layer " <> T.pack (show n)) $ do
-  printRect (Pos3D.fromMm $ V3 100 100 0) (Disp3D.fromMm $ V3 50 50 0)
+  printRect (pos3fromMm $ V3 100 100 0) (delta2fromMm $ V2 50 50)
 
 sketch :: GCode ()
 sketch = local changeEnv $ initPrinter $ do

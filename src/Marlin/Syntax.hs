@@ -7,6 +7,7 @@ where
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Text as Text
 import Relude
 import Text.Printf (printf)
 
@@ -34,7 +35,7 @@ data RawGCodeLine = RawGCodeLine
 
 instance ToText ArgValue where
   toText (ArgInt i) = T.pack (show i)
-  toText (ArgDouble d) = T.pack (printf "%.5f" d)
+  toText (ArgDouble d) = T.pack (printf "%.4f" d)
   toText (ArgFlag True) = "1"
   toText (ArgFlag False) = "0"
 
@@ -43,9 +44,9 @@ instance ToText RawGCodeCmd where
     let argsText =
           args
             & Map.toList
-            & fmap (\(k, v) -> " " <> T.singleton k <> toText v)
+            & fmap (\(k, v) -> " " <> T.pack (printf "%9s" (Text.unpack (T.singleton k <> toText v))))
             & T.concat
-     in cmd <> argsText
+     in Text.pack (printf "%-4s" (Text.unpack cmd)) <> argsText
 
 instance ToText [RawGCodeLine] where
   toText lines = unlines zipped

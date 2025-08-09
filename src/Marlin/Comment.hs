@@ -20,7 +20,7 @@ gcodeToComment cmd =
         <> maybe "" (\v -> " F" <> show v) f
     GAutoHome _ -> "Auto home axes"
     GSetPosition (SetPosition x y z e) ->
-      "Set position to"
+      "Set pos to"
         <> maybe "" (\v -> " X" <> show v) x
         <> maybe "" (\v -> " Y" <> printNum v) y
         <> maybe "" (\v -> " Z" <> printNum v) z
@@ -47,7 +47,7 @@ gcodeToComment cmd =
     GDwell (Dwell s) -> "Dwell for " <> show s <> " seconds"
 
 printNum :: Double -> Text
-printNum = T.pack . printf "%.2f"
+printNum = T.pack . printf "%6.2f"
 
 printV3 :: V3 (Maybe Double) -> Text
 printV3 (V3 x y z) = "(" <> printComponent x <> ", " <> printComponent y <> ", " <> printComponent z <> ")"

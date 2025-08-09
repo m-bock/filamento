@@ -1,7 +1,7 @@
 module Filamento.Types.Temperature
   ( Temperature,
-    fromCelsius,
-    toCelsius,
+    temperatureFromCelsius,
+    temperatureToCelsius,
   )
 where
 
@@ -10,8 +10,8 @@ import Relude
 newtype Temperature = Temperature {degrees :: Double}
   deriving (Show, Eq, Num)
 
-fromCelsius :: Double -> Temperature
-fromCelsius t = Temperature t
+temperatureFromCelsius :: Double -> Temperature
+temperatureFromCelsius t = Temperature t
 
-toCelsius :: Temperature -> Double
-toCelsius (Temperature t) = t
+temperatureToCelsius :: Temperature -> Double
+temperatureToCelsius (Temperature t) = t

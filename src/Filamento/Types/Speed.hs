@@ -1,9 +1,9 @@
 module Filamento.Types.Speed
   ( Speed,
-    fromMmPerMin,
-    toMmPerMin,
-    fromMmPerSec,
-    toMmPerSec,
+    speedFromMmPerMin,
+    speedToMmPerMin,
+    speedFromMmPerSec,
+    speedToMmPerSec,
   )
 where
 
@@ -12,14 +12,14 @@ import Relude
 newtype Speed = Speed {mmPerSec :: Double}
   deriving (Show, Eq, Ord)
 
-fromMmPerMin :: Double -> Speed
-fromMmPerMin d = Speed (d / 60)
+speedFromMmPerMin :: Double -> Speed
+speedFromMmPerMin d = Speed (d / 60)
 
-toMmPerMin :: Speed -> Double
-toMmPerMin (Speed s) = s * 60
+speedToMmPerMin :: Speed -> Double
+speedToMmPerMin (Speed s) = s * 60
 
-fromMmPerSec :: Double -> Speed
-fromMmPerSec d = Speed d
+speedFromMmPerSec :: Double -> Speed
+speedFromMmPerSec d = Speed d
 
-toMmPerSec :: Speed -> Double
-toMmPerSec (Speed s) = s
+speedToMmPerSec :: Speed -> Double
+speedToMmPerSec (Speed s) = s

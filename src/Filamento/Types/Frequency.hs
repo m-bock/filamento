@@ -1,7 +1,7 @@
 module Filamento.Types.Frequency
   ( Frequency,
-    fromHz,
-    toHz,
+    frequencyFromHz,
+    frequencyToHz,
   )
 where
 
@@ -10,8 +10,8 @@ import Relude
 newtype Frequency = Frequency {hz :: Double}
   deriving (Show, Eq, Generic)
 
-fromHz :: Double -> Frequency
-fromHz f = Frequency f
+frequencyFromHz :: Double -> Frequency
+frequencyFromHz f = Frequency f
 
-toHz :: Frequency -> Double
-toHz (Frequency f) = f
+frequencyToHz :: Frequency -> Double
+frequencyToHz (Frequency f) = f

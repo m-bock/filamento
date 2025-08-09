@@ -31,17 +31,21 @@ common warnings
     TupleSections
     TypeApplications
     TypeOperators
+    ViewPatterns
 
 library
   import: warnings
   exposed-modules:
     Filamento
+    Filamento.Core
     Filamento.Factory.V1
     Filamento.IO
     Filamento.Lib
     Filamento.Math
-    Filamento.Types.Displacement2D
-    Filamento.Types.Displacement3D
+    Filamento.Types
+    Filamento.Types.Delta
+    Filamento.Types.Delta2D
+    Filamento.Types.Delta3D
     Filamento.Types.Distance
     Filamento.Types.Duration
     Filamento.Types.Frequency

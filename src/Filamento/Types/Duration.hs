@@ -1,7 +1,7 @@
 module Filamento.Types.Duration
   ( Duration,
-    fromMs,
-    toMs,
+    durationFromMs,
+    durationToMs,
   )
 where
 
@@ -10,8 +10,8 @@ import Relude
 newtype Duration = Duration {ms :: Double}
   deriving (Show, Eq, Generic)
 
-fromMs :: Double -> Duration
-fromMs d = Duration d
+durationFromMs :: Double -> Duration
+durationFromMs d = Duration d
 
-toMs :: Duration -> Double
-toMs (Duration d) = d
+durationToMs :: Duration -> Double
+durationToMs (Duration d) = d
