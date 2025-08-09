@@ -5,7 +5,6 @@ import Filamento.IO
 import Filamento.Math
 import GHC.List ((!!))
 import Linear
-import Linear.V (V (V))
 import Relude
 
 data Dir = Vert | Horz
@@ -15,12 +14,14 @@ purgeTower :: Position2D -> Delta -> Dir -> Int -> GCode ()
 purgeTower (pos2ToMm -> V2 x y) (deltaToMm -> size) dir purgeIndex = do
   let ticks = linspaceByStepLength 0 size 0.4 floor
 
-  let nSections = length ticks `div` 5
+  let n = 5
+
+  let nSections = length ticks `div` n
   let nTicksPerSection = length ticks `div` nSections
 
   section ("lines purgeIndex=" <> show purgeIndex <> " dir=" <> show dir) do
     forM_ [0 .. nSections - 1] \i -> do
-      let index = i * nTicksPerSection + ((purgeIndex + i) `mod` 5)
+      let index = i * nTicksPerSection + ((purgeIndex + i) `mod` n)
       let tick = ticks !! index
       case dir of
         Vert -> do
@@ -34,9 +35,9 @@ printSketch :: GCode ()
 printSketch = do
   initPrinter do
     let pos = pos2FromMm $ V2 100 100
-        delta = deltaFromMm 30
+        delta = deltaFromMm 20
 
-    forM_ [0 .. 99] \i -> do
+    forM_ [0 .. 199] \i -> do
       if i == 0
         then raw "M106 S0" "Turn off fan"
         else raw "M106 S255" "Turn on fan"
