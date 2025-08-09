@@ -32,7 +32,7 @@ nextLayer = do
   moveZ (deltaFromMm $ env.layerHeight * fromIntegral newLayer)
 
 withRetract :: GCode a -> GCode a
-withRetract inner = do
+withRetract inner = section "retract" do
   env <- ask
 
   extrude (speedFromMmPerSec 2000) (-env.retractLength)
@@ -44,13 +44,13 @@ withRetract inner = do
   pure ret
 
 withZHop :: GCode a -> GCode a
-withZHop inner = do
+withZHop inner = section "zHop" do
   st <- get
   env <- ask
   let V3 _ _ z = pos3toMm st.currentPosition
-  moveZ (deltaFromMm $ z + env.zHop)
+  moveToZ (posFromMm $ z + env.zHop)
   ret <- inner
-  moveZ (deltaFromMm z)
+  moveToZ (posFromMm z)
   pure ret
 
 printPolyLine :: [Position3D] -> GCode ()
@@ -82,7 +82,7 @@ printRect v1 (delta2toMm -> V2 dx dy) = do
 
 printTestStripes :: GCode ()
 printTestStripes = section "Test Stripes" $ do
-  moveZ (deltaFromMm 0.2)
+  moveToZ (posFromMm 0.2)
 
   -- section "Thick test stripe" do
   --   moveTo (V2 10.0 5.0)
@@ -90,11 +90,15 @@ printTestStripes = section "Test Stripes" $ do
   --   extrudeTo (V2 215.0 5.0)
   --   extrude (-1)
 
-  section "Thin test stripe" do
+  section "Thin test stripe 1" do
     moveToXY (pos2FromMm $ V2 5 5)
     extrude (speedFromMmPerSec 2000) 5
     extrudeToXY (pos2FromMm $ V2 215.0 5)
     extrude (speedFromMmPerSec 2000) (-1)
+
+  section "Thin test stripe 2" do
+    withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 5 10)
+    extrudeToXY (pos2FromMm $ V2 215.0 10)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
 -- raw "G1 X10 Y5 F3000" "Move to start pos"

@@ -14,6 +14,12 @@ linspace start end n =
   let step = (end - start) / fromIntegral (n - 1)
    in [start + fromIntegral i * step | i <- [0 .. n - 1]]
 
+linspaceByStepLength :: Double -> Double -> Double -> (Double -> Int) -> [Double]
+linspaceByStepLength start end idealStep f =
+  let diff = end - start
+      n = f (diff / idealStep)
+   in linspace start end n
+
 addX :: V2 Double -> Double -> V2 Double
 addX (V2 x y) dx = V2 (x + dx) y
 

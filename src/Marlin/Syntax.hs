@@ -53,7 +53,7 @@ instance ToText [RawGCodeLine] where
     where
       cmds = map (\x -> maybe "" toText x.cmd <> x.rawExtra) lines
       maxLength = fromMaybe 0 $ maximumMay (map T.length cmds)
-      comments = map (maybe "" (\c -> " ; " <> c) . (\x -> x.comment)) lines
+      comments = map (maybe "" (\c -> "   ; " <> c) . (\x -> x.comment)) lines
       zipped = zipWith (\cmd comment -> cmd <> (T.replicate (maxLength - T.length cmd) " ") <> comment) cmds comments
 
 maximumMay :: (Foldable t, Ord a) => t a -> Maybe a

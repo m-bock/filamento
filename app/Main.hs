@@ -2,17 +2,50 @@ module Main where
 
 import Filamento
 import Filamento.IO
-import Filamento.Lib
-import Filamento.Types.Delta2D as Disp2D
-import Filamento.Types.Position2D as Pos2D
+import Filamento.Math
+import GHC.List ((!!))
 import Linear
+import Linear.V (V (V))
 import Relude
+
+data Dir = Vert | Horz
+  deriving (Show, Eq)
+
+purgeTower :: Position2D -> Delta -> Dir -> Int -> GCode ()
+purgeTower (pos2ToMm -> V2 x y) (deltaToMm -> size) dir purgeIndex = do
+  let ticks = linspaceByStepLength 0 size 0.4 floor
+
+  let nSections = length ticks `div` 5
+  let nTicksPerSection = length ticks `div` nSections
+
+  section ("lines purgeIndex=" <> show purgeIndex <> " dir=" <> show dir) do
+    forM_ [0 .. nSections - 1] \i -> do
+      let index = i * nTicksPerSection + ((purgeIndex + i) `mod` 5)
+      let tick = ticks !! index
+      case dir of
+        Vert -> do
+          withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 y (x + tick))
+          extrudeX (deltaFromMm size)
+        Horz -> do
+          withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 (x + tick) y)
+          extrudeY (deltaFromMm size)
 
 printSketch :: GCode ()
 printSketch = do
   initPrinter do
-    printRect2d (pos2FromMm $ V2 0 0) (delta2fromMm $ V2 100 100)
-    pure ()
+    let pos = pos2FromMm $ V2 100 100
+        delta = deltaFromMm 30
+
+    forM_ [0 .. 99] \i -> do
+      if i == 0
+        then raw "M106 S0" "Turn off fan"
+        else raw "M106 S255" "Turn on fan"
+
+      let h = 0.2 + fromIntegral i * 0.2
+      moveToZ (posFromMm h)
+      let dir = if odd i then Vert else Horz
+
+      purgeTower pos delta dir 0
 
 {-local (\env -> env {transpose = \(V3 x y z) -> V3 x (y + 0) z})-}
 
@@ -24,4 +57,11 @@ main =
     )
   where
     mkEnv :: GCodeEnv -> GCodeEnv
-    mkEnv env = env
+    mkEnv env =
+      env
+        { lineWidth = 0.4,
+          layerHeight = 0.2,
+          hotendTemperature = temperatureFromCelsius 205,
+          bedTemperature = temperatureFromCelsius 65,
+          retractLength = distanceFromMm 1.5
+        }

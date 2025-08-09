@@ -13,7 +13,7 @@ import Linear
 import Relude
 
 newtype Position = Position {mm :: Double}
-  deriving (Show, Eq, Num)
+  deriving (Show, Eq, Num, Fractional, Ord, Real, Enum, Floating)
 
 posFromMm :: Double -> Position
 posFromMm v = Position v

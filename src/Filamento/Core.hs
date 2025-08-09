@@ -53,6 +53,8 @@ module Filamento.Core
 where
 
 import Control.Monad.Writer
+import qualified Data.Text as Text
+import Data.Typeable (gcast1)
 import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Marlin.Comment (gcodeToComment)
@@ -81,7 +83,8 @@ data GCodeEnv = Env
     transpose :: Position3D -> Position3D,
     retractLength :: Distance,
     retractSpeed :: Speed,
-    zHop :: Double
+    zHop :: Double,
+    sectionPath :: [Text]
   }
 
 data PrintState = PrintState
@@ -104,10 +107,10 @@ initPrintState =
 defaultGCodeEnv :: GCodeEnv
 defaultGCodeEnv =
   Env
-    { moveSpeed = speedFromMmPerMin 10000,
-      extrudeSpeed = speedFromMmPerMin 2000,
-      moveSpeedFirstLayer = speedFromMmPerMin 1000,
-      extrudeSpeedFirstLayer = speedFromMmPerMin 800,
+    { moveSpeed = speedFromMmPerSec 10000,
+      extrudeSpeed = speedFromMmPerSec 2000,
+      moveSpeedFirstLayer = speedFromMmPerSec 1000,
+      extrudeSpeedFirstLayer = speedFromMmPerSec 800,
       bedTemperature = temperatureFromCelsius 60,
       hotendTemperature = temperatureFromCelsius 210,
       printSize = V3 225 225 280,
@@ -120,7 +123,8 @@ defaultGCodeEnv =
       transpose = id,
       retractLength = 1,
       retractSpeed = speedFromMmPerMin 1800,
-      zHop = 0.4
+      zHop = 0.4,
+      sectionPath = []
     }
 
 newtype GCode a = GCode
@@ -161,12 +165,12 @@ rand = GCode $ state $ \st ->
 
 section :: Text -> GCode a -> GCode a
 section caption gc = do
-  newline
-  comment ("START: " <> caption)
-  ret <- gc
-  comment ("END: " <> caption)
-  newline
-  pure ret
+  local (\env -> env {sectionPath = env.sectionPath <> [caption]}) gc
+
+toTextSectionPath :: [Text] -> Text
+toTextSectionPath [] = ""
+toTextSectionPath path =
+  "[ " <> Text.intercalate " / " path <> " ] "
 
 newline :: GCode ()
 newline = GCode $ tell [GCodeLine {cmd = Nothing, rawExtra = "", comment = Nothing}]
@@ -232,7 +236,7 @@ operateTool v_ speed extr = do
         { x = Just mx,
           y = Just my,
           z = Just mz,
-          feedrate = Just $ round $ speedToMmPerMin speed,
+          feedrate = Just $ round $ speedToMmPerSec speed,
           extrude = Just $ coerce $ distanceToMm extr
         }
 
@@ -334,8 +338,9 @@ extrudeImpl mx my mz = do
   speed <- getSpeed
   cur <- getCurrentPosition
   let v = pos3fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
-  extr <- getExtrudeLength v
-  operateTool (v + cur) speed (distanceFromMm extr)
+  let v' = v + cur
+  extr <- getExtrudeLength v'
+  operateTool v' speed (distanceFromMm extr)
 
 extrudeXYZ :: Delta3D -> GCode ()
 extrudeXYZ (delta3toMm -> V3 dx dy dz) = do
@@ -345,14 +350,14 @@ extrudeXY :: Delta2D -> GCode ()
 extrudeXY (delta2toMm -> V2 dx dy) = do
   extrudeImpl (Just dx) (Just dy) Nothing
 
-extrudeX :: Double -> GCode ()
-extrudeX x = extrudeXYZ (delta3fromMm $ V3 x 0 0)
+extrudeX :: Delta -> GCode ()
+extrudeX (deltaToMm -> x) = extrudeXYZ (delta3fromMm $ V3 x 0 0)
 
-extrudeY :: Double -> GCode ()
-extrudeY y = extrudeXYZ (delta3fromMm $ V3 0 y 0)
+extrudeY :: Delta -> GCode ()
+extrudeY (deltaToMm -> y) = extrudeXYZ (delta3fromMm $ V3 0 y 0)
 
-extrudeZ :: Double -> GCode ()
-extrudeZ z = extrudeXYZ (delta3fromMm $ V3 0 0 z)
+extrudeZ :: Delta -> GCode ()
+extrudeZ (deltaToMm -> z) = extrudeXYZ (delta3fromMm $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
@@ -439,13 +444,15 @@ gCodeFromCmd cmd = do
         GLinearMove opt -> GLinearMove opt
         _ -> cmd
 
+  env <- ask
+
   GCode
     $ tell
     $ pure
     $ GCodeLine
       { cmd = Just cmd',
         rawExtra = "",
-        comment = Just (gcodeToComment cmd)
+        comment = Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)
       }
 
 playTone :: Frequency -> Duration -> GCode ()

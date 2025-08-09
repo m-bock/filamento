@@ -1,8 +1,6 @@
 module Marlin.Comment where
 
 import qualified Data.Text as T
-import Linear (V3)
-import Linear.V (V)
 import Linear.V3
 import Marlin.Core
 import Relude
