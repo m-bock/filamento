@@ -7,8 +7,10 @@ maintainer: no-day@posteo.net
 build-type: Simple
 extra-doc-files: CHANGELOG.md
 
-common warnings
+common flags
   ghc-options: -Wall
+
+common extensions
   default-extensions:
     AllowAmbiguousTypes
     BlockArguments
@@ -34,7 +36,7 @@ common warnings
     ViewPatterns
 
 library
-  import: warnings
+  import: flags, extensions
   exposed-modules:
     Filamento
     Filamento.Core
@@ -71,8 +73,8 @@ library
   hs-source-dirs: src
   default-language: Haskell2010
 
-executable marlin-exe
-  import: warnings
+executable filamento-exe
+  import: flags, extensions
   main-is: Main.hs
   other-modules:
     Filament5

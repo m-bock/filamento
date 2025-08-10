@@ -311,7 +311,7 @@ moveZ (deltaToMm -> z) =
 
 extrudeToImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 extrudeToImpl mx my mz = do
-  speed <- getSpeed
+  speed <- getExtrudeSpeed
   (pos3toMm -> V3 curX curY curZ) <- getCurrentPosition
   let v = pos3fromMm (V3 (fromMaybe curX mx) (fromMaybe curY my) (fromMaybe curZ mz))
   extr <- getExtrudeLength v
@@ -341,7 +341,7 @@ extrudeToZ (posToMm -> dz) =
 
 extrudeImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 extrudeImpl mx my mz = do
-  speed <- getSpeed
+  speed <- getExtrudeSpeed
   cur <- getCurrentPosition
   let v = pos3fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
   let v' = v + cur

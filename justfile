@@ -1,15 +1,9 @@
-# Justfile for jee-code
-
-# Usage: just gen     # generate G-code
-#        just print   # upload and print via OctoPrint
-# Requires .env file with OCTOPRINT_API_KEY (and optionally OCTOPRINT_URL)
-
 set dotenv-load
 
 gen:
     cabal run
 
-cancel-print:
+octo-cancel-print:
     curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
          -H "Content-Type: application/json" \
          -X POST \
@@ -25,7 +19,7 @@ octo-upload:
          -F "file=@out/myprint.gcode" \
          "${OCTOPRINT_URL:-http://localhost:5000}/api/files/local"
 
-print:
+octo-print:
     curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
          -F "select=true" \
          -F "print=true" \
@@ -54,10 +48,9 @@ octo-status:
 show:
     code out/myprint.gcode
 
-dev1: gen cancel-print print
+dev1: gen octo-cancel-print octo-print
 
 dev2: gen octo-upload
 
-
-start-octo:
+octo-start:
     nix-shell -p octoprint --run "octoprint serve"
