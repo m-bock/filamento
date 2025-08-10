@@ -138,7 +138,6 @@ newtype GCode a = GCode (StateT PrintState (ReaderT GCodeEnv (Writer [GCodeLine]
       MonadState PrintState
     )
 
--- Export helper to avoid unused warning
 instance ToText (GCode a) where
   toText (GCode m) =
     evalStateT m initPrintState
@@ -210,8 +209,8 @@ setFanOff = gcodeFromCmd MSetFanOff
 motorsOff :: GCode ()
 motorsOff = gcodeFromCmd MMotorsOff
 
-pause :: Int -> GCode ()
-pause seconds = gcodeFromCmd $ GDwell {seconds = Just seconds}
+pause :: Duration -> GCode ()
+pause dur = gcodeFromCmd $ GDwell {seconds = Just $ round $ durToSecs dur}
 
 setFanSpeed :: Proportion -> GCode ()
 setFanSpeed prop =

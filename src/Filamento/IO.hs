@@ -4,11 +4,9 @@ import Data.Aeson
 import Filamento.Core
 import Relude
 
-run :: (PersistentState -> (String, GCode ())) -> IO ()
-run f = do
-  st <- readPersistentState
-  let (fileName, gcode) = f st
-  let codeStr = toText gcode
+saveGCodeToFile :: String -> GCode () -> (GCodeEnv -> GCodeEnv) -> IO ()
+saveGCodeToFile fileName gcode mkEnv = do
+  let codeStr = toText $ local mkEnv gcode
   writeFileText fileName codeStr
 
 data PersistentState = PersistentState

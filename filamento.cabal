@@ -38,6 +38,7 @@ common extensions
 library
   import: flags, extensions
   exposed-modules:
+    -- BEGIN AUTO MODULES
     Filamento
     Filamento.Core
     Filamento.Factory.V1
@@ -61,6 +62,7 @@ library
     Marlin.Core
     Marlin.Syntax
 
+  -- END AUTO MODULES
   build-depends:
     aeson ^>=2.2.3.0,
     base ^>=4.17.2.1,
@@ -78,6 +80,7 @@ executable filamento-exe
   main-is: Main.hs
   other-modules:
     Filament5
+    PurgeTower
     Sketch03
     Try
 

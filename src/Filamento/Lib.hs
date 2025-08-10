@@ -142,7 +142,7 @@ cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
   moveToXYZ (pos3FromMm $ V3 0 0 2)
   playTone_
-  pause 10
+  pause (durFromSecs 10)
 
 initPrinter :: GCode a -> GCode a
 initPrinter inner = do
@@ -206,7 +206,7 @@ filamentChange = do
 
     extrude (spdFromMmPerSec 2000) 5
 
-    pause 2
+    pause (durFromSecs 2)
 
     local (\env -> env {extrudeSpeed = spdFromMmPerSec 200}) $ do
       extrude (spdFromMmPerSec 2000) 10
