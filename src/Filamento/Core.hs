@@ -267,15 +267,15 @@ moveToXY (pos2ToMm -> V2 x y) =
   moveToImpl (Just x) (Just y) Nothing
 
 moveToX :: Position -> GCode ()
-moveToX (posToMm -> x) =
+moveToX (toMm -> x) =
   moveToImpl (Just x) Nothing Nothing
 
 moveToY :: Position -> GCode ()
-moveToY (posToMm -> y) =
+moveToY (toMm -> y) =
   moveToImpl Nothing (Just y) Nothing
 
 moveToZ :: Position -> GCode ()
-moveToZ (posToMm -> z) =
+moveToZ (toMm -> z) =
   moveToImpl Nothing Nothing (Just z)
 
 --------------------------------------------------------------------------------
@@ -292,7 +292,7 @@ moveXYZ (dlt3ToMm -> V3 dx dy dz) =
   moveImpl (Just dx) (Just dy) (Just dz)
 
 moveXY :: Delta2D -> GCode ()
-moveXY (dlt2ToMm -> V2 dx dy) =
+moveXY (toMm -> V2 dx dy) =
   moveImpl (Just dx) (Just dy) Nothing
 
 moveX :: Delta -> GCode ()
@@ -326,15 +326,15 @@ extrudeToXYZ (pos3ToMm -> V3 dx dy dz) =
   extrudeToImpl (Just dx) (Just dy) (Just dz)
 
 extrudeToX :: Position -> GCode ()
-extrudeToX (posToMm -> dx) =
+extrudeToX (toMm -> dx) =
   extrudeToImpl (Just dx) Nothing Nothing
 
 extrudeToY :: Position -> GCode ()
-extrudeToY (posToMm -> dy) =
+extrudeToY (toMm -> dy) =
   extrudeToImpl Nothing (Just dy) Nothing
 
 extrudeToZ :: Position -> GCode ()
-extrudeToZ (posToMm -> dz) =
+extrudeToZ (toMm -> dz) =
   extrudeToImpl Nothing Nothing (Just dz)
 
 -------------------------------------------------------------------------------
@@ -353,7 +353,7 @@ extrudeXYZ (dlt3ToMm -> V3 dx dy dz) = do
   extrudeImpl (Just dx) (Just dy) (Just dz)
 
 extrudeXY :: Delta2D -> GCode ()
-extrudeXY (dlt2ToMm -> V2 dx dy) = do
+extrudeXY (toMm -> V2 dx dy) = do
   extrudeImpl (Just dx) (Just dy) Nothing
 
 extrudeX :: Delta -> GCode ()

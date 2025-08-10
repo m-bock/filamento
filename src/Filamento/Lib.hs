@@ -31,7 +31,7 @@ nextLayer = do
   env <- ask
   st <- get
 
-  let z = posFromMm (toMm env.firstLayerHeight + convert st.currentLayer * toMm env.layerHeight)
+  let z = fromMm (toMm env.firstLayerHeight + convert st.currentLayer * toMm env.layerHeight)
 
   modify \st -> st {currentLayer = st.currentLayer + 1}
 
@@ -54,9 +54,9 @@ withZHop inner = section "zHop" do
   st <- get
   env <- ask
   let V3 _ _ z = pos3ToMm st.currentPosition
-  moveToZ (posAddDelta (posFromMm z) env.zHop)
+  moveToZ (addDelta (fromMm z) env.zHop)
   ret <- inner
-  moveToZ (posFromMm z)
+  moveToZ (fromMm z)
   pure ret
 
 printPolyLine :: [Position3D] -> GCode ()
@@ -77,7 +77,7 @@ printRect2d (pos2ToMm -> V2 x y) delta = do
   printRect pos delta
 
 printRect :: Position3D -> Delta2D -> GCode ()
-printRect v1 (dlt2ToMm -> V2 dx dy) = do
+printRect v1 (toMm -> V2 dx dy) = do
   let dlt3 = dlt3FromMm $ V3 dx dy 0
   let v2 = pos3AddDelta v1 (dlt3JustX dlt3)
   let v3 = pos3AddDelta v2 (dlt3JustY dlt3)
@@ -88,7 +88,7 @@ printRect v1 (dlt2ToMm -> V2 dx dy) = do
 
 printTestStripes :: GCode ()
 printTestStripes = section "Test Stripes" $ do
-  moveToZ (posFromMm 0.2)
+  moveToZ (fromMm 0.2)
 
   -- section "Thick test stripe" do
   --   moveTo (V2 10.0 5.0)

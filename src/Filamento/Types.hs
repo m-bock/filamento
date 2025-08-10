@@ -1,17 +1,7 @@
 module Filamento.Types
   ( Delta,
-    dltJustX,
-    dltJustY,
     Position,
-    posFromMm,
-    posToMm,
-    posAddDelta,
-    posSubDelta,
     Delta2D,
-    dlt2JustX,
-    dlt2JustY,
-    dlt2FromMm,
-    dlt2ToMm,
     Delta3D,
     dlt3JustX,
     dlt3JustY,
@@ -60,7 +50,7 @@ module Filamento.Types
   )
 where
 
-import Filamento.Classes (Millimeters (..))
+import Filamento.Classes
 import Linear
 import qualified Linear as Lin
 import Relude
@@ -71,42 +61,28 @@ instance Millimeters Double Delta where
   toMm (Delta v) = v
   fromMm v = Delta v
 
--- | Keep only X component (identity for 1D)
-dltJustX :: Delta -> Delta
-dltJustX (Delta x) = Delta x
-
--- | Keep only Y component (identity for 1D)
-dltJustY :: Delta -> Delta
-dltJustY (Delta y) = Delta y
-
 newtype Position = Position {mm :: Double}
   deriving (Show, Eq, Num, Fractional, Ord, Real, Enum, Floating)
 
-posFromMm :: Double -> Position
-posFromMm v = Position v
+instance Millimeters Double Position where
+  toMm (Position v) = v
+  fromMm v = Position v
 
-posToMm :: Position -> Double
-posToMm (Position v) = v
-
-posAddDelta :: Position -> Delta -> Position
-posAddDelta pos disp = posFromMm (posToMm pos + toMm disp)
-
-posSubDelta :: Position -> Delta -> Position
-posSubDelta pos disp = posFromMm (posToMm pos - toMm disp)
+instance DeltaApplication Position Delta where
+  addDelta (Position p) (Delta d) = Position (p + d)
+  subDelta (Position p) (Delta d) = Position (p - d)
 
 newtype Delta2D = Delta2D (V2 Double)
 
-dlt2FromMm :: V2 Double -> Delta2D
-dlt2FromMm v = Delta2D v
+instance Millimeters (V2 Double) Delta2D where
+  toMm (Delta2D v) = v
+  fromMm v = Delta2D v
 
-dlt2ToMm :: Delta2D -> V2 Double
-dlt2ToMm (Delta2D v) = v
+instance JustX Delta2D where
+  justX (Delta2D (V2 x _)) = Delta2D (V2 x 0)
 
-dlt2JustX :: Delta2D -> Delta2D
-dlt2JustX (Delta2D (V2 x _)) = Delta2D (V2 x 0)
-
-dlt2JustY :: Delta2D -> Delta2D
-dlt2JustY (Delta2D (V2 _ y)) = Delta2D (V2 0 y)
+instance JustY Delta2D where
+  justY (Delta2D (V2 _ y)) = Delta2D (V2 0 y)
 
 newtype Delta3D = Delta3D (V3 Double)
 
@@ -177,10 +153,10 @@ newtype Position2D = Position2D {mm :: V2 Double}
   deriving (Show, Eq, Num)
 
 pos2AddDelta :: Position2D -> Delta2D -> Position2D
-pos2AddDelta pos disp = pos2FromMm (pos2ToMm pos + dlt2ToMm disp)
+pos2AddDelta pos disp = pos2FromMm (pos2ToMm pos + toMm disp)
 
 pos2SubDelta :: Position2D -> Delta2D -> Position2D
-pos2SubDelta pos disp = pos2FromMm (pos2ToMm pos - dlt2ToMm disp)
+pos2SubDelta pos disp = pos2FromMm (pos2ToMm pos - toMm disp)
 
 pos2FromMm :: V2 Double -> Position2D
 pos2FromMm v = Position2D v

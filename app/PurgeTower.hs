@@ -45,7 +45,7 @@ printSketch2 = do
         else setFanSpeedFull
 
       let h = 0.2 + fromIntegral i * 0.2
-      moveToZ (posFromMm h)
+      moveToZ (fromMm h)
       let dir = if odd i then Vert else Horz
 
       purgeTower pos delta dir 0
