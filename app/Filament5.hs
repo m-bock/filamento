@@ -189,7 +189,7 @@ printSnake (Coord frontLeft) (Coord backRight) = section "Print Snake" $ do
         backLeft' = backLeft + V2 plus minus
     tubeMoveTo (Coord frontLeft')
 
-    local (\e -> e {lineWidth = step}) do
+    local (\e -> e {lineWidth = dltFromMm step}) do
       section ("Snake " <> show i) do
         section "Front" do
           tubeExtrudePoints (Coord frontLeft') (Coord frontRight')
@@ -251,7 +251,7 @@ printPhase phase hillIndex = section ("Print Phase = " <> show phase <> " hillIn
 
   withRetract $ moveZ $ dltFromMm 0.1
 
-  local (\e -> e {layerHeight = config.realLayerHeight, lineWidth = config.idealLineWidth}) do
+  local (\e -> e {layerHeight = dltFromMm config.realLayerHeight, lineWidth = dltFromMm config.idealLineWidth}) do
     forM_ [0 .. config.countPrintedLayers - 1] \layerIndex -> do
       if layerIndex == 0
         then raw "M106 S0" "Turn off fan"
@@ -319,15 +319,15 @@ main = do
   let count = ps.count `mod` 4
   let mkEnv env =
         env
-          { lineWidth = 0.4,
-            layerHeight = 0.2,
+          { lineWidth = dltFromMm 0.4,
+            layerHeight = dltFromMm 0.2,
             hotendTemperature = tempFromCelsius 205,
             bedTemperature = tempFromCelsius 65,
             transpose = id, -- V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
             parkingPosition = pos3FromMm $ V3 0 0 30,
             moveSpeed = spdFromMmPerSec 2000,
             extrudeSpeed = spdFromMmPerSec 2500,
-            retractLength = distFromMm 1.5
+            retractLength = dltFromMm 1.5
           }
   let codeStr = toText $ local mkEnv sketch
   writeFileText "out/myprint.gcode" codeStr

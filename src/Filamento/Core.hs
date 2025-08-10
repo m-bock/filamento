@@ -71,21 +71,20 @@ import System.Random
 data GCodeEnv = Env
   { moveSpeed :: Speed,
     extrudeSpeed :: Speed,
-    movespdFirstLayer :: Speed,
-    extrudespdFirstLayer :: Speed,
+    moveSpeedFirstLayer :: Speed,
+    extrudeSpeedFirstLayer :: Speed,
     bedTemperature :: Temperature,
     hotendTemperature :: Temperature,
-    printSize :: V3 Double,
     parkingPosition :: Position3D,
-    autoHomePosition :: V3 Double,
-    layerHeight :: Double,
-    firstLayerHeight :: Double,
-    lineWidth :: Double,
-    filamentDia :: Double,
+    autoHomePosition :: Position3D,
+    layerHeight :: Delta,
+    firstLayerHeight :: Delta,
+    lineWidth :: Delta,
+    filamentDia :: Delta,
     transpose :: Position3D -> Position3D,
-    retractLength :: Distance,
+    retractLength :: Delta,
     retractSpeed :: Speed,
-    zHop :: Double,
+    zHop :: Delta,
     sectionPath :: [Text]
   }
 
@@ -93,7 +92,7 @@ data PrintState = PrintState
   { currentLayer :: Int,
     currentPosition :: Position3D,
     stdgen :: StdGen,
-    filament :: [(Text, Double)]
+    filament :: [(Text, Delta)]
   }
   deriving (Show, Eq)
 
@@ -111,21 +110,20 @@ defaultGCodeEnv =
   Env
     { moveSpeed = spdFromMmPerSec 10000,
       extrudeSpeed = spdFromMmPerSec 2000,
-      movespdFirstLayer = spdFromMmPerSec 1000,
-      extrudespdFirstLayer = spdFromMmPerSec 800,
+      moveSpeedFirstLayer = spdFromMmPerSec 1000,
+      extrudeSpeedFirstLayer = spdFromMmPerSec 800,
       bedTemperature = tempFromCelsius 60,
       hotendTemperature = tempFromCelsius 210,
-      printSize = V3 225 225 280,
       parkingPosition = pos3FromMm $ V3 0 225 120,
-      autoHomePosition = V3 145.50 94.00 1.56,
-      layerHeight = 0.4,
-      firstLayerHeight = 0.2,
-      lineWidth = 0.4,
-      filamentDia = 1.75,
+      autoHomePosition = pos3FromMm $ V3 145.50 94.00 1.56,
+      layerHeight = dltFromMm 0.4,
+      firstLayerHeight = dltFromMm 0.2,
+      lineWidth = dltFromMm 0.4,
+      filamentDia = dltFromMm 1.75,
       transpose = id,
-      retractLength = 1,
+      retractLength = dltFromMm 1,
       retractSpeed = spdFromMmPerMin 1800,
-      zHop = 0.4,
+      zHop = dltFromMm 0.4,
       sectionPath = []
     }
 
@@ -227,7 +225,7 @@ setFanSpeedFull = setFanSpeed (propFromFractionClamped 1)
 
 --------------------------------------------------------------------------------
 
-operateTool :: Position3D -> Speed -> Distance -> GCode ()
+operateTool :: Position3D -> Speed -> Delta -> GCode ()
 operateTool v_ speed extr = do
   env <- ask
 
@@ -241,7 +239,7 @@ operateTool v_ speed extr = do
         y = Just my,
         z = Just mz,
         feedrate = Just $ round $ spdToMmPerSec speed,
-        extrude = Just $ coerce $ distToMm extr
+        extrude = Just $ coerce $ dltToMm extr
       }
 
 --------------------------------------------------------------------------------
@@ -313,7 +311,7 @@ extrudeToImpl mx my mz = do
   (pos3ToMm -> V3 curX curY curZ) <- getCurrentPosition
   let v = pos3FromMm (V3 (fromMaybe curX mx) (fromMaybe curY my) (fromMaybe curZ mz))
   extr <- getExtrudeLength v
-  operateTool v speed (distFromMm extr)
+  operateTool v speed extr
 
 extrudeToXY :: Position2D -> GCode ()
 extrudeToXY (pos2ToMm -> V2 dx dy) =
@@ -344,7 +342,7 @@ extrudeImpl mx my mz = do
   let v = pos3FromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
   let v' = v + cur
   extr <- getExtrudeLength v'
-  operateTool v' speed (distFromMm extr)
+  operateTool v' speed extr
 
 extrudeXYZ :: Delta3D -> GCode ()
 extrudeXYZ (dlt3ToMm -> V3 dx dy dz) = do
@@ -365,7 +363,7 @@ extrudeZ (dltToMm -> z) = extrudeXYZ (dlt3FromMm $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
-extrude :: Speed -> Distance -> GCode ()
+extrude :: Speed -> Delta -> GCode ()
 extrude speed extr = do
   v <- getCurrentPosition
   operateTool v speed extr
@@ -380,21 +378,21 @@ getSpeed = do
   env <- ask
   pure
     $ if b
-      then env.movespdFirstLayer
+      then env.moveSpeedFirstLayer
       else env.moveSpeed
 
-getExtrudeLength :: Position3D -> GCode Double
+getExtrudeLength :: Position3D -> GCode Delta
 getExtrudeLength target = do
   extrudeMM <- getExtrudeMM
   st <- get
   let lineLength = distToMm $ pos3Distance st.currentPosition target
-  pure (lineLength * extrudeMM)
+  pure (dltFromMm $ lineLength * extrudeMM)
 
 getExtrudeMM :: GCode Double
 getExtrudeMM = do
   env <- ask
-  let vPerMm = env.layerHeight * env.lineWidth
-      aFil = pi * (env.filamentDia ** 2) / 4
+  let vPerMm = dltToMm env.layerHeight * dltToMm env.lineWidth
+      aFil = pi * (dltToMm env.filamentDia ** 2) / 4
   pure (vPerMm / aFil)
 
 isFirstLayers :: GCode Bool
@@ -409,7 +407,7 @@ getExtrudeSpeed = do
   env <- ask
   pure
     $ if b
-      then env.extrudespdFirstLayer
+      then env.extrudeSpeedFirstLayer
       else env.extrudeSpeed
 
 playTone :: Frequency -> Duration -> GCode ()

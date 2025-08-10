@@ -10,7 +10,7 @@ where
 import Linear
 import Relude
 
-newtype Delta = Delta Double
+newtype Delta = Delta Double deriving (Show, Eq, Generic, Num, Ord)
 
 dltFromMm :: Double -> Delta
 dltFromMm v = Delta v

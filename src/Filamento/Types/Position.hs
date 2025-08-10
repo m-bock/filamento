@@ -2,12 +2,14 @@ module Filamento.Types.Position
   ( Position,
     posFromMm,
     posToMm,
+    posAddDelta,
+    posSubDelta,
   )
 where
 
 -- Pos
 
-import Filamento.Types.Delta2D (Delta2D)
+import Filamento.Types.Delta (Delta, dltToMm)
 import qualified Filamento.Types.Delta2D as Disp2D
 import Linear
 import Relude
@@ -20,3 +22,9 @@ posFromMm v = Position v
 
 posToMm :: Position -> Double
 posToMm (Position v) = v
+
+posAddDelta :: Position -> Delta -> Position
+posAddDelta pos disp = posFromMm (posToMm pos + dltToMm disp)
+
+posSubDelta :: Position -> Delta -> Position
+posSubDelta pos disp = posFromMm (posToMm pos - dltToMm disp)

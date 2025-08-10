@@ -31,3 +31,6 @@ subX (V2 x y) dx = V2 (x - dx) y
 
 subY :: V2 Double -> Double -> V2 Double
 subY (V2 x y) dy = V2 x (y - dy)
+
+i2d :: (Integral a, Num b) => a -> b
+i2d = fromIntegral

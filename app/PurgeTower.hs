@@ -75,9 +75,9 @@ main = do
     printSketch
     \env ->
       env
-        { lineWidth = 0.4,
-          layerHeight = 0.2,
+        { lineWidth = dltFromMm 0.4,
+          layerHeight = dltFromMm 0.2,
           hotendTemperature = tempFromCelsius 205,
           bedTemperature = tempFromCelsius 65,
-          retractLength = distFromMm 1.5
+          retractLength = dltFromMm 1.5
         }

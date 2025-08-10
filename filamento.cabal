@@ -38,7 +38,6 @@ common extensions
 library
   import: flags, extensions
   exposed-modules:
-    -- BEGIN AUTO MODULES
     Filamento
     Filamento.Core
     Filamento.Factory.V1
@@ -62,10 +61,10 @@ library
     Marlin.Core
     Marlin.Syntax
 
-  -- END AUTO MODULES
   build-depends:
     aeson ^>=2.2.3.0,
     base ^>=4.17.2.1,
+    convertible,
     linear,
     mtl,
     newtype,

@@ -3,7 +3,6 @@ module Filamento.Lib
     extrude,
     moveXY,
     moveZ,
-    nextLayer,
     withRetract,
     withZHop,
     printPolyLine,
@@ -15,21 +14,27 @@ module Filamento.Lib
     homeOrResume,
     initPrinter,
     filamentChange,
+    nextLayer,
   )
 where
 
+import Data.Convertible
 import Filamento.Core
+import Filamento.Math
 import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Relude
 
 nextLayer :: GCode ()
 nextLayer = do
-  st <- get
   env <- ask
-  let newLayer = st.currentLayer + 1
-  put $ st {currentLayer = newLayer}
-  moveZ (dltFromMm $ env.layerHeight * fromIntegral newLayer)
+  st <- get
+
+  let z = posFromMm (dltToMm env.firstLayerHeight + convert st.currentLayer * dltToMm env.layerHeight)
+
+  modify \st -> st {currentLayer = st.currentLayer + 1}
+
+  moveToZ z
 
 withRetract :: GCode a -> GCode a
 withRetract inner = section "retract" do
@@ -48,7 +53,7 @@ withZHop inner = section "zHop" do
   st <- get
   env <- ask
   let V3 _ _ z = pos3ToMm st.currentPosition
-  moveToZ (posFromMm $ z + env.zHop)
+  moveToZ (posAddDelta (posFromMm z) env.zHop)
   ret <- inner
   moveToZ (posFromMm z)
   pure ret
