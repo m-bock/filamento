@@ -149,7 +149,7 @@ tubeMoveTo (Coord pt) = do
 tubeExtrudeTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeExtrudeTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
-  extrudeByXY $ fromMm worldPt
+  extrudeBy2 $ fromMm worldPt
 
 splitInterval :: Double -> Double -> (Double, Int)
 splitInterval big small =

@@ -6,6 +6,14 @@ class Millimeters lo hi | hi -> lo where
   fromMm :: lo -> hi
   toMm :: hi -> lo
 
+class Millimeters3 lo hi | hi -> lo where
+  fromMm3 :: lo -> lo -> lo -> hi
+  toMm3 :: hi -> (lo, lo, lo)
+
+class Millimeters2 lo hi | hi -> lo where
+  fromMm2 :: lo -> lo -> hi
+  toMm2 :: hi -> (lo, lo)
+
 class Seconds lo hi | hi -> lo where
   fromSecs :: lo -> hi
   toSecs :: hi -> lo

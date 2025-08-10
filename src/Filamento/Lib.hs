@@ -1,5 +1,5 @@
 module Filamento.Lib
-  ( extrudeByXY,
+  ( extrudeBy2,
     extrude,
     moveBy2,
     moveByZ,
@@ -68,7 +68,7 @@ printPolyLine (v : vs) = do
 extrudePoints :: [Position3D] -> GCode ()
 extrudePoints vs = do
   forM_ vs $ \v -> do
-    extrudeToXYZ v
+    extrudeTo3 v
 
 printRect2d :: Position2D -> Delta2D -> GCode ()
 printRect2d (toMm -> V2 x y) delta = do
@@ -99,12 +99,12 @@ printTestStripes = section "Test Stripes" $ do
   section "stripe 1" do
     moveTo2 (fromMm $ V2 5 5)
     extrude (fromMmPerSec 2000) 5
-    extrudeToXY (fromMm $ V2 215.0 5)
+    extrudeTo2 (fromMm $ V2 215.0 5)
     extrude (fromMmPerSec 2000) (-1)
 
   section "stripe 2" do
     withRetract $ withZHop $ moveTo2 (fromMm $ V2 5 10)
-    extrudeToXY (fromMm $ V2 215.0 10)
+    extrudeTo2 (fromMm $ V2 215.0 10)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
 -- raw "G1 X10 Y5 F3000" "Move to start pos"

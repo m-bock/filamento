@@ -20,7 +20,7 @@ module Filamento.Core
     setFanOff,
     motorsOff,
     pause,
-    extrudeByXY,
+    extrudeBy2,
     moveBy2,
     moveBy3,
     moveByZ,
@@ -37,8 +37,8 @@ module Filamento.Core
     extrudeToX,
     extrudeToY,
     extrudeToZ,
-    extrudeToXY,
-    extrudeToXYZ,
+    extrudeTo2,
+    extrudeTo3,
     extrude,
     playTone,
     playTone_,
@@ -52,6 +52,10 @@ module Filamento.Core
     setFanSpeed,
     setFanSpeedOff,
     setFanSpeedFull,
+    MoveTo (..),
+    MoveBy (..),
+    ExtrudeTo (..),
+    ExtrudeBy (..),
   )
 where
 
@@ -317,12 +321,12 @@ extrudeToImpl mx my mz = do
   extr <- getExtrudeLength v
   operateTool v speed extr
 
-extrudeToXY :: Position2D -> GCode ()
-extrudeToXY (toMm -> V2 dx dy) =
+extrudeTo2 :: Position2D -> GCode ()
+extrudeTo2 (toMm -> V2 dx dy) =
   extrudeToImpl (Just dx) (Just dy) Nothing
 
-extrudeToXYZ :: Position3D -> GCode ()
-extrudeToXYZ (toMm -> V3 dx dy dz) =
+extrudeTo3 :: Position3D -> GCode ()
+extrudeTo3 (toMm -> V3 dx dy dz) =
   extrudeToImpl (Just dx) (Just dy) (Just dz)
 
 extrudeToX :: Position -> GCode ()
@@ -348,22 +352,22 @@ extrudeByImpl mx my mz = do
   extr <- getExtrudeLength v'
   operateTool v' speed extr
 
-extrudeByXYZ :: Delta3D -> GCode ()
-extrudeByXYZ (toMm -> V3 dx dy dz) = do
+extrudeBy3 :: Delta3D -> GCode ()
+extrudeBy3 (toMm -> V3 dx dy dz) = do
   extrudeByImpl (Just dx) (Just dy) (Just dz)
 
-extrudeByXY :: Delta2D -> GCode ()
-extrudeByXY (toMm -> V2 dx dy) = do
+extrudeBy2 :: Delta2D -> GCode ()
+extrudeBy2 (toMm -> V2 dx dy) = do
   extrudeByImpl (Just dx) (Just dy) Nothing
 
 extrudeByX :: Delta -> GCode ()
-extrudeByX (toMm -> x) = extrudeByXYZ (fromMm $ V3 x 0 0)
+extrudeByX (toMm -> x) = extrudeBy3 (fromMm $ V3 x 0 0)
 
 extrudeByY :: Delta -> GCode ()
-extrudeByY (toMm -> y) = extrudeByXYZ (fromMm $ V3 0 y 0)
+extrudeByY (toMm -> y) = extrudeBy3 (fromMm $ V3 0 y 0)
 
 extrudeByZ :: Delta -> GCode ()
-extrudeByZ (toMm -> z) = extrudeByXYZ (fromMm $ V3 0 0 z)
+extrudeByZ (toMm -> z) = extrudeBy3 (fromMm $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
@@ -497,3 +501,39 @@ gcodeFromCmd cmd = do
         rawExtra = "",
         comment = Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)
       }
+
+class MoveTo a where
+  moveTo :: a -> GCode ()
+
+instance MoveTo Position3D where
+  moveTo (toMm -> V3 x y z) = moveToImpl (Just x) (Just y) (Just z)
+
+instance MoveTo Position2D where
+  moveTo (toMm -> V2 x y) = moveToImpl (Just x) (Just y) Nothing
+
+class MoveBy a where
+  moveBy :: a -> GCode ()
+
+instance MoveBy Delta3D where
+  moveBy (toMm -> V3 x y z) = moveByImpl (Just x) (Just y) (Just z)
+
+instance MoveBy Delta2D where
+  moveBy (toMm -> V2 x y) = moveByImpl (Just x) (Just y) Nothing
+
+class ExtrudeTo a where
+  extrudeTo :: a -> GCode ()
+
+instance ExtrudeTo Position3D where
+  extrudeTo (toMm -> V3 x y z) = extrudeToImpl (Just x) (Just y) (Just z)
+
+instance ExtrudeTo Position2D where
+  extrudeTo (toMm -> V2 x y) = extrudeToImpl (Just x) (Just y) Nothing
+
+class ExtrudeBy a where
+  extrudeBy :: a -> GCode ()
+
+instance ExtrudeBy Delta3D where
+  extrudeBy (toMm -> V3 x y z) = extrudeByImpl (Just x) (Just y) (Just z)
+
+instance ExtrudeBy Delta2D where
+  extrudeBy (toMm -> V2 x y) = extrudeByImpl (Just x) (Just y) Nothing
