@@ -1,7 +1,7 @@
 module Filamento.Types.Frequency
   ( Frequency,
-    frequencyFromHz,
-    frequencyToHz,
+    freqFromHz,
+    freqToHz,
     freqBeepLow,
     freqBeepMid,
     freqBeepHigh,
@@ -13,17 +13,17 @@ import Relude
 newtype Frequency = Frequency {hz :: Double}
   deriving (Show, Eq, Generic)
 
-frequencyFromHz :: Double -> Frequency
-frequencyFromHz f = Frequency f
+freqFromHz :: Double -> Frequency
+freqFromHz f = Frequency f
 
-frequencyToHz :: Frequency -> Double
-frequencyToHz (Frequency f) = f
+freqToHz :: Frequency -> Double
+freqToHz (Frequency f) = f
 
 freqBeepLow :: Frequency
-freqBeepLow = frequencyFromHz 440 -- A4, common reference pitch
+freqBeepLow = freqFromHz 440 -- A4, common reference pitch
 
 freqBeepMid :: Frequency
-freqBeepMid = frequencyFromHz 880 -- A5, clear but not harsh
+freqBeepMid = freqFromHz 880 -- A5, clear but not harsh
 
 freqBeepHigh :: Frequency
-freqBeepHigh = frequencyFromHz 1320 -- E6, attention-grabbing but not painful
+freqBeepHigh = freqFromHz 1320 -- E6, attention-grabbing but not painful

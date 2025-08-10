@@ -29,17 +29,17 @@ nextLayer = do
   env <- ask
   let newLayer = st.currentLayer + 1
   put $ st {currentLayer = newLayer}
-  moveZ (deltaFromMm $ env.layerHeight * fromIntegral newLayer)
+  moveZ (dltFromMm $ env.layerHeight * fromIntegral newLayer)
 
 withRetract :: GCode a -> GCode a
 withRetract inner = section "retract" do
   env <- ask
 
-  extrude (speedFromMmPerSec 2000) (-env.retractLength)
+  extrude (spdFromMmPerSec 2000) (-env.retractLength)
 
   ret <- inner
 
-  extrude (speedFromMmPerSec 2000) env.retractLength
+  extrude (spdFromMmPerSec 2000) env.retractLength
 
   pure ret
 
@@ -47,7 +47,7 @@ withZHop :: GCode a -> GCode a
 withZHop inner = section "zHop" do
   st <- get
   env <- ask
-  let V3 _ _ z = pos3toMm st.currentPosition
+  let V3 _ _ z = pos3ToMm st.currentPosition
   moveToZ (posFromMm $ z + env.zHop)
   ret <- inner
   moveToZ (posFromMm z)
@@ -66,17 +66,17 @@ extrudePoints vs = do
 
 printRect2d :: Position2D -> Delta2D -> GCode ()
 printRect2d (pos2ToMm -> V2 x y) delta = do
-  (pos3toMm -> V3 _ _ z) <- getCurrentPosition
-  let pos = pos3fromMm $ V3 x y z
+  (pos3ToMm -> V3 _ _ z) <- getCurrentPosition
+  let pos = pos3FromMm $ V3 x y z
   printRect pos delta
 
 printRect :: Position3D -> Delta2D -> GCode ()
-printRect v1 (delta2toMm -> V2 dx dy) = do
-  let delta3 = delta3fromMm $ V3 dx dy 0
-  let v2 = pos3addDelta v1 (delta3justX delta3)
-  let v3 = pos3addDelta v2 (delta3justY delta3)
-  let v4 = pos3subDelta v3 (delta3justX delta3)
-  let v5 = pos3subDelta v4 (delta3justY delta3)
+printRect v1 (dlt2ToMm -> V2 dx dy) = do
+  let dlt3 = dlt3FromMm $ V3 dx dy 0
+  let v2 = pos3AddDelta v1 (dlt3JustX dlt3)
+  let v3 = pos3AddDelta v2 (dlt3JustY dlt3)
+  let v4 = pos3SubDelta v3 (dlt3JustX dlt3)
+  let v5 = pos3SubDelta v4 (dlt3JustY dlt3)
 
   printPolyLine [v1, v2, v3, v4, v5]
 
@@ -92,9 +92,9 @@ printTestStripes = section "Test Stripes" $ do
 
   section "stripe 1" do
     moveToXY (pos2FromMm $ V2 5 5)
-    extrude (speedFromMmPerSec 2000) 5
+    extrude (spdFromMmPerSec 2000) 5
     extrudeToXY (pos2FromMm $ V2 215.0 5)
-    extrude (speedFromMmPerSec 2000) (-1)
+    extrude (spdFromMmPerSec 2000) (-1)
 
   section "stripe 2" do
     withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 5 10)
@@ -118,11 +118,11 @@ finalPark :: GCode ()
 finalPark = do
   env <- ask
 
-  let V3 parkX parkY parkZ = pos3toMm env.parkingPosition
+  let V3 parkX parkY parkZ = pos3ToMm env.parkingPosition
 
-  extrude (speedFromMmPerSec 2000) (-3)
+  extrude (spdFromMmPerSec 2000) (-3)
 
-  moveZ (deltaFromMm parkZ)
+  moveZ (dltFromMm parkZ)
   moveToXY (pos2FromMm $ V2 parkX parkY)
 
 homeOrResume :: GCode ()
@@ -136,11 +136,11 @@ homeOrResume = do
         autoHome
     else do
       section "Resume" $ do
-        setPositionXYZ (pos3toMm env.parkingPosition)
+        setPositionXYZ (pos3ToMm env.parkingPosition)
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
-  moveToXYZ (pos3fromMm $ V3 0 0 2)
+  moveToXYZ (pos3FromMm $ V3 0 0 2)
   playTone_
   pause 10
 
@@ -150,7 +150,7 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  moveToXYZ (pos3fromMm $ V3 0 0 0)
+  moveToXYZ (pos3FromMm $ V3 0 0 0)
 
   heatup homeOrResume
 
@@ -184,11 +184,11 @@ printPolygon n v s'
   | s' <= 0 = pure () -- Side length must be positive
   | otherwise = do
       let angle = 2 * pi / fromIntegral n
-          s = distanceToMm s'
+          s = distToMm s'
           points =
-            [ pos3addDelta
+            [ pos3AddDelta
                 v
-                (delta3fromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
+                (dlt3FromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
               | i <- [0 .. n - 1]
             ]
       case viaNonEmpty head points of
@@ -204,25 +204,25 @@ filamentChange = do
 
     raw "M0" "Pause for filament change"
 
-    extrude (speedFromMmPerSec 2000) 5
+    extrude (spdFromMmPerSec 2000) 5
 
     pause 2
 
-    local (\env -> env {extrudeSpeed = speedFromMmPerSec 200}) $ do
-      extrude (speedFromMmPerSec 2000) 10
+    local (\env -> env {extrudeSpeed = spdFromMmPerSec 200}) $ do
+      extrude (spdFromMmPerSec 2000) 10
 
-    local (\env -> env {extrudeSpeed = speedFromMmPerSec 800}) $ do
-      extrude (speedFromMmPerSec 2000) 200
+    local (\env -> env {extrudeSpeed = spdFromMmPerSec 800}) $ do
+      extrude (spdFromMmPerSec 2000) 200
 
-    local (\env -> env {extrudeSpeed = speedFromMmPerSec 200}) $ do
-      extrude (speedFromMmPerSec 2000) 50
-      extrude (speedFromMmPerSec 2000) (-1)
+    local (\env -> env {extrudeSpeed = spdFromMmPerSec 200}) $ do
+      extrude (spdFromMmPerSec 2000) 50
+      extrude (spdFromMmPerSec 2000) (-1)
 
     playTone_
 
-    local (\env -> env {extrudeSpeed = speedFromMmPerSec 200}) $ do
-      extrude (speedFromMmPerSec 2000) (-1)
-      extrude (speedFromMmPerSec 2000) 1
+    local (\env -> env {extrudeSpeed = spdFromMmPerSec 200}) $ do
+      extrude (spdFromMmPerSec 2000) (-1)
+      extrude (spdFromMmPerSec 2000) 1
 
     playTone_
 

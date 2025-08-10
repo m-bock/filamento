@@ -1,10 +1,10 @@
 module Filamento.Types.Position3D
   ( Position3D,
-    pos3addDelta,
-    pos3subDelta,
-    pos3distance,
-    pos3fromMm,
-    pos3toMm,
+    pos3AddDelta,
+    pos3SubDelta,
+    pos3Distance,
+    pos3FromMm,
+    pos3ToMm,
   )
 where
 
@@ -20,17 +20,17 @@ import Relude
 newtype Position3D = Position3D {mm :: V3 Double}
   deriving (Show, Eq, Num)
 
-pos3addDelta :: Position3D -> Delta3D -> Position3D
-pos3addDelta pos disp = pos3fromMm (pos3toMm pos + delta3toMm disp)
+pos3AddDelta :: Position3D -> Delta3D -> Position3D
+pos3AddDelta pos disp = pos3FromMm (pos3ToMm pos + dlt3ToMm disp)
 
-pos3subDelta :: Position3D -> Delta3D -> Position3D
-pos3subDelta pos disp = pos3fromMm (pos3toMm pos - delta3toMm disp)
+pos3SubDelta :: Position3D -> Delta3D -> Position3D
+pos3SubDelta pos disp = pos3FromMm (pos3ToMm pos - dlt3ToMm disp)
 
-pos3fromMm :: V3 Double -> Position3D
-pos3fromMm v = Position3D v
+pos3FromMm :: V3 Double -> Position3D
+pos3FromMm v = Position3D v
 
-pos3toMm :: Position3D -> V3 Double
-pos3toMm (Position3D v) = v
+pos3ToMm :: Position3D -> V3 Double
+pos3ToMm (Position3D v) = v
 
-pos3distance :: Position3D -> Position3D -> Distance
-pos3distance (Position3D v1) (Position3D v2) = distanceFromMm (Lin.distance v1 v2)
+pos3Distance :: Position3D -> Position3D -> Distance
+pos3Distance (Position3D v1) (Position3D v2) = distFromMm (Lin.distance v1 v2)

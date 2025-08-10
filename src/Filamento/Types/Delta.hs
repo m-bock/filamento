@@ -1,9 +1,9 @@
 module Filamento.Types.Delta
   ( Delta,
-    deltaJustX,
-    deltaJustY,
-    deltaFromMm,
-    deltaToMm,
+    dltJustX,
+    dltJustY,
+    dltFromMm,
+    dltToMm,
   )
 where
 
@@ -12,14 +12,17 @@ import Relude
 
 newtype Delta = Delta Double
 
-deltaFromMm :: Double -> Delta
-deltaFromMm v = Delta v
+dltFromMm :: Double -> Delta
+dltFromMm v = Delta v
 
-deltaToMm :: Delta -> Double
-deltaToMm (Delta v) = v
+-- | Convert delta to millimeters
+dltToMm :: Delta -> Double
+dltToMm (Delta v) = v
 
-deltaJustX :: Delta -> Delta
-deltaJustX (Delta x) = Delta x
+-- | Keep only X component (identity for 1D)
+dltJustX :: Delta -> Delta
+dltJustX (Delta x) = Delta x
 
-deltaJustY :: Delta -> Delta
-deltaJustY (Delta y) = Delta y
+-- | Keep only Y component (identity for 1D)
+dltJustY :: Delta -> Delta
+dltJustY (Delta y) = Delta y

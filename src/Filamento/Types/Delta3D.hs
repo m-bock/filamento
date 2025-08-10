@@ -1,10 +1,10 @@
 module Filamento.Types.Delta3D
   ( Delta3D,
-    delta3justX,
-    delta3justY,
-    delta3justZ,
-    delta3fromMm,
-    delta3toMm,
+    dlt3JustX,
+    dlt3JustY,
+    dlt3JustZ,
+    dlt3FromMm,
+    dlt3ToMm,
   )
 where
 
@@ -13,17 +13,17 @@ import Relude
 
 newtype Delta3D = Delta3D (V3 Double)
 
-delta3fromMm :: V3 Double -> Delta3D
-delta3fromMm v = Delta3D v
+dlt3FromMm :: V3 Double -> Delta3D
+dlt3FromMm v = Delta3D v
 
-delta3toMm :: Delta3D -> V3 Double
-delta3toMm (Delta3D v) = v
+dlt3ToMm :: Delta3D -> V3 Double
+dlt3ToMm (Delta3D v) = v
 
-delta3justX :: Delta3D -> Delta3D
-delta3justX (Delta3D (V3 x _ _)) = Delta3D (V3 x 0 0)
+dlt3JustX :: Delta3D -> Delta3D
+dlt3JustX (Delta3D (V3 x _ _)) = Delta3D (V3 x 0 0)
 
-delta3justY :: Delta3D -> Delta3D
-delta3justY (Delta3D (V3 _ y _)) = Delta3D (V3 0 y 0)
+dlt3JustY :: Delta3D -> Delta3D
+dlt3JustY (Delta3D (V3 _ y _)) = Delta3D (V3 0 y 0)
 
-delta3justZ :: Delta3D -> Delta3D
-delta3justZ (Delta3D (V3 _ _ z)) = Delta3D (V3 0 0 z)
+dlt3JustZ :: Delta3D -> Delta3D
+dlt3JustZ (Delta3D (V3 _ _ z)) = Delta3D (V3 0 0 z)
