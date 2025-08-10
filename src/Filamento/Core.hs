@@ -21,14 +21,14 @@ module Filamento.Core
     motorsOff,
     pause,
     extrudeByXY,
-    moveByXY,
-    moveByXYZ,
+    moveBy2,
+    moveBy3,
     moveByZ,
     moveToX,
     moveToY,
     moveToZ,
-    moveToXY,
-    moveToXYZ,
+    moveTo2,
+    moveTo3,
     moveByX,
     moveByY,
     extrudeByX,
@@ -258,12 +258,12 @@ moveToImpl mx my mz = do
       newZ = fromMaybe z mz
   operateTool (fromMm $ V3 newX newY newZ) speed 0
 
-moveToXYZ :: Position3D -> GCode ()
-moveToXYZ (toMm -> V3 x y z) =
+moveTo3 :: Position3D -> GCode ()
+moveTo3 (toMm -> V3 x y z) =
   moveToImpl (Just x) (Just y) (Just z)
 
-moveToXY :: Position2D -> GCode ()
-moveToXY (toMm -> V2 x y) =
+moveTo2 :: Position2D -> GCode ()
+moveTo2 (toMm -> V2 x y) =
   moveToImpl (Just x) (Just y) Nothing
 
 moveToX :: Position -> GCode ()
@@ -287,12 +287,12 @@ moveByImpl mx my mz = do
   let v = fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
   operateTool (v + cur) speed 0
 
-moveByXYZ :: Delta3D -> GCode ()
-moveByXYZ (toMm -> V3 dx dy dz) =
+moveBy3 :: Delta3D -> GCode ()
+moveBy3 (toMm -> V3 dx dy dz) =
   moveByImpl (Just dx) (Just dy) (Just dz)
 
-moveByXY :: Delta2D -> GCode ()
-moveByXY (toMm -> V2 dx dy) =
+moveBy2 :: Delta2D -> GCode ()
+moveBy2 (toMm -> V2 dx dy) =
   moveByImpl (Just dx) (Just dy) Nothing
 
 moveByX :: Delta -> GCode ()

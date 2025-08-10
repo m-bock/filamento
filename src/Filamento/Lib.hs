@@ -1,7 +1,7 @@
 module Filamento.Lib
   ( extrudeByXY,
     extrude,
-    moveByXY,
+    moveBy2,
     moveByZ,
     withRetract,
     withZHop,
@@ -62,7 +62,7 @@ withZHop inner = section "zHop" do
 printPolyLine :: [Position3D] -> GCode ()
 printPolyLine [] = pure ()
 printPolyLine (v : vs) = do
-  moveToXYZ v
+  moveTo3 v
   extrudePoints vs
 
 extrudePoints :: [Position3D] -> GCode ()
@@ -97,13 +97,13 @@ printTestStripes = section "Test Stripes" $ do
   --   extrude (-1)
 
   section "stripe 1" do
-    moveToXY (fromMm $ V2 5 5)
+    moveTo2 (fromMm $ V2 5 5)
     extrude (fromMmPerSec 2000) 5
     extrudeToXY (fromMm $ V2 215.0 5)
     extrude (fromMmPerSec 2000) (-1)
 
   section "stripe 2" do
-    withRetract $ withZHop $ moveToXY (fromMm $ V2 5 10)
+    withRetract $ withZHop $ moveTo2 (fromMm $ V2 5 10)
     extrudeToXY (fromMm $ V2 215.0 10)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
@@ -129,7 +129,7 @@ finalPark = do
   extrude (fromMmPerSec 2000) (-3)
 
   moveByZ (fromMm parkZ)
-  moveToXY (fromMm $ V2 parkX parkY)
+  moveTo2 (fromMm $ V2 parkX parkY)
 
 homeOrResume :: GCode ()
 homeOrResume = do
@@ -146,7 +146,7 @@ homeOrResume = do
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
-  moveToXYZ (fromMm $ V3 0 0 2)
+  moveTo3 (fromMm $ V3 0 0 2)
   playTone_
   pause (fromSecs 10)
 
@@ -156,7 +156,7 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  moveToXYZ (fromMm $ V3 0 0 0)
+  moveTo3 (fromMm $ V3 0 0 0)
 
   heatup homeOrResume
 

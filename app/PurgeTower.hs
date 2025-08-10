@@ -26,11 +26,11 @@ purgeTower (toMm -> V2 x y) (toMm -> size) dir purgeIndex = do
       case dir of
         Vert -> do
           section "vertical" do
-            withRetract $ withZHop $ moveToXY (fromMm $ V2 y (x + tick))
+            withRetract $ withZHop $ moveTo2 (fromMm $ V2 y (x + tick))
             extrudeByX (fromMm size)
         Horz -> do
           section "horizontal" do
-            withRetract $ withZHop $ moveToXY (fromMm $ V2 (x + tick) y)
+            withRetract $ withZHop $ moveTo2 (fromMm $ V2 (x + tick) y)
             extrudeByY (fromMm size)
 
 printSketch2 :: GCode ()

@@ -7,7 +7,7 @@ import Relude
 -- initPrinter $
 printSketch :: GCode ()
 printSketch = initPrinter do
-  moveToXYZ (fromMm $ V3 100 100 0.2)
+  moveTo3 (fromMm $ V3 100 100 0.2)
   extrudeToXYZ (fromMm $ V3 100 50 0.2)
 
   pure ()
