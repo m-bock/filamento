@@ -1,5 +1,5 @@
 module Filamento.Lib
-  ( extrudeXY,
+  ( extrudeByXY,
     extrude,
     moveXY,
     moveZ,

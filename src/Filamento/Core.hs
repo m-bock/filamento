@@ -20,7 +20,7 @@ module Filamento.Core
     setFanOff,
     motorsOff,
     pause,
-    extrudeXY,
+    extrudeByXY,
     moveXY,
     moveXYZ,
     moveZ,
@@ -31,9 +31,9 @@ module Filamento.Core
     moveToXYZ,
     moveX,
     moveY,
-    extrudeX,
-    extrudeY,
-    extrudeZ,
+    extrudeByX,
+    extrudeByY,
+    extrudeByZ,
     extrudeToX,
     extrudeToY,
     extrudeToZ,
@@ -339,8 +339,8 @@ extrudeToZ (toMm -> dz) =
 
 -------------------------------------------------------------------------------
 
-extrudeImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
-extrudeImpl mx my mz = do
+extrudeByImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
+extrudeByImpl mx my mz = do
   speed <- getExtrudeSpeed
   cur <- getCurrentPosition
   let v = fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
@@ -348,22 +348,22 @@ extrudeImpl mx my mz = do
   extr <- getExtrudeLength v'
   operateTool v' speed extr
 
-extrudeXYZ :: Delta3D -> GCode ()
-extrudeXYZ (toMm -> V3 dx dy dz) = do
-  extrudeImpl (Just dx) (Just dy) (Just dz)
+extrudeByXYZ :: Delta3D -> GCode ()
+extrudeByXYZ (toMm -> V3 dx dy dz) = do
+  extrudeByImpl (Just dx) (Just dy) (Just dz)
 
-extrudeXY :: Delta2D -> GCode ()
-extrudeXY (toMm -> V2 dx dy) = do
-  extrudeImpl (Just dx) (Just dy) Nothing
+extrudeByXY :: Delta2D -> GCode ()
+extrudeByXY (toMm -> V2 dx dy) = do
+  extrudeByImpl (Just dx) (Just dy) Nothing
 
-extrudeX :: Delta -> GCode ()
-extrudeX (toMm -> x) = extrudeXYZ (fromMm $ V3 x 0 0)
+extrudeByX :: Delta -> GCode ()
+extrudeByX (toMm -> x) = extrudeByXYZ (fromMm $ V3 x 0 0)
 
-extrudeY :: Delta -> GCode ()
-extrudeY (toMm -> y) = extrudeXYZ (fromMm $ V3 0 y 0)
+extrudeByY :: Delta -> GCode ()
+extrudeByY (toMm -> y) = extrudeByXYZ (fromMm $ V3 0 y 0)
 
-extrudeZ :: Delta -> GCode ()
-extrudeZ (toMm -> z) = extrudeXYZ (fromMm $ V3 0 0 z)
+extrudeByZ :: Delta -> GCode ()
+extrudeByZ (toMm -> z) = extrudeByXYZ (fromMm $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
