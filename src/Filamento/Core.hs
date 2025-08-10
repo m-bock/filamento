@@ -99,7 +99,7 @@ data PrintState = PrintState
 initPrintState :: PrintState
 initPrintState =
   PrintState
-    { currentPosition = pos3FromMm $ V3 145.50 94.00 1.56,
+    { currentPosition = pos3FromMm $ V3 0 0 0,
       stdgen = mkStdGen 0,
       currentLayer = 0,
       filament = []
@@ -185,7 +185,10 @@ setUnits u = gcodeFromCmd $ case u of
 -------------------------------------------------------------------------------
 
 autoHome :: GCode ()
-autoHome = gcodeFromCmd $ GAutoHome {skipIfTrusted = False}
+autoHome = do
+  env <- ask
+  modify \st -> st {currentPosition = env.autoHomePosition}
+  gcodeFromCmd $ GAutoHome {skipIfTrusted = False}
 
 -------------------------------------------------------------------------------
 
