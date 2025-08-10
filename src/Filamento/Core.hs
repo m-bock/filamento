@@ -100,7 +100,7 @@ data PrintState = PrintState
 initPrintState :: PrintState
 initPrintState =
   PrintState
-    { currentPosition = pos3FromMm $ V3 0 0 0,
+    { currentPosition = fromMm $ V3 0 0 0,
       stdgen = mkStdGen 0,
       currentLayer = 0,
       filament = []
@@ -109,21 +109,21 @@ initPrintState =
 defaultGCodeEnv :: GCodeEnv
 defaultGCodeEnv =
   Env
-    { moveSpeed = spdFromMmPerSec 10000,
-      extrudeSpeed = spdFromMmPerSec 2000,
-      moveSpeedFirstLayer = spdFromMmPerSec 1000,
-      extrudeSpeedFirstLayer = spdFromMmPerSec 800,
-      bedTemperature = tempFromCelsius 60,
-      hotendTemperature = tempFromCelsius 210,
-      parkingPosition = pos3FromMm $ V3 0 225 120,
-      autoHomePosition = pos3FromMm $ V3 145.50 94.00 1.56,
+    { moveSpeed = fromMmPerSec 10000,
+      extrudeSpeed = fromMmPerSec 2000,
+      moveSpeedFirstLayer = fromMmPerSec 1000,
+      extrudeSpeedFirstLayer = fromMmPerSec 800,
+      bedTemperature = fromCelsius 60,
+      hotendTemperature = fromCelsius 210,
+      parkingPosition = fromMm $ V3 0 225 120,
+      autoHomePosition = fromMm $ V3 145.50 94.00 1.56,
       layerHeight = fromMm 0.4,
       firstLayerHeight = fromMm 0.2,
       lineWidth = fromMm 0.4,
       filamentDia = fromMm 1.75,
       transpose = id,
       retractLength = fromMm 1,
-      retractSpeed = spdFromMmPerMin 1800,
+      retractSpeed = fromMmPerMin 1800,
       zHop = fromMm 0.4,
       sectionPath = []
     }
@@ -212,20 +212,20 @@ motorsOff :: GCode ()
 motorsOff = gcodeFromCmd MMotorsOff
 
 pause :: Duration -> GCode ()
-pause dur = gcodeFromCmd $ GDwell {seconds = Just $ round $ durToSecs dur}
+pause dur = gcodeFromCmd $ GDwell {seconds = Just $ round $ toSecs dur}
 
 setFanSpeed :: Proportion -> GCode ()
 setFanSpeed prop =
   gcodeFromCmd
     $ MSetFanSpeed
-      { speed = Just (round $ propToFraction prop * 255)
+      { speed = Just (round $ toFraction prop * 255)
       }
 
 setFanSpeedOff :: GCode ()
-setFanSpeedOff = setFanSpeed (propFromFractionClamped 0)
+setFanSpeedOff = setFanSpeed (clampFraction 0)
 
 setFanSpeedFull :: GCode ()
-setFanSpeedFull = setFanSpeed (propFromFractionClamped 1)
+setFanSpeedFull = setFanSpeed (clampFraction 1)
 
 --------------------------------------------------------------------------------
 
@@ -235,14 +235,14 @@ operateTool v_ speed extr = do
 
   modify \st -> st {currentPosition = v_}
 
-  let V3 mx my mz = pos3ToMm $ env.transpose v_
+  let V3 mx my mz = toMm $ env.transpose v_
 
   gcodeFromCmd
     $ GLinearMove
       { x = Just mx,
         y = Just my,
         z = Just mz,
-        feedrate = Just $ round $ spdToMmPerSec speed,
+        feedrate = Just $ round $ toMmPerSec speed,
         extrude = Just $ coerce $ toMm extr
       }
 
@@ -252,18 +252,18 @@ moveToImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 moveToImpl mx my mz = do
   speed <- getSpeed
   cur <- getCurrentPosition
-  let V3 x y z = pos3ToMm cur
+  let V3 x y z = toMm cur
       newX = fromMaybe x mx
       newY = fromMaybe y my
       newZ = fromMaybe z mz
-  operateTool (pos3FromMm $ V3 newX newY newZ) speed 0
+  operateTool (fromMm $ V3 newX newY newZ) speed 0
 
 moveToXYZ :: Position3D -> GCode ()
-moveToXYZ (pos3ToMm -> V3 x y z) =
+moveToXYZ (toMm -> V3 x y z) =
   moveToImpl (Just x) (Just y) (Just z)
 
 moveToXY :: Position2D -> GCode ()
-moveToXY (pos2ToMm -> V2 x y) =
+moveToXY (toMm -> V2 x y) =
   moveToImpl (Just x) (Just y) Nothing
 
 moveToX :: Position -> GCode ()
@@ -284,11 +284,11 @@ moveImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 moveImpl mx my mz = do
   speed <- getSpeed
   cur <- getCurrentPosition
-  let v = pos3FromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
+  let v = fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
   operateTool (v + cur) speed 0
 
 moveXYZ :: Delta3D -> GCode ()
-moveXYZ (dlt3ToMm -> V3 dx dy dz) =
+moveXYZ (toMm -> V3 dx dy dz) =
   moveImpl (Just dx) (Just dy) (Just dz)
 
 moveXY :: Delta2D -> GCode ()
@@ -312,17 +312,17 @@ moveZ (toMm -> z) =
 extrudeToImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 extrudeToImpl mx my mz = do
   speed <- getExtrudeSpeed
-  (pos3ToMm -> V3 curX curY curZ) <- getCurrentPosition
-  let v = pos3FromMm (V3 (fromMaybe curX mx) (fromMaybe curY my) (fromMaybe curZ mz))
+  (toMm -> V3 curX curY curZ) <- getCurrentPosition
+  let v = fromMm (V3 (fromMaybe curX mx) (fromMaybe curY my) (fromMaybe curZ mz))
   extr <- getExtrudeLength v
   operateTool v speed extr
 
 extrudeToXY :: Position2D -> GCode ()
-extrudeToXY (pos2ToMm -> V2 dx dy) =
+extrudeToXY (toMm -> V2 dx dy) =
   extrudeToImpl (Just dx) (Just dy) Nothing
 
 extrudeToXYZ :: Position3D -> GCode ()
-extrudeToXYZ (pos3ToMm -> V3 dx dy dz) =
+extrudeToXYZ (toMm -> V3 dx dy dz) =
   extrudeToImpl (Just dx) (Just dy) (Just dz)
 
 extrudeToX :: Position -> GCode ()
@@ -343,13 +343,13 @@ extrudeImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 extrudeImpl mx my mz = do
   speed <- getExtrudeSpeed
   cur <- getCurrentPosition
-  let v = pos3FromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
+  let v = fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
   let v' = v + cur
   extr <- getExtrudeLength v'
   operateTool v' speed extr
 
 extrudeXYZ :: Delta3D -> GCode ()
-extrudeXYZ (dlt3ToMm -> V3 dx dy dz) = do
+extrudeXYZ (toMm -> V3 dx dy dz) = do
   extrudeImpl (Just dx) (Just dy) (Just dz)
 
 extrudeXY :: Delta2D -> GCode ()
@@ -357,13 +357,13 @@ extrudeXY (toMm -> V2 dx dy) = do
   extrudeImpl (Just dx) (Just dy) Nothing
 
 extrudeX :: Delta -> GCode ()
-extrudeX (toMm -> x) = extrudeXYZ (dlt3FromMm $ V3 x 0 0)
+extrudeX (toMm -> x) = extrudeXYZ (fromMm $ V3 x 0 0)
 
 extrudeY :: Delta -> GCode ()
-extrudeY (toMm -> y) = extrudeXYZ (dlt3FromMm $ V3 0 y 0)
+extrudeY (toMm -> y) = extrudeXYZ (fromMm $ V3 0 y 0)
 
 extrudeZ :: Delta -> GCode ()
-extrudeZ (toMm -> z) = extrudeXYZ (dlt3FromMm $ V3 0 0 z)
+extrudeZ (toMm -> z) = extrudeXYZ (fromMm $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
@@ -389,7 +389,7 @@ getExtrudeLength :: Position3D -> GCode Delta
 getExtrudeLength target = do
   extrudeMM <- getExtrudeMM
   st <- get
-  let lineLength = distToMm $ pos3Distance st.currentPosition target
+  let lineLength = toMm $ pos3Distance st.currentPosition target
   pure (fromMm $ lineLength * extrudeMM)
 
 getExtrudeMM :: GCode Double
@@ -402,7 +402,7 @@ getExtrudeMM = do
 isFirstLayers :: GCode Bool
 isFirstLayers = do
   st <- get
-  let (V3 _ _ z) = pos3ToMm st.currentPosition
+  let (V3 _ _ z) = toMm st.currentPosition
   pure (z <= 0.4)
 
 getExtrudeSpeed :: GCode Speed
@@ -418,43 +418,43 @@ playTone :: Frequency -> Duration -> GCode ()
 playTone freq dur =
   gcodeFromCmd
     $ MPlayTone
-      { frequency = Just $ round $ freqToHz freq,
-        milliseconds = Just $ round $ durToMs dur
+      { frequency = Just $ round $ toHz freq,
+        milliseconds = Just $ round $ toMs dur
       }
 
 playTone_ :: GCode ()
-playTone_ = playTone (freqFromHz 2600) (durFromMs 1)
+playTone_ = playTone (fromHz 2600) (fromMs 1)
 
 setBedTemperature :: Temperature -> GCode ()
 setBedTemperature degrees = do
   gcodeFromCmd
     $ MSetBedTemperature
-      { degrees = Just $ round $ tempToCelsius degrees
+      { degrees = Just $ round $ toCelsius degrees
       }
 
 setHotendTemperature :: Temperature -> GCode ()
 setHotendTemperature temp = do
   gcodeFromCmd
     $ MSSetHotendTemperature
-      { degrees = Just $ round $ tempToCelsius temp
+      { degrees = Just $ round $ toCelsius temp
       }
 
 waitForBedTemperature :: Temperature -> GCode ()
 waitForBedTemperature temp = do
   gcodeFromCmd
     $ MWaitForBedTemperature
-      { degrees = Just $ round $ tempToCelsius temp
+      { degrees = Just $ round $ toCelsius temp
       }
 
 waitForHotendTemperature :: Temperature -> GCode ()
 waitForHotendTemperature temp = do
   gcodeFromCmd
     $ MWaitForHotendTemperature
-      { degrees = Just $ round $ tempToCelsius temp
+      { degrees = Just $ round $ toCelsius temp
       }
 
 setPositionXYZ :: Position3D -> GCode ()
-setPositionXYZ (pos3ToMm -> V3 x y z) = do
+setPositionXYZ (toMm -> V3 x y z) = do
   gcodeFromCmd
     $ GSetPosition
       { x = Just x,
@@ -464,7 +464,7 @@ setPositionXYZ (pos3ToMm -> V3 x y z) = do
       }
 
 setPositionXY :: Position2D -> GCode ()
-setPositionXY (pos2ToMm -> V2 x y) = do
+setPositionXY (toMm -> V2 x y) = do
   gcodeFromCmd
     $ GSetPosition
       { x = Just x,

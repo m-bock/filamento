@@ -11,7 +11,7 @@ data Dir = Vert | Horz
   deriving (Show, Eq)
 
 purgeTower :: Position2D -> Delta -> Dir -> Int -> GCode ()
-purgeTower (pos2ToMm -> V2 x y) (toMm -> size) dir purgeIndex = do
+purgeTower (toMm -> V2 x y) (toMm -> size) dir purgeIndex = do
   let ticks = linspaceByStepLength 0 size 0.4 floor
 
   let n = 5
@@ -26,17 +26,17 @@ purgeTower (pos2ToMm -> V2 x y) (toMm -> size) dir purgeIndex = do
       case dir of
         Vert -> do
           section "vertical" do
-            withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 y (x + tick))
+            withRetract $ withZHop $ moveToXY (fromMm $ V2 y (x + tick))
             extrudeX (fromMm size)
         Horz -> do
           section "horizontal" do
-            withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 (x + tick) y)
+            withRetract $ withZHop $ moveToXY (fromMm $ V2 (x + tick) y)
             extrudeY (fromMm size)
 
 printSketch2 :: GCode ()
 printSketch2 = do
   initPrinter do
-    let pos = pos2FromMm $ V2 100 100
+    let pos = fromMm $ V2 100 100
         delta = fromMm 20
 
     forM_ [0 .. 199] \i -> do
@@ -59,7 +59,7 @@ main = do
       env
         { lineWidth = fromMm 0.4,
           layerHeight = fromMm 0.2,
-          hotendTemperature = tempFromCelsius 205,
-          bedTemperature = tempFromCelsius 65,
+          hotendTemperature = fromCelsius 205,
+          bedTemperature = fromCelsius 65,
           retractLength = fromMm 1.5
         }

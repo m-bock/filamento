@@ -21,7 +21,7 @@ where
 import Data.Convertible
 import Filamento.Classes
 import Filamento.Core
-import Filamento.Math
+import Filamento.Math hiding (justX, justY)
 import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Relude
@@ -41,11 +41,11 @@ withRetract :: GCode a -> GCode a
 withRetract inner = section "retract" do
   env <- ask
 
-  extrude (spdFromMmPerSec 2000) (-env.retractLength)
+  extrude (fromMmPerSec 2000) (-env.retractLength)
 
   ret <- inner
 
-  extrude (spdFromMmPerSec 2000) env.retractLength
+  extrude (fromMmPerSec 2000) env.retractLength
 
   pure ret
 
@@ -53,7 +53,7 @@ withZHop :: GCode a -> GCode a
 withZHop inner = section "zHop" do
   st <- get
   env <- ask
-  let V3 _ _ z = pos3ToMm st.currentPosition
+  let V3 _ _ z = toMm st.currentPosition
   moveToZ (addDelta (fromMm z) env.zHop)
   ret <- inner
   moveToZ (fromMm z)
@@ -71,18 +71,18 @@ extrudePoints vs = do
     extrudeToXYZ v
 
 printRect2d :: Position2D -> Delta2D -> GCode ()
-printRect2d (pos2ToMm -> V2 x y) delta = do
-  (pos3ToMm -> V3 _ _ z) <- getCurrentPosition
-  let pos = pos3FromMm $ V3 x y z
+printRect2d (toMm -> V2 x y) delta = do
+  (toMm -> V3 _ _ z) <- getCurrentPosition
+  let pos = fromMm $ V3 x y z
   printRect pos delta
 
 printRect :: Position3D -> Delta2D -> GCode ()
 printRect v1 (toMm -> V2 dx dy) = do
-  let dlt3 = dlt3FromMm $ V3 dx dy 0
-  let v2 = pos3AddDelta v1 (dlt3JustX dlt3)
-  let v3 = pos3AddDelta v2 (dlt3JustY dlt3)
-  let v4 = pos3SubDelta v3 (dlt3JustX dlt3)
-  let v5 = pos3SubDelta v4 (dlt3JustY dlt3)
+  let dlt3 = fromMm $ V3 dx dy 0
+  let v2 = addDelta v1 (justX dlt3)
+  let v3 = addDelta v2 (justY dlt3)
+  let v4 = subDelta v3 (justX dlt3)
+  let v5 = subDelta v4 (justY dlt3)
 
   printPolyLine [v1, v2, v3, v4, v5]
 
@@ -97,14 +97,14 @@ printTestStripes = section "Test Stripes" $ do
   --   extrude (-1)
 
   section "stripe 1" do
-    moveToXY (pos2FromMm $ V2 5 5)
-    extrude (spdFromMmPerSec 2000) 5
-    extrudeToXY (pos2FromMm $ V2 215.0 5)
-    extrude (spdFromMmPerSec 2000) (-1)
+    moveToXY (fromMm $ V2 5 5)
+    extrude (fromMmPerSec 2000) 5
+    extrudeToXY (fromMm $ V2 215.0 5)
+    extrude (fromMmPerSec 2000) (-1)
 
   section "stripe 2" do
-    withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 5 10)
-    extrudeToXY (pos2FromMm $ V2 215.0 10)
+    withRetract $ withZHop $ moveToXY (fromMm $ V2 5 10)
+    extrudeToXY (fromMm $ V2 215.0 10)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
 -- raw "G1 X10 Y5 F3000" "Move to start pos"
@@ -124,12 +124,12 @@ finalPark :: GCode ()
 finalPark = do
   env <- ask
 
-  let V3 parkX parkY parkZ = pos3ToMm env.parkingPosition
+  let V3 parkX parkY parkZ = toMm env.parkingPosition
 
-  extrude (spdFromMmPerSec 2000) (-3)
+  extrude (fromMmPerSec 2000) (-3)
 
   moveZ (fromMm parkZ)
-  moveToXY (pos2FromMm $ V2 parkX parkY)
+  moveToXY (fromMm $ V2 parkX parkY)
 
 homeOrResume :: GCode ()
 homeOrResume = do
@@ -146,9 +146,9 @@ homeOrResume = do
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
-  moveToXYZ (pos3FromMm $ V3 0 0 2)
+  moveToXYZ (fromMm $ V3 0 0 2)
   playTone_
-  pause (durFromSecs 10)
+  pause (fromSecs 10)
 
 initPrinter :: GCode a -> GCode a
 initPrinter inner = do
@@ -156,7 +156,7 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  moveToXYZ (pos3FromMm $ V3 0 0 0)
+  moveToXYZ (fromMm $ V3 0 0 0)
 
   heatup homeOrResume
 
@@ -190,11 +190,11 @@ printPolygon n v s'
   | s' <= 0 = pure () -- Side length must be positive
   | otherwise = do
       let angle = 2 * pi / fromIntegral n
-          s = distToMm s'
+          s = toMm s'
           points =
-            [ pos3AddDelta
+            [ addDelta
                 v
-                (dlt3FromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
+                (fromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
               | i <- [0 .. n - 1]
             ]
       case viaNonEmpty head points of
@@ -210,25 +210,25 @@ filamentChange = do
 
     raw "M0" "Pause for filament change"
 
-    extrude (spdFromMmPerSec 2000) 5
+    extrude (fromMmPerSec 2000) 5
 
-    pause (durFromSecs 2)
+    pause (fromSecs 2)
 
-    local (\env -> env {extrudeSpeed = spdFromMmPerSec 200}) $ do
-      extrude (spdFromMmPerSec 2000) 10
+    local (\env -> env {extrudeSpeed = fromMmPerSec 200}) $ do
+      extrude (fromMmPerSec 2000) 10
 
-    local (\env -> env {extrudeSpeed = spdFromMmPerSec 800}) $ do
-      extrude (spdFromMmPerSec 2000) 200
+    local (\env -> env {extrudeSpeed = fromMmPerSec 800}) $ do
+      extrude (fromMmPerSec 2000) 200
 
-    local (\env -> env {extrudeSpeed = spdFromMmPerSec 200}) $ do
-      extrude (spdFromMmPerSec 2000) 50
-      extrude (spdFromMmPerSec 2000) (-1)
+    local (\env -> env {extrudeSpeed = fromMmPerSec 200}) $ do
+      extrude (fromMmPerSec 2000) 50
+      extrude (fromMmPerSec 2000) (-1)
 
     playTone_
 
-    local (\env -> env {extrudeSpeed = spdFromMmPerSec 200}) $ do
-      extrude (spdFromMmPerSec 2000) (-1)
-      extrude (spdFromMmPerSec 2000) 1
+    local (\env -> env {extrudeSpeed = fromMmPerSec 200}) $ do
+      extrude (fromMmPerSec 2000) (-1)
+      extrude (fromMmPerSec 2000) 1
 
     playTone_
 

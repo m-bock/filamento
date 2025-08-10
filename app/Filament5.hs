@@ -302,8 +302,8 @@ printTestObj = section "Print Test Object" $ do
 
   forM_ [0 .. 40] \i -> do
     moveZ $ fromMm (0.1 + fromIntegral i * config.realLayerHeight)
-    withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 100 100)
-    printRect2d (pos2FromMm $ V2 100 100) (fromMm $ V2 50 20)
+    withRetract $ withZHop $ moveToXY (fromMm $ V2 100 100)
+    printRect2d (fromMm $ V2 100 100) (fromMm $ V2 50 20)
 
 isDev = False
 
@@ -315,12 +315,12 @@ main = do
         env
           { lineWidth = fromMm 0.4,
             layerHeight = fromMm 0.2,
-            hotendTemperature = tempFromCelsius 205,
-            bedTemperature = tempFromCelsius 65,
+            hotendTemperature = fromCelsius 205,
+            bedTemperature = fromCelsius 65,
             transpose = id, -- V2 0 if isDev then (150 - fromIntegral count * 50) else 0,
-            parkingPosition = pos3FromMm $ V3 0 0 30,
-            moveSpeed = spdFromMmPerSec 2000,
-            extrudeSpeed = spdFromMmPerSec 2500,
+            parkingPosition = fromMm $ V3 0 0 30,
+            moveSpeed = fromMmPerSec 2000,
+            extrudeSpeed = fromMmPerSec 2500,
             retractLength = fromMm 1.5
           }
   let codeStr = toText $ local mkEnv sketch

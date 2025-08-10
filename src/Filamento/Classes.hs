@@ -41,3 +41,12 @@ class JustZ a where
 class DeltaApplication abs rel | abs -> rel where
   addDelta :: abs -> rel -> abs
   subDelta :: abs -> rel -> abs
+
+class Milliseconds lo hi | hi -> lo where
+  fromMs :: lo -> hi
+  toMs :: hi -> lo
+
+class FractionalValue a where
+  fromFraction :: Double -> a
+  toFraction :: a -> Double
+  clampFraction :: Double -> a
