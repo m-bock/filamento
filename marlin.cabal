@@ -52,6 +52,7 @@ library
     Filamento.Types.Position
     Filamento.Types.Position2D
     Filamento.Types.Position3D
+    Filamento.Types.Proportion
     Filamento.Types.Speed
     Filamento.Types.Temperature
     Marlin.Comment

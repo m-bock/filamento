@@ -19,17 +19,19 @@ purgeTower (pos2ToMm -> V2 x y) (deltaToMm -> size) dir purgeIndex = do
   let nSections = length ticks `div` n
   let nTicksPerSection = length ticks `div` nSections
 
-  section ("lines purgeIndex=" <> show purgeIndex <> " dir=" <> show dir) do
-    forM_ [0 .. nSections - 1] \i -> do
+  section "purgeTower" do
+    forM_ [0 .. nSections - 1] \i -> section ("section " <> show i) do
       let index = i * nTicksPerSection + ((purgeIndex + i) `mod` n)
       let tick = ticks !! index
       case dir of
         Vert -> do
-          withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 y (x + tick))
-          extrudeX (deltaFromMm size)
+          section "vertical" do
+            withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 y (x + tick))
+            extrudeX (deltaFromMm size)
         Horz -> do
-          withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 (x + tick) y)
-          extrudeY (deltaFromMm size)
+          section "horizontal" do
+            withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 (x + tick) y)
+            extrudeY (deltaFromMm size)
 
 printSketch :: GCode ()
 printSketch = do
@@ -39,8 +41,8 @@ printSketch = do
 
     forM_ [0 .. 199] \i -> do
       if i == 0
-        then raw "M106 S0" "Turn off fan"
-        else raw "M106 S255" "Turn on fan"
+        then setFanSpeedOff
+        else setFanSpeedFull
 
       let h = 0.2 + fromIntegral i * 0.2
       moveToZ (posFromMm h)

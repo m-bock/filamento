@@ -90,13 +90,13 @@ printTestStripes = section "Test Stripes" $ do
   --   extrudeTo (V2 215.0 5.0)
   --   extrude (-1)
 
-  section "Thin test stripe 1" do
+  section "stripe 1" do
     moveToXY (pos2FromMm $ V2 5 5)
     extrude (speedFromMmPerSec 2000) 5
     extrudeToXY (pos2FromMm $ V2 215.0 5)
     extrude (speedFromMmPerSec 2000) (-1)
 
-  section "Thin test stripe 2" do
+  section "stripe 2" do
     withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 5 10)
     extrudeToXY (pos2FromMm $ V2 215.0 10)
 
@@ -167,15 +167,12 @@ initPrinter inner = do
 heatup :: GCode a -> GCode a
 heatup inner = do
   env <- ask
-  section "Heatup" $ do
-    setBedTemperature env.bedTemperature
-    setHotendTemperature env.hotendTemperature
+  setBedTemperature env.bedTemperature
+  setHotendTemperature env.hotendTemperature
 
-  ret <-
-    section "Prepare while waiting" $ do
-      inner
+  ret <- inner
 
-  section "Wait for temperatures" $ do
+  do
     waitForBedTemperature env.bedTemperature
     waitForHotendTemperature env.hotendTemperature
 

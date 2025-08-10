@@ -9,5 +9,6 @@ import Filamento.Types.Frequency as Export
 import Filamento.Types.Position as Export
 import Filamento.Types.Position2D as Export
 import Filamento.Types.Position3D as Export
+import Filamento.Types.Proportion as Export
 import Filamento.Types.Speed as Export
 import Filamento.Types.Temperature as Export

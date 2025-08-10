@@ -49,12 +49,14 @@ module Filamento.Core
     setPositionXYZ,
     setPositionXY,
     getCurrentPosition,
+    setFanSpeed,
+    setFanSpeedOff,
+    setFanSpeedFull,
   )
 where
 
 import Control.Monad.Writer
 import qualified Data.Text as Text
-import Data.Typeable (gcast1)
 import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Marlin.Comment (gcodeToComment)
@@ -153,14 +155,6 @@ rand = GCode $ state $ \st ->
       st' = st {stdgen = newGen}
    in (value, st')
 
--- updatePos :: V3 (Maybe Double) -> GCode ()
--- updatePos (V3 mx my mz) =
---   GCode $ do
---     st <- get
---     let (V3 x y z) = st.currentPosition
---         newPos = V3 (fromMaybe x mx) (fromMaybe y my) (fromMaybe z mz)
---     put $ st {currentPosition = newPos}
-
 -------------------------------------------------------------------------------
 
 section :: Text -> GCode a -> GCode a
@@ -195,7 +189,7 @@ setUnits u = gCodeFromCmd $ case u of
 -------------------------------------------------------------------------------
 
 autoHome :: GCode ()
-autoHome = gCodeFromCmd $ GAutoHome gcodeDef {skipIfTrusted = False}
+autoHome = gCodeFromCmd $ GAutoHome {skipIfTrusted = False}
 
 -------------------------------------------------------------------------------
 
@@ -218,7 +212,20 @@ motorsOff :: GCode ()
 motorsOff = gCodeFromCmd MMotorsOff
 
 pause :: Int -> GCode ()
-pause seconds = gCodeFromCmd $ GDwell (gcodeDef {seconds = Just seconds})
+pause seconds = gCodeFromCmd $ GDwell {seconds = Just seconds}
+
+setFanSpeed :: Proportion -> GCode ()
+setFanSpeed prop =
+  gCodeFromCmd
+    $ MSetFanSpeed
+      { speed = Just (round $ proportionToFraction prop * 255)
+      }
+
+setFanSpeedOff :: GCode ()
+setFanSpeedOff = setFanSpeed (proportionFromFractionClamped 0)
+
+setFanSpeedFull :: GCode ()
+setFanSpeedFull = setFanSpeed (proportionFromFractionClamped 1)
 
 --------------------------------------------------------------------------------
 
@@ -232,13 +239,12 @@ operateTool v_ speed extr = do
 
   gCodeFromCmd
     $ GLinearMove
-      gcodeDef
-        { x = Just mx,
-          y = Just my,
-          z = Just mz,
-          feedrate = Just $ round $ speedToMmPerSec speed,
-          extrude = Just $ coerce $ distanceToMm extr
-        }
+      { x = Just mx,
+        y = Just my,
+        z = Just mz,
+        feedrate = Just $ round $ speedToMmPerSec speed,
+        extrude = Just $ coerce $ distanceToMm extr
+      }
 
 --------------------------------------------------------------------------------
 
@@ -415,42 +421,13 @@ stateUpdateExtrude len st = case st.filament of
 
 gCodeFromCmd :: GCodeCmd -> GCode ()
 gCodeFromCmd cmd = do
-  case cmd of
-    GMillimeterUnits -> pure ()
-    GInchUnits -> pure ()
-    GLinearMove opt -> pure ()
-    -- updatePos (V3 opt.x opt.y opt.z)
-    -- forM_ opt.extrude $ \e -> modify (stateUpdateExtrude e)
-    GAutoHome _ -> pure ()
-    -- env <- ask
-    -- updatePos (fmap Just env.autoHomePosition)
-    GSetPosition opt -> pure ()
-    -- updatePos (V3 opt.x opt.y opt.z)
-    -- setExtruded opt.extrude
-    MSetBedTemperature _ -> pure ()
-    MWaitForBedTemperature _ -> pure ()
-    MSSetHotendTemperature _ -> pure ()
-    MWaitForHotendTemperature _ -> pure ()
-    MSetExtruderRelative -> pure ()
-    MSetExtruderAbsolute -> pure ()
-    MSetHotendOff -> pure ()
-    MSetBedOff -> pure ()
-    MSetFanOff -> pure ()
-    MMotorsOff -> pure ()
-    MPlayTone _ -> pure ()
-    GDwell _ -> pure ()
-
-  let cmd' = case cmd of
-        GLinearMove opt -> GLinearMove opt
-        _ -> cmd
-
   env <- ask
 
   GCode
     $ tell
     $ pure
     $ GCodeLine
-      { cmd = Just cmd',
+      { cmd = Just cmd,
         rawExtra = "",
         comment = Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)
       }
@@ -459,10 +436,9 @@ playTone :: Frequency -> Duration -> GCode ()
 playTone freq dur =
   gCodeFromCmd
     $ MPlayTone
-      gcodeDef
-        { frequency = Just $ round $ frequencyToHz freq,
-          milliseconds = Just $ round $ durationToMs dur
-        }
+      { frequency = Just $ round $ frequencyToHz freq,
+        milliseconds = Just $ round $ durationToMs dur
+      }
 
 playTone_ :: GCode ()
 playTone_ = playTone (frequencyFromHz 2600) (durationFromMs 1)
@@ -471,52 +447,46 @@ setBedTemperature :: Temperature -> GCode ()
 setBedTemperature degrees = do
   gCodeFromCmd
     $ MSetBedTemperature
-      gcodeDef
-        { degrees = Just $ round $ temperatureToCelsius degrees
-        }
+      { degrees = Just $ round $ temperatureToCelsius degrees
+      }
 
 setHotendTemperature :: Temperature -> GCode ()
 setHotendTemperature temp = do
   gCodeFromCmd
     $ MSSetHotendTemperature
-      gcodeDef
-        { degrees = Just $ round $ temperatureToCelsius temp
-        }
+      { degrees = Just $ round $ temperatureToCelsius temp
+      }
 
 waitForBedTemperature :: Temperature -> GCode ()
 waitForBedTemperature temp = do
   gCodeFromCmd
     $ MWaitForBedTemperature
-      gcodeDef
-        { degrees = Just $ round $ temperatureToCelsius temp
-        }
+      { degrees = Just $ round $ temperatureToCelsius temp
+      }
 
 waitForHotendTemperature :: Temperature -> GCode ()
 waitForHotendTemperature temp = do
   gCodeFromCmd
     $ MWaitForHotendTemperature
-      gcodeDef
-        { degrees = Just $ round $ temperatureToCelsius temp
-        }
+      { degrees = Just $ round $ temperatureToCelsius temp
+      }
 
 setPositionXYZ :: V3 Double -> GCode ()
 setPositionXYZ (V3 x y z) = do
   gCodeFromCmd
     $ GSetPosition
-      gcodeDef
-        { x = Just x,
-          y = Just y,
-          z = Just z
-        }
+      { x = Just x,
+        y = Just y,
+        z = Just z
+      }
 
 setPositionXY :: V2 Double -> GCode ()
 setPositionXY (V2 x y) = do
   gCodeFromCmd
     $ GSetPosition
-      gcodeDef
-        { x = Just x,
-          y = Just y
-        }
+      { x = Just x,
+        y = Just y
+      }
 
 changeColor :: Text -> GCode ()
 changeColor colorName = do
