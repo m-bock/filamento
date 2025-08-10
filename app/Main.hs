@@ -1,9 +1,7 @@
 module Main where
 
 import Filamento
-import Filamento.IO
 import Linear
-import qualified PurgeTower
 import Relude
 
 -- initPrinter $
@@ -16,17 +14,14 @@ printSketch = initPrinter do
 
 main :: IO ()
 main = do
-  putStrLn "Starting Filamento application..."
-  PurgeTower.main
-
--- saveGCodeToFile
---   "out/myprint.gcode"
---   printSketch
---   \env ->
---     env
---       { lineWidth = fromMm 0.4,
---         layerHeight = fromMm 0.2,
---         hotendTemperature = tempFromCelsius 205,
---         bedTemperature = tempFromCelsius 65,
---         retractLength = fromMm 1.5
---       }
+  saveGCodeToFile
+    "out/myprint.gcode"
+    printSketch
+    \env ->
+      env
+        { lineWidth = fromMm 0.4,
+          layerHeight = fromMm 0.2,
+          hotendTemperature = fromCelsius 205,
+          bedTemperature = fromCelsius 65,
+          retractLength = fromMm 1.5
+        }
