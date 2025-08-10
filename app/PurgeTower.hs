@@ -11,7 +11,7 @@ data Dir = Vert | Horz
   deriving (Show, Eq)
 
 purgeTower :: Position2D -> Delta -> Dir -> Int -> GCode ()
-purgeTower (pos2ToMm -> V2 x y) (dltToMm -> size) dir purgeIndex = do
+purgeTower (pos2ToMm -> V2 x y) (toMm -> size) dir purgeIndex = do
   let ticks = linspaceByStepLength 0 size 0.4 floor
 
   let n = 5
@@ -27,17 +27,17 @@ purgeTower (pos2ToMm -> V2 x y) (dltToMm -> size) dir purgeIndex = do
         Vert -> do
           section "vertical" do
             withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 y (x + tick))
-            extrudeX (dltFromMm size)
+            extrudeX (fromMm size)
         Horz -> do
           section "horizontal" do
             withRetract $ withZHop $ moveToXY (pos2FromMm $ V2 (x + tick) y)
-            extrudeY (dltFromMm size)
+            extrudeY (fromMm size)
 
 printSketch2 :: GCode ()
 printSketch2 = do
   initPrinter do
     let pos = pos2FromMm $ V2 100 100
-        delta = dltFromMm 20
+        delta = fromMm 20
 
     forM_ [0 .. 199] \i -> do
       if i == 0
@@ -50,34 +50,16 @@ printSketch2 = do
 
       purgeTower pos delta dir 0
 
-{-local (\env -> env {transpose = \(V3 x y z) -> V3 x (y + 0) z})-}
-
-printSketch :: GCode ()
-printSketch = initPrinter do
-  let sides = 6
-      radius = 10
-      height = 10
-
-  let mkPoint i =
-        let ang = 2 * pi * fromIntegral i / fromIntegral sides
-         in V2 (radius * cos ang) (radius * sin ang)
-
-  moveToXY (pos2FromMm $ mkPoint 0)
-
-  forM_ [0 .. sides] $ \i -> do
-    let p = mkPoint i
-    extrudeToXY (pos2FromMm p)
-
 main :: IO ()
 main = do
   saveGCodeToFile
     "out/myprint.gcode"
-    printSketch
+    printSketch2
     \env ->
       env
-        { lineWidth = dltFromMm 0.4,
-          layerHeight = dltFromMm 0.2,
+        { lineWidth = fromMm 0.4,
+          layerHeight = fromMm 0.2,
           hotendTemperature = tempFromCelsius 205,
           bedTemperature = tempFromCelsius 65,
-          retractLength = dltFromMm 1.5
+          retractLength = fromMm 1.5
         }

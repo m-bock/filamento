@@ -19,6 +19,7 @@ module Filamento.Lib
 where
 
 import Data.Convertible
+import Filamento.Classes
 import Filamento.Core
 import Filamento.Math
 import Filamento.Types
@@ -30,7 +31,7 @@ nextLayer = do
   env <- ask
   st <- get
 
-  let z = posFromMm (dltToMm env.firstLayerHeight + convert st.currentLayer * dltToMm env.layerHeight)
+  let z = posFromMm (toMm env.firstLayerHeight + convert st.currentLayer * toMm env.layerHeight)
 
   modify \st -> st {currentLayer = st.currentLayer + 1}
 
@@ -127,7 +128,7 @@ finalPark = do
 
   extrude (spdFromMmPerSec 2000) (-3)
 
-  moveZ (dltFromMm parkZ)
+  moveZ (fromMm parkZ)
   moveToXY (pos2FromMm $ V2 parkX parkY)
 
 homeOrResume :: GCode ()

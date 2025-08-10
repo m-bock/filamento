@@ -39,24 +39,13 @@ library
   import: flags, extensions
   exposed-modules:
     Filamento
+    Filamento.Classes
     Filamento.Core
     Filamento.Factory.V1
     Filamento.IO
     Filamento.Lib
     Filamento.Math
     Filamento.Types
-    Filamento.Types.Delta
-    Filamento.Types.Delta2D
-    Filamento.Types.Delta3D
-    Filamento.Types.Distance
-    Filamento.Types.Duration
-    Filamento.Types.Frequency
-    Filamento.Types.Position
-    Filamento.Types.Position2D
-    Filamento.Types.Position3D
-    Filamento.Types.Proportion
-    Filamento.Types.Speed
-    Filamento.Types.Temperature
     Marlin.Comment
     Marlin.Core
     Marlin.Syntax

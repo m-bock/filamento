@@ -57,6 +57,7 @@ where
 
 import Control.Monad.Writer
 import qualified Data.Text as Text
+import Filamento.Classes
 import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Marlin.Comment (gcodeToComment)
@@ -116,14 +117,14 @@ defaultGCodeEnv =
       hotendTemperature = tempFromCelsius 210,
       parkingPosition = pos3FromMm $ V3 0 225 120,
       autoHomePosition = pos3FromMm $ V3 145.50 94.00 1.56,
-      layerHeight = dltFromMm 0.4,
-      firstLayerHeight = dltFromMm 0.2,
-      lineWidth = dltFromMm 0.4,
-      filamentDia = dltFromMm 1.75,
+      layerHeight = fromMm 0.4,
+      firstLayerHeight = fromMm 0.2,
+      lineWidth = fromMm 0.4,
+      filamentDia = fromMm 1.75,
       transpose = id,
-      retractLength = dltFromMm 1,
+      retractLength = fromMm 1,
       retractSpeed = spdFromMmPerMin 1800,
-      zHop = dltFromMm 0.4,
+      zHop = fromMm 0.4,
       sectionPath = []
     }
 
@@ -242,7 +243,7 @@ operateTool v_ speed extr = do
         y = Just my,
         z = Just mz,
         feedrate = Just $ round $ spdToMmPerSec speed,
-        extrude = Just $ coerce $ dltToMm extr
+        extrude = Just $ coerce $ toMm extr
       }
 
 --------------------------------------------------------------------------------
@@ -295,15 +296,15 @@ moveXY (dlt2ToMm -> V2 dx dy) =
   moveImpl (Just dx) (Just dy) Nothing
 
 moveX :: Delta -> GCode ()
-moveX (dltToMm -> x) =
+moveX (toMm -> x) =
   moveImpl (Just x) Nothing Nothing
 
 moveY :: Delta -> GCode ()
-moveY (dltToMm -> y) =
+moveY (toMm -> y) =
   moveImpl Nothing (Just y) Nothing
 
 moveZ :: Delta -> GCode ()
-moveZ (dltToMm -> z) =
+moveZ (toMm -> z) =
   moveImpl Nothing Nothing (Just z)
 
 --------------------------------------------------------------------------------
@@ -356,13 +357,13 @@ extrudeXY (dlt2ToMm -> V2 dx dy) = do
   extrudeImpl (Just dx) (Just dy) Nothing
 
 extrudeX :: Delta -> GCode ()
-extrudeX (dltToMm -> x) = extrudeXYZ (dlt3FromMm $ V3 x 0 0)
+extrudeX (toMm -> x) = extrudeXYZ (dlt3FromMm $ V3 x 0 0)
 
 extrudeY :: Delta -> GCode ()
-extrudeY (dltToMm -> y) = extrudeXYZ (dlt3FromMm $ V3 0 y 0)
+extrudeY (toMm -> y) = extrudeXYZ (dlt3FromMm $ V3 0 y 0)
 
 extrudeZ :: Delta -> GCode ()
-extrudeZ (dltToMm -> z) = extrudeXYZ (dlt3FromMm $ V3 0 0 z)
+extrudeZ (toMm -> z) = extrudeXYZ (dlt3FromMm $ V3 0 0 z)
 
 -------------------------------------------------------------------------------
 
@@ -389,13 +390,13 @@ getExtrudeLength target = do
   extrudeMM <- getExtrudeMM
   st <- get
   let lineLength = distToMm $ pos3Distance st.currentPosition target
-  pure (dltFromMm $ lineLength * extrudeMM)
+  pure (fromMm $ lineLength * extrudeMM)
 
 getExtrudeMM :: GCode Double
 getExtrudeMM = do
   env <- ask
-  let vPerMm = dltToMm env.layerHeight * dltToMm env.lineWidth
-      aFil = pi * (dltToMm env.filamentDia ** 2) / 4
+  let vPerMm = toMm env.layerHeight * toMm env.lineWidth
+      aFil = pi * (toMm env.filamentDia ** 2) / 4
   pure (vPerMm / aFil)
 
 isFirstLayers :: GCode Bool
