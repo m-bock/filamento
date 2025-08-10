@@ -20,15 +20,10 @@ module Filamento.Core
     setFanOff,
     motorsOff,
     pause,
-    extrudeBy2,
-    moveBy2,
-    moveBy3,
     moveByZ,
     moveToX,
     moveToY,
     moveToZ,
-    moveTo2,
-    moveTo3,
     moveByX,
     moveByY,
     extrudeByX,
@@ -37,8 +32,6 @@ module Filamento.Core
     extrudeToX,
     extrudeToY,
     extrudeToZ,
-    extrudeTo2,
-    extrudeTo3,
     extrude,
     playTone,
     playTone_,
@@ -260,15 +253,7 @@ moveToImpl mx my mz = do
       newX = fromMaybe x mx
       newY = fromMaybe y my
       newZ = fromMaybe z mz
-  operateTool (fromMm $ V3 newX newY newZ) speed 0
-
-moveTo3 :: Position3D -> GCode ()
-moveTo3 (toMm -> V3 x y z) =
-  moveToImpl (Just x) (Just y) (Just z)
-
-moveTo2 :: Position2D -> GCode ()
-moveTo2 (toMm -> V2 x y) =
-  moveToImpl (Just x) (Just y) Nothing
+  operateTool (pos3fromMm newX newY newZ) speed 0
 
 moveToX :: Position -> GCode ()
 moveToX (toMm -> x) =
@@ -291,14 +276,6 @@ moveByImpl mx my mz = do
   let v = fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
   operateTool (v + cur) speed 0
 
-moveBy3 :: Delta3D -> GCode ()
-moveBy3 (toMm -> V3 dx dy dz) =
-  moveByImpl (Just dx) (Just dy) (Just dz)
-
-moveBy2 :: Delta2D -> GCode ()
-moveBy2 (toMm -> V2 dx dy) =
-  moveByImpl (Just dx) (Just dy) Nothing
-
 moveByX :: Delta -> GCode ()
 moveByX (toMm -> x) =
   moveByImpl (Just x) Nothing Nothing
@@ -320,14 +297,6 @@ extrudeToImpl mx my mz = do
   let v = fromMm (V3 (fromMaybe curX mx) (fromMaybe curY my) (fromMaybe curZ mz))
   extr <- getExtrudeLength v
   operateTool v speed extr
-
-extrudeTo2 :: Position2D -> GCode ()
-extrudeTo2 (toMm -> V2 dx dy) =
-  extrudeToImpl (Just dx) (Just dy) Nothing
-
-extrudeTo3 :: Position3D -> GCode ()
-extrudeTo3 (toMm -> V3 dx dy dz) =
-  extrudeToImpl (Just dx) (Just dy) (Just dz)
 
 extrudeToX :: Position -> GCode ()
 extrudeToX (toMm -> dx) =
@@ -352,22 +321,14 @@ extrudeByImpl mx my mz = do
   extr <- getExtrudeLength v'
   operateTool v' speed extr
 
-extrudeBy3 :: Delta3D -> GCode ()
-extrudeBy3 (toMm -> V3 dx dy dz) = do
-  extrudeByImpl (Just dx) (Just dy) (Just dz)
-
-extrudeBy2 :: Delta2D -> GCode ()
-extrudeBy2 (toMm -> V2 dx dy) = do
-  extrudeByImpl (Just dx) (Just dy) Nothing
-
 extrudeByX :: Delta -> GCode ()
-extrudeByX (toMm -> x) = extrudeBy3 (fromMm $ V3 x 0 0)
+extrudeByX (toMm -> x) = extrudeByImpl (Just x) Nothing Nothing
 
 extrudeByY :: Delta -> GCode ()
-extrudeByY (toMm -> y) = extrudeBy3 (fromMm $ V3 0 y 0)
+extrudeByY (toMm -> y) = extrudeByImpl Nothing (Just y) Nothing
 
 extrudeByZ :: Delta -> GCode ()
-extrudeByZ (toMm -> z) = extrudeBy3 (fromMm $ V3 0 0 z)
+extrudeByZ (toMm -> z) = extrudeByImpl Nothing Nothing (Just z)
 
 -------------------------------------------------------------------------------
 

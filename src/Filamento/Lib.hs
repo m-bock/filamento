@@ -1,7 +1,6 @@
 module Filamento.Lib
-  ( extrudeBy2,
-    extrude,
-    moveBy2,
+  ( extrude,
+    moveBy,
     moveByZ,
     withRetract,
     withZHop,
@@ -62,13 +61,13 @@ withZHop inner = section "zHop" do
 printPolyLine :: [Position3D] -> GCode ()
 printPolyLine [] = pure ()
 printPolyLine (v : vs) = do
-  moveTo3 v
+  moveTo v
   extrudePoints vs
 
 extrudePoints :: [Position3D] -> GCode ()
 extrudePoints vs = do
   forM_ vs $ \v -> do
-    extrudeTo3 v
+    extrudeTo v
 
 printRect2d :: Position2D -> Delta2D -> GCode ()
 printRect2d (toMm -> V2 x y) delta = do
@@ -97,14 +96,14 @@ printTestStripes = section "Test Stripes" $ do
   --   extrude (-1)
 
   section "stripe 1" do
-    moveTo2 (fromMm $ V2 5 5)
+    moveTo (pos2fromMm 5 5)
     extrude (fromMmPerSec 2000) 5
-    extrudeTo2 (fromMm $ V2 215.0 5)
+    extrudeTo (pos2fromMm 215.0 5)
     extrude (fromMmPerSec 2000) (-1)
 
   section "stripe 2" do
-    withRetract $ withZHop $ moveTo2 (fromMm $ V2 5 10)
-    extrudeTo2 (fromMm $ V2 215.0 10)
+    withRetract $ withZHop $ moveTo (pos2fromMm 5 10)
+    extrudeTo (pos2fromMm 215.0 10)
 
 -- raw "G1 Z0.2 F1200" "Move to first layer height"
 -- raw "G1 X10 Y5 F3000" "Move to start pos"
@@ -129,7 +128,7 @@ finalPark = do
   extrude (fromMmPerSec 2000) (-3)
 
   moveByZ (fromMm parkZ)
-  moveTo2 (fromMm $ V2 parkX parkY)
+  moveTo (pos2fromMm parkX parkY)
 
 homeOrResume :: GCode ()
 homeOrResume = do
@@ -146,7 +145,7 @@ homeOrResume = do
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
-  moveTo3 (fromMm $ V3 0 0 2)
+  moveTo (pos3fromMm 0 0 2)
   playTone_
   pause (fromSecs 10)
 
@@ -156,7 +155,7 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  moveTo3 (fromMm $ V3 0 0 0)
+  moveTo (pos3fromMm 0 0 0)
 
   heatup homeOrResume
 
@@ -194,7 +193,7 @@ printPolygon n v s'
           points =
             [ addDelta
                 v
-                (fromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
+                (delta3fromMm (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
               | i <- [0 .. n - 1]
             ]
       case viaNonEmpty head points of
