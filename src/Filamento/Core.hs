@@ -451,8 +451,8 @@ waitForHotendTemperature temp = do
       { degrees = Just $ round $ tempToCelsius temp
       }
 
-setPositionXYZ :: V3 Double -> GCode ()
-setPositionXYZ (V3 x y z) = do
+setPositionXYZ :: Position3D -> GCode ()
+setPositionXYZ (pos3ToMm -> V3 x y z) = do
   gcodeFromCmd
     $ GSetPosition
       { x = Just x,
@@ -461,8 +461,8 @@ setPositionXYZ (V3 x y z) = do
         extrude = Nothing
       }
 
-setPositionXY :: V2 Double -> GCode ()
-setPositionXY (V2 x y) = do
+setPositionXY :: Position2D -> GCode ()
+setPositionXY (pos2ToMm -> V2 x y) = do
   gcodeFromCmd
     $ GSetPosition
       { x = Just x,

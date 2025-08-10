@@ -3,6 +3,8 @@ module Filamento.Types.Proportion
     propFromFractionClamped,
     clamp,
     propToFraction,
+    propMin,
+    propMax,
   )
 where
 
@@ -19,3 +21,9 @@ clamp minVal maxVal x = max minVal (min maxVal x)
 
 propToFraction :: Proportion -> Double
 propToFraction (Proportion f) = f
+
+propMin :: Proportion
+propMin = Proportion 0
+
+propMax :: Proportion
+propMax = Proportion 1

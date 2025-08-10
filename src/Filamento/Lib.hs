@@ -136,7 +136,7 @@ homeOrResume = do
         autoHome
     else do
       section "Resume" $ do
-        setPositionXYZ (pos3ToMm env.parkingPosition)
+        setPositionXYZ env.parkingPosition
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
