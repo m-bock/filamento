@@ -144,7 +144,7 @@ tubeExtrudePoints (Coord start) (Coord end) = do
 tubeMoveTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeMoveTo (Coord pt) = do
   let Coord worldPt = tubeToWorld2 (Coord pt)
-  moveXY $ fromMm worldPt
+  moveByXY $ fromMm worldPt
 
 tubeExtrudeTo :: Coord (V2 Double) Tube Abs -> GCode ()
 tubeExtrudeTo (Coord pt) = do
@@ -239,11 +239,11 @@ printPhase phase hillIndex = section ("Print Phase = " <> show phase <> " hillIn
         Hill -> 0.5
         Valley -> 1
 
-  withRetract $ moveZ $ fromMm 2.2
+  withRetract $ moveByZ $ fromMm 2.2
   let v = V2 0 ((fromIntegral hillIndex + offset) * config.depthHill)
   withRetract $ tubeMoveTo (Coord v)
 
-  withRetract $ moveZ $ fromMm 0.1
+  withRetract $ moveByZ $ fromMm 0.1
 
   local (\e -> e {layerHeight = fromMm config.realLayerHeight, lineWidth = fromMm config.idealLineWidth}) do
     forM_ [0 .. config.countPrintedLayers - 1] \layerIndex -> do
@@ -251,7 +251,7 @@ printPhase phase hillIndex = section ("Print Phase = " <> show phase <> " hillIn
         then raw "M106 S0" "Turn off fan"
         else raw "M106 S255" "Turn on fan"
 
-      moveZ $ fromMm (0.1 + fromIntegral layerIndex * config.realLayerHeight)
+      moveByZ $ fromMm (0.1 + fromIntegral layerIndex * config.realLayerHeight)
       printPhaseLayer phase hillIndex layerIndex
 
 printFilament :: GCode ()
@@ -277,8 +277,7 @@ ironFinishing = section "Iron Finishing" $ do
   let ironHeight = 0.1 + (fromIntegral config.countPrintedLayers - 1) * config.realLayerHeight
 
   raw "M106 S255" "Turn on fan"
-
-  moveZ $ fromMm ironHeight
+  moveByZ $ fromMm ironHeight
   tubeMoveTo (Coord $ V2 0 0)
 
   let step = config.tubeCircumference / fromIntegral config.countArcSteps
@@ -301,7 +300,7 @@ printTestObj = section "Print Test Object" $ do
   filamentChange
 
   forM_ [0 .. 40] \i -> do
-    moveZ $ fromMm (0.1 + fromIntegral i * config.realLayerHeight)
+    moveByZ $ fromMm (0.1 + fromIntegral i * config.realLayerHeight)
     withRetract $ withZHop $ moveToXY (fromMm $ V2 100 100)
     printRect2d (fromMm $ V2 100 100) (fromMm $ V2 50 20)
 

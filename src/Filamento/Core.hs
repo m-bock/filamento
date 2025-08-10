@@ -21,16 +21,16 @@ module Filamento.Core
     motorsOff,
     pause,
     extrudeByXY,
-    moveXY,
-    moveXYZ,
-    moveZ,
+    moveByXY,
+    moveByXYZ,
+    moveByZ,
     moveToX,
     moveToY,
     moveToZ,
     moveToXY,
     moveToXYZ,
-    moveX,
-    moveY,
+    moveByX,
+    moveByY,
     extrudeByX,
     extrudeByY,
     extrudeByZ,
@@ -280,32 +280,32 @@ moveToZ (toMm -> z) =
 
 --------------------------------------------------------------------------------
 
-moveImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
-moveImpl mx my mz = do
+moveByImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
+moveByImpl mx my mz = do
   speed <- getSpeed
   cur <- getCurrentPosition
   let v = fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
   operateTool (v + cur) speed 0
 
-moveXYZ :: Delta3D -> GCode ()
-moveXYZ (toMm -> V3 dx dy dz) =
-  moveImpl (Just dx) (Just dy) (Just dz)
+moveByXYZ :: Delta3D -> GCode ()
+moveByXYZ (toMm -> V3 dx dy dz) =
+  moveByImpl (Just dx) (Just dy) (Just dz)
 
-moveXY :: Delta2D -> GCode ()
-moveXY (toMm -> V2 dx dy) =
-  moveImpl (Just dx) (Just dy) Nothing
+moveByXY :: Delta2D -> GCode ()
+moveByXY (toMm -> V2 dx dy) =
+  moveByImpl (Just dx) (Just dy) Nothing
 
-moveX :: Delta -> GCode ()
-moveX (toMm -> x) =
-  moveImpl (Just x) Nothing Nothing
+moveByX :: Delta -> GCode ()
+moveByX (toMm -> x) =
+  moveByImpl (Just x) Nothing Nothing
 
-moveY :: Delta -> GCode ()
-moveY (toMm -> y) =
-  moveImpl Nothing (Just y) Nothing
+moveByY :: Delta -> GCode ()
+moveByY (toMm -> y) =
+  moveByImpl Nothing (Just y) Nothing
 
-moveZ :: Delta -> GCode ()
-moveZ (toMm -> z) =
-  moveImpl Nothing Nothing (Just z)
+moveByZ :: Delta -> GCode ()
+moveByZ (toMm -> z) =
+  moveByImpl Nothing Nothing (Just z)
 
 --------------------------------------------------------------------------------
 

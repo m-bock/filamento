@@ -1,8 +1,8 @@
 module Filamento.Lib
   ( extrudeByXY,
     extrude,
-    moveXY,
-    moveZ,
+    moveByXY,
+    moveByZ,
     withRetract,
     withZHop,
     printPolyLine,
@@ -128,7 +128,7 @@ finalPark = do
 
   extrude (fromMmPerSec 2000) (-3)
 
-  moveZ (fromMm parkZ)
+  moveByZ (fromMm parkZ)
   moveToXY (fromMm $ V2 parkX parkY)
 
 homeOrResume :: GCode ()
