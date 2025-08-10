@@ -10,12 +10,6 @@ import Filamento
 import Filamento.IO
 import Filamento.Lib
 import qualified Filamento.Math as Math
-import qualified Filamento.Types.Delta2D as Disp2D
-import qualified Filamento.Types.Distance as Distance
-import Filamento.Types.Position2D (Position2D)
-import qualified Filamento.Types.Position2D as Pos2D
-import qualified Filamento.Types.Speed as Speed
-import qualified Filamento.Types.Temperature as Temperature
 import Linear (V3 (..))
 import Linear.V2 (V2 (..))
 import Relude
