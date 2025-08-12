@@ -1,65 +1,52 @@
-module Filamento.Factory.V1 (
-  printFilament,
-  printFilament_,
-  ConfigSrc (..),
-)
-where
+module Filamento.Factory.V1 where
 
 import Data.List ((!!))
-import qualified Data.Text as T
 import Filamento
-import Filamento.Lib
-import Filamento.Math (addX, addY, justX, justY, subX)
-import Linear (V3 (..))
-import Linear.V2 (V2 (..), _x, _y)
 import Relude
-import Relude.Extra (un, wrap)
 
-newtype Coord a b c = Coord a
-  deriving (Show, Eq, Num)
+data Profile = Hill | Valley
 
-type V2D = V2 Double
-
-type V3D = V3 Double
-
-type D3 = V3 Double
-
-type X = Double
-
-type Y = Double
-
-type Z = Double
-
-data Abs
-
-data Rel
-
-data Tube
-
-data World
-
----
-
----
-
-data ConfigSrc = ConfigSrc
-  {
-  }
-
-data ConfigDrv = ConfigDrv
-  {
-  }
+printRectByCenter :: Position2D -> Delta2D -> GCode ()
+printRectByCenter center delta = do
+  let deltaHalf = scale 0.5 delta
+      p1 = subDelta center deltaHalf
+      p2 = addDelta p1 (justX deltaHalf)
+      p3 = addDelta p2 (justY deltaHalf)
+      p4 = subDelta p3 (justX deltaHalf)
+  moveTo p1
+  extrudeTo p2
+  extrudeTo p3
+  extrudeTo p4
+  extrudeTo p1
 
 data Config = Config
-  { src :: ConfigSrc
-  , drv :: ConfigDrv
+  { overlap :: Delta,
+    filamentDia :: Delta
   }
 
-drvConfig :: ConfigSrc -> Config
-drvConfig = undefined
+configDefault :: Config
+configDefault =
+  Config
+    { overlap = fromMm 5.0,
+      filamentDia = fromMm 1.75
+    }
 
-printFilament_ :: GCode ()
-printFilament_ = undefined
+getY :: Count -> Delta -> Delta
+getY c len =
+  let baseLen = configDefault.overlap + len + configDefault.overlap
+   in baseLen
 
-printFilament :: (ConfigSrc -> ConfigSrc) -> GCode ()
-printFilament = undefined
+printProfile :: Profile -> Position -> Delta -> GCode ()
+printProfile profile posY len = do
+  let rectCenter = addDelta (pos2FromPos 0 posY) (delta2FromDelta mempty (scale 0.5 len))
+      size = delta2FromDelta configDefault.filamentDia (getY mempty len)
+  printRectByCenter rectCenter size
+
+printFilament :: [FilamentSection] -> GCode ()
+printFilament secs = do
+  forM_ (zip [0 ..] secs) $ \(i, sec) -> do
+    let secPrev = secs !!? (i - 1)
+        begin = maybe 0 (\x -> x.endPosMm) secPrev
+        end = sec.endPosMm
+        sdist = signedDistance begin end
+    printProfile Hill begin sdist

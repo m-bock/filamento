@@ -2,9 +2,9 @@ module Filamento.Core
   ( gcodeFromCmd,
     GCode,
     GCodeEnv (..),
-    PrintState (..),
-    initPrintState,
-    defaultGCodeEnv,
+    GCodeState (..),
+    gcodeStateInit,
+    gcodeEnvDefault,
     section,
     newline,
     comment,
@@ -50,9 +50,9 @@ module Filamento.Core
     ExtrudeTo (..),
     ExtrudeBy (..),
     withSketchTranspose,
-    runGcode,
+    gcodeRun,
     FilamentSection (..),
-    getPrintState,
+    gcodeStateGet,
     nextLayer,
     withColors,
   )
@@ -71,6 +71,46 @@ import Marlin.Comment (gcodeToComment)
 import Marlin.Core
 import Relude
 import System.Random
+
+-------------------------------------------------------------------------------
+--- GCode
+-------------------------------------------------------------------------------
+
+newtype GCode a = GCode (StateT GCodeState (ReaderT GCodeEnv (Writer [GCodeLine])) a)
+  deriving
+    ( Functor,
+      Applicative,
+      Monad,
+      MonadReader GCodeEnv
+    )
+
+instance ToText (GCode a) where
+  toText (GCode m) =
+    evalStateT m gcodeStateInit
+      & (`runReaderT` gcodeEnvDefault)
+      & execWriter
+      & map gcodeLineToRaw
+      & toText
+
+gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> (a, GCodeState, Text)
+gcodeRun (GCode m) env oldState =
+  let ((val, newState), lines) =
+        runStateT m oldState
+          & (`runReaderT` env)
+          & runWriter
+   in (val, newState, toText $ map gcodeLineToRaw lines)
+
+gcodeFromCmd :: GCodeCmd -> GCode ()
+gcodeFromCmd cmd = do
+  env <- ask
+  GCode
+    $ tell
+    $ pure
+    $ GCodeLine
+      { cmd = Just cmd,
+        rawExtra = "",
+        comment = Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)
+      }
 
 -------------------------------------------------------------------------------
 --- GCodeEnv
@@ -99,79 +139,8 @@ data GCodeEnv = Env
     colors :: NonEmpty Text
   }
 
--------------------------------------------------------------------------------
---- FilamentSection
--------------------------------------------------------------------------------
-
-data FilamentSection = FilamentSection
-  { color :: Text,
-    endPosMm :: Position
-  }
-  deriving (Show, Eq, Generic)
-
-instance FromJSON FilamentSection
-
-instance ToJSON FilamentSection
-
--------------------------------------------------------------------------------
---- PrintState
--------------------------------------------------------------------------------
-
-data PrintState = PrintState
-  { currentLayer :: Int,
-    currentPosition :: Position3D,
-    stdgen :: StdGen,
-    filament :: [FilamentSection]
-  }
-  deriving (Show, Eq)
-
-data Msg
-  = MsgChangeCurrentPosition Position3D
-  | MsgTrackExtrusion Delta
-  | MsgChangeCurrentLayer Int
-  | MsgChangeColor Text
-
-modifyPrintStatePure :: Msg -> PrintState -> PrintState
-modifyPrintStatePure msg st = case msg of
-  MsgChangeCurrentPosition pos -> st {currentPosition = pos}
-  MsgChangeCurrentLayer layer -> st {currentLayer = layer}
-  MsgChangeColor color -> case st.filament of
-    h : t ->
-      st
-        { filament = FilamentSection {color, endPosMm = h.endPosMm} : h : t
-        }
-    [] ->
-      st
-        { filament = [FilamentSection {color, endPosMm = 0}]
-        }
-  MsgTrackExtrusion extr -> case st.filament of
-    h : t ->
-      st
-        { filament = h {endPosMm = addDelta h.endPosMm extr} : t
-        }
-    [] ->
-      st
-        { filament = [FilamentSection {color = "default", endPosMm = 0}]
-        }
-
-modifyPrintState :: Msg -> GCode ()
-modifyPrintState msg = GCode do
-  modify \st -> modifyPrintStatePure msg st
-
-getPrintState :: GCode PrintState
-getPrintState = GCode $ get
-
-initPrintState :: PrintState
-initPrintState =
-  PrintState
-    { currentPosition = fromMm $ V3 0 0 0,
-      stdgen = mkStdGen 0,
-      currentLayer = 0,
-      filament = []
-    }
-
-defaultGCodeEnv :: GCodeEnv
-defaultGCodeEnv =
+gcodeEnvDefault :: GCodeEnv
+gcodeEnvDefault =
   Env
     { moveSpeed = fromMmPerSec 10000,
       extrudeSpeed = fromMmPerSec 2000,
@@ -195,6 +164,80 @@ defaultGCodeEnv =
       colors = "default" :| []
     }
 
+-------------------------------------------------------------------------------
+--- FilamentSection
+-------------------------------------------------------------------------------
+
+data FilamentSection = FilamentSection
+  { color :: Text,
+    endPosMm :: Position
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON FilamentSection
+
+instance ToJSON FilamentSection
+
+-------------------------------------------------------------------------------
+--- GCodeState
+-------------------------------------------------------------------------------
+
+data GCodeState = GCodeState
+  { currentLayer :: Int,
+    currentPosition :: Position3D,
+    stdgen :: StdGen,
+    filament :: [FilamentSection]
+  }
+  deriving (Show, Eq)
+
+data Msg
+  = MsgChangeCurrentPosition Position3D
+  | MsgTrackExtrusion Delta
+  | MsgChangeCurrentLayer Int
+  | MsgChangeColor Text
+
+gcodeStateUpdate :: Msg -> GCodeState -> GCodeState
+gcodeStateUpdate msg st = case msg of
+  MsgChangeCurrentPosition pos -> st {currentPosition = pos}
+  MsgChangeCurrentLayer layer -> st {currentLayer = layer}
+  MsgChangeColor color -> case st.filament of
+    h : t ->
+      st
+        { filament = FilamentSection {color, endPosMm = h.endPosMm} : h : t
+        }
+    [] ->
+      st
+        { filament = [FilamentSection {color, endPosMm = 0}]
+        }
+  MsgTrackExtrusion extr -> case st.filament of
+    h : t ->
+      st
+        { filament = h {endPosMm = addDelta h.endPosMm extr} : t
+        }
+    [] ->
+      st
+        { filament = [FilamentSection {color = "default", endPosMm = 0}]
+        }
+
+gcodeStateModify :: Msg -> GCode ()
+gcodeStateModify msg = GCode do
+  modify \st -> gcodeStateUpdate msg st
+
+gcodeStateGet :: GCode GCodeState
+gcodeStateGet = GCode $ get
+
+gcodeStateInit :: GCodeState
+gcodeStateInit =
+  GCodeState
+    { currentPosition = fromMm $ V3 0 0 0,
+      stdgen = mkStdGen 0,
+      currentLayer = 0,
+      filament = []
+    }
+
+-------------------------------------------------------------------------------
+--- Utils
+-------------------------------------------------------------------------------
 transposeCenterSketch :: Delta3D -> Delta2D -> Position3D -> Position3D
 transposeCenterSketch sketchSize bedSize pos =
   let halfSketch = scale 0.5 (delta2From3 sketchSize)
@@ -202,37 +245,13 @@ transposeCenterSketch sketchSize bedSize pos =
       diff = delta2To3 (halfBed - halfSketch) mempty
    in addDelta pos diff
 
-withSketchTranspose :: GCode () -> GCode ()
+withSketchTranspose :: GCode a -> GCode a
 withSketchTranspose inner = do
   env <- ask
   let sketchSize = env.sketchSize
   let bedSize = env.bedSize
   let transpose = transposeCenterSketch sketchSize bedSize
   local (\env -> env {transpose}) inner
-
-newtype GCode a = GCode (StateT PrintState (ReaderT GCodeEnv (Writer [GCodeLine])) a)
-  deriving
-    ( Functor,
-      Applicative,
-      Monad,
-      MonadReader GCodeEnv
-    )
-
-instance ToText (GCode a) where
-  toText (GCode m) =
-    evalStateT m initPrintState
-      & (`runReaderT` defaultGCodeEnv)
-      & execWriter
-      & map gcodeLineToRaw
-      & toText
-
-runGcode :: GCode a -> GCodeEnv -> PrintState -> (a, PrintState, Text)
-runGcode (GCode m) env oldState =
-  let ((val, newState), lines) =
-        runStateT m oldState
-          & (`runReaderT` env)
-          & runWriter
-   in (val, newState, toText $ map gcodeLineToRaw lines)
 
 -- | Random value for any type that implements `Random`
 rand :: (Random a) => GCode a
@@ -266,11 +285,11 @@ raw extra comm = GCode $ do
 nextLayer :: GCode ()
 nextLayer = do
   env <- ask
-  st <- getPrintState
+  st <- gcodeStateGet
 
   let z = fromMm (toMm env.firstLayerHeight + convert st.currentLayer * toMm env.layerHeight)
 
-  modifyPrintState $ MsgChangeCurrentLayer (st.currentLayer + 1)
+  gcodeStateModify $ MsgChangeCurrentLayer (st.currentLayer + 1)
 
   moveToZ z
 
@@ -282,7 +301,7 @@ withColors f = do
   let mp = Map.fromListWith (++) (map (\(txt, gc) -> (txt, [gc])) r)
 
   forM_ (zip [0 ..] $ Map.toList mp) $ \(i, (color, gcs)) -> section ("color " <> color) do
-    modifyPrintState $ MsgChangeColor color
+    gcodeStateModify $ MsgChangeColor color
     raw ("T" <> show i) "tool change"
     forM_ gcs $ \gc -> gc
 
@@ -300,7 +319,7 @@ setUnits u = gcodeFromCmd $ case u of
 autoHome :: GCode ()
 autoHome = do
   env <- ask
-  modifyPrintState $ MsgChangeCurrentPosition env.autoHomePosition
+  gcodeStateModify $ MsgChangeCurrentPosition env.autoHomePosition
   gcodeFromCmd $ GAutoHome {skipIfTrusted = False}
 
 -------------------------------------------------------------------------------
@@ -345,8 +364,8 @@ operateTool :: Position3D -> Speed -> Delta -> GCode ()
 operateTool v_ speed extr = do
   env <- ask
 
-  modifyPrintState $ MsgChangeCurrentPosition v_
-  modifyPrintState $ MsgTrackExtrusion extr
+  gcodeStateModify $ MsgChangeCurrentPosition v_
+  gcodeStateModify $ MsgTrackExtrusion extr
 
   let V3 mx my mz = toMm $ env.transpose v_
 
@@ -469,7 +488,7 @@ getSpeed = do
 getExtrudeLength :: Position3D -> GCode Delta
 getExtrudeLength target = do
   extrudeMM <- getExtrudeMM
-  st <- getPrintState
+  st <- gcodeStateGet
   let lineLength = toMm $ pos3Distance st.currentPosition target
   pure (fromMm $ lineLength * extrudeMM)
 
@@ -482,7 +501,7 @@ getExtrudeMM = do
 
 isFirstLayers :: GCode Bool
 isFirstLayers = do
-  st <- getPrintState
+  st <- gcodeStateGet
   let (V3 _ _ z) = toMm st.currentPosition
   pure (z <= 0.4)
 
@@ -554,30 +573,13 @@ setPositionXY (toMm -> V2 x y) = do
         extrude = Nothing
       }
 
--- _changeColor :: Text -> GCode ()
--- _changeColor colorName = do
---   comment ("Change color to: " <> colorName)
---   modify \st -> st {filament = (colorName, 0) : st.filament}
-
 data FilamentStrategy = FilamentChange | PreparedFilament
   deriving (Show, Eq)
 
 getCurrentPosition :: GCode Position3D
 getCurrentPosition = do
-  st <- getPrintState
+  st <- gcodeStateGet
   pure st.currentPosition
-
-gcodeFromCmd :: GCodeCmd -> GCode ()
-gcodeFromCmd cmd = do
-  env <- ask
-  GCode
-    $ tell
-    $ pure
-    $ GCodeLine
-      { cmd = Just cmd,
-        rawExtra = "",
-        comment = Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)
-      }
 
 class MoveTo a where
   moveTo :: a -> GCode ()

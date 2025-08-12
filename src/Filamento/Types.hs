@@ -25,10 +25,12 @@ module Filamento.Types
     delta3fromMmVec,
     pos2fromMmVec,
     pos3fromMmVec,
+    pos2FromPos,
     pos2From3,
     delta3From2,
     delta2From3,
     delta2To3,
+    delta2FromDelta,
     OutOf,
     Count,
     Total,
@@ -73,11 +75,17 @@ instance DeltaApplication Position Delta where
   addDelta (Position p) (Delta d) = Position (p + d)
   subDelta (Position p) (Delta d) = Position (p - d)
 
+instance SignedDistance Position Delta where
+  signedDistance (Position x) (Position y) = Delta (y - x)
+
 -------------------------------------------------------------------------------
 
 newtype Delta2D = Delta2D (V2 Double)
   deriving (Show, Eq, Num)
   deriving (Semigroup, Monoid) via (Sum (V2 Double))
+
+delta2FromDelta :: Delta -> Delta -> Delta2D
+delta2FromDelta (Delta x) (Delta y) = Delta2D (V2 x y)
 
 delta2fromMm :: Double -> Double -> Delta2D
 delta2fromMm x y = Delta2D (V2 x y)
@@ -234,6 +242,9 @@ pos3fromMm x y z = Position3D (V3 x y z)
 pos3fromMmVec :: V3 Double -> Position3D
 pos3fromMmVec v = Position3D v
 
+pos2FromPos :: Position -> Position -> Position2D
+pos2FromPos (Position x) (Position y) = pos2fromMm x y
+
 instance Millimeters (V3 Double) Position3D where
   toMm (Position3D v) = v
   fromMm v = Position3D v
@@ -312,6 +323,7 @@ outOfToFraction (OutOf count total) = toDouble count / toDouble total
 
 newtype Count = Count Natural
   deriving (Show, Eq)
+  deriving (Semigroup, Monoid) via (Sum Natural)
 
 instance FromToNatural Natural Count where
   fromNat x = Count x

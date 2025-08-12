@@ -15,18 +15,12 @@ module Filamento.Lib
     filamentChange,
     nextLayer,
     printLayers,
+    printLayers_,
     printSketchFrame,
+    getFilamentDef,
   )
 where
 
-import Control.Monad.RWS.Class (MonadWriter (..))
-import Control.Monad.Writer (WriterT)
-import Control.Monad.Writer.Lazy (execWriterT)
-import Data.Aeson (FromJSON)
-import Data.Aeson.Types (ToJSON)
-import Data.Convertible
-import Data.List.NonEmpty ((<|))
-import qualified Data.Map.Strict as Map
 import Filamento.Classes
 import Filamento.Core
 import Filamento.Types
@@ -43,6 +37,9 @@ printLayers printLayer = do
 
     nextLayer
     printLayer outOf
+
+printLayers_ :: GCode () -> GCode ()
+printLayers_ gcode = printLayers (const gcode)
 
 printSketchFrame :: GCode ()
 printSketchFrame = section "sketchFrame" do
@@ -65,7 +62,7 @@ withRetract inner = section "retract" do
 
 withZHop :: GCode a -> GCode a
 withZHop inner = section "zHop" do
-  st <- getPrintState
+  st <- gcodeStateGet
   env <- ask
   let V3 _ _ z = toMm st.currentPosition
   moveToZ (addDelta (fromMm z) env.zHop)
@@ -128,7 +125,7 @@ finalPark = do
 homeOrResume :: GCode ()
 homeOrResume = do
   env <- ask
-  st <- getPrintState
+  st <- gcodeStateGet
 
   if st.currentLayer == 0
     then do
@@ -231,8 +228,11 @@ filamentChange = do
 purge :: GCode ()
 purge = undefined
 
-getFilamentDef :: GCode a -> [FilamentSection]
-getFilamentDef = undefined
+getFilamentDef :: GCode () -> GCode [FilamentSection]
+getFilamentDef gcode = do
+  gcode
+  st <- gcodeStateGet
+  pure $ st.filament
 
 printFilamentDef :: [FilamentSection] -> GCode ()
 printFilamentDef = undefined

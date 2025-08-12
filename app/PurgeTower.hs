@@ -33,8 +33,8 @@ purgeTower (toMm -> V2 x y) (toMm -> size) dir purgeIndex = do
             withRetract $ withZHop $ moveTo (pos2fromMm (x + tick) y)
             extrudeByY (fromMm size)
 
-printSketch2 :: GCode ()
-printSketch2 = do
+printSketch :: GCode ()
+printSketch = do
   initPrinter do
     let pos = fromMm $ V2 100 100
         delta = fromMm 20
@@ -52,14 +52,18 @@ printSketch2 = do
 
 main :: IO ()
 main = do
-  saveGCodeToFile
-    "out/myprint.gcode"
-    printSketch2
-    \env ->
-      env
-        { lineWidth = fromMm 0.4,
-          layerHeight = fromMm 0.2,
-          hotendTemperature = fromCelsius 205,
-          bedTemperature = fromCelsius 65,
-          retractLength = fromMm 1.5
-        }
+  generateGcode
+    OutputConfig
+      { gcodeFile = "out/myprint.gcode",
+        reportFile = "out/myprint-report.json",
+        gcode = printSketch,
+        env =
+          gcodeEnvDefault
+            { lineWidth = fromMm 0.6,
+              layerHeight = fromMm 0.3,
+              hotendTemperature = fromCelsius 205,
+              bedTemperature = fromCelsius 65,
+              retractLength = fromMm 1.5,
+              colors = "red" :| ["yellow"]
+            }
+      }

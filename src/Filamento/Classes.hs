@@ -70,3 +70,6 @@ class FromToInt lo hi | hi -> lo where
 class FromToDouble lo hi | hi -> lo where
   fromDouble :: lo -> hi
   toDouble :: hi -> lo
+
+class SignedDistance abs rel | abs -> rel where
+  signedDistance :: abs -> abs -> rel

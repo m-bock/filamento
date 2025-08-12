@@ -6,12 +6,26 @@ import Filamento.Core
 import Filamento.Types
 import Relude
 
-saveGCodeToFile :: String -> GCode () -> (GCodeEnv -> GCodeEnv) -> IO ()
-saveGCodeToFile fileName gcode mkEnv = do
-  let env = mkEnv defaultGCodeEnv
+data OutputConfig = OutputConfig
+  { gcodeFile :: FilePath,
+    reportFile :: FilePath,
+    gcode :: GCode (),
+    env :: GCodeEnv
+  }
+
+generateGcode :: OutputConfig -> IO ()
+generateGcode OutputConfig {gcodeFile, reportFile, gcode, env} = do
+  let gcode' = local (const env) gcode
+  let (_, st, codeStr) = gcodeRun gcode' env gcodeStateInit
+  writeFileLBS reportFile $ encodePretty (reverse st.filament)
+  writeFileText gcodeFile codeStr
+
+saveGCodeToFile :: FilePath -> FilePath -> GCode () -> (GCodeEnv -> GCodeEnv) -> IO ()
+saveGCodeToFile fileName reportFile gcode mkEnv = do
+  let env = mkEnv gcodeEnvDefault
   let gcode' = local mkEnv gcode
-  let (_, st, codeStr) = runGcode gcode' env initPrintState
-  writeFileLBS "out/print-report.json" $ encodePretty (reverse st.filament)
+  let (_, st, codeStr) = gcodeRun gcode' env gcodeStateInit
+  writeFileLBS reportFile $ encodePretty (reverse st.filament)
   writeFileText fileName codeStr
 
 data PrintReport = PrintReport
