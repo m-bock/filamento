@@ -1,13 +1,28 @@
 module Filamento.IO where
 
 import Data.Aeson
+import Data.Aeson.Encode.Pretty (encodePretty)
 import Filamento.Core
+import Filamento.Types
 import Relude
 
 saveGCodeToFile :: String -> GCode () -> (GCodeEnv -> GCodeEnv) -> IO ()
 saveGCodeToFile fileName gcode mkEnv = do
-  let codeStr = toText $ local mkEnv gcode
+  let env = mkEnv defaultGCodeEnv
+  let gcode' = local mkEnv gcode
+  let (_, st, codeStr) = runGcode gcode' env initPrintState
+  writeFileLBS "out/print-report.json" $ encodePretty (reverse st.filament)
   writeFileText fileName codeStr
+
+data PrintReport = PrintReport
+  { gcodeFile :: FilePath,
+    colors :: [(Text, Delta)]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON PrintReport
+
+instance FromJSON PrintReport
 
 data PersistentState = PersistentState
   {count :: Int}

@@ -16,6 +16,7 @@ common extensions
     BlockArguments
     DeriveGeneric
     DerivingStrategies
+    DerivingVia
     DuplicateRecordFields
     FlexibleContexts
     FlexibleInstances
@@ -52,6 +53,7 @@ library
 
   build-depends:
     aeson ^>=2.2.3.0,
+    aeson-pretty,
     base ^>=4.17.2.1,
     convertible,
     linear,

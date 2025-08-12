@@ -49,10 +49,20 @@ module Filamento.Core
     MoveBy (..),
     ExtrudeTo (..),
     ExtrudeBy (..),
+    withSketchTranspose,
+    runGcode,
+    FilamentSection (..),
+    getPrintState,
+    nextLayer,
+    withColors,
   )
 where
 
 import Control.Monad.Writer
+import Data.Aeson (ToJSON)
+import Data.Aeson.Types (FromJSON)
+import Data.Convertible (convert)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Filamento.Classes
 import Filamento.Types
@@ -63,7 +73,7 @@ import Relude
 import System.Random
 
 -------------------------------------------------------------------------------
---- GCode
+--- GCodeEnv
 -------------------------------------------------------------------------------
 
 data GCodeEnv = Env
@@ -75,6 +85,7 @@ data GCodeEnv = Env
     hotendTemperature :: Temperature,
     parkingPosition :: Position3D,
     autoHomePosition :: Position3D,
+    sketchSize :: Delta3D,
     layerHeight :: Delta,
     firstLayerHeight :: Delta,
     lineWidth :: Delta,
@@ -83,16 +94,72 @@ data GCodeEnv = Env
     retractLength :: Delta,
     retractSpeed :: Speed,
     zHop :: Delta,
-    sectionPath :: [Text]
+    sectionPath :: [Text],
+    bedSize :: Delta2D,
+    colors :: NonEmpty Text
   }
+
+-------------------------------------------------------------------------------
+--- FilamentSection
+-------------------------------------------------------------------------------
+
+data FilamentSection = FilamentSection
+  { color :: Text,
+    endPosMm :: Position
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON FilamentSection
+
+instance ToJSON FilamentSection
+
+-------------------------------------------------------------------------------
+--- PrintState
+-------------------------------------------------------------------------------
 
 data PrintState = PrintState
   { currentLayer :: Int,
     currentPosition :: Position3D,
     stdgen :: StdGen,
-    filament :: [(Text, Delta)]
+    filament :: [FilamentSection]
   }
   deriving (Show, Eq)
+
+data Msg
+  = MsgChangeCurrentPosition Position3D
+  | MsgTrackExtrusion Delta
+  | MsgChangeCurrentLayer Int
+  | MsgChangeColor Text
+
+modifyPrintStatePure :: Msg -> PrintState -> PrintState
+modifyPrintStatePure msg st = case msg of
+  MsgChangeCurrentPosition pos -> st {currentPosition = pos}
+  MsgChangeCurrentLayer layer -> st {currentLayer = layer}
+  MsgChangeColor color -> case st.filament of
+    h : t ->
+      st
+        { filament = FilamentSection {color, endPosMm = h.endPosMm} : h : t
+        }
+    [] ->
+      st
+        { filament = [FilamentSection {color, endPosMm = 0}]
+        }
+  MsgTrackExtrusion extr -> case st.filament of
+    h : t ->
+      st
+        { filament = h {endPosMm = addDelta h.endPosMm extr} : t
+        }
+    [] ->
+      st
+        { filament = [FilamentSection {color = "default", endPosMm = 0}]
+        }
+
+modifyPrintState :: Msg -> GCode ()
+modifyPrintState msg = GCode do
+  modify \st -> modifyPrintStatePure msg st
+
+getPrintState :: GCode PrintState
+getPrintState = GCode $ get
 
 initPrintState :: PrintState
 initPrintState =
@@ -118,20 +185,37 @@ defaultGCodeEnv =
       firstLayerHeight = fromMm 0.2,
       lineWidth = fromMm 0.4,
       filamentDia = fromMm 1.75,
+      sketchSize = fromMm3 100 100 100,
       transpose = id,
       retractLength = fromMm 1,
       retractSpeed = fromMmPerMin 1800,
       zHop = fromMm 0.4,
-      sectionPath = []
+      sectionPath = [],
+      bedSize = fromMm2 220 220,
+      colors = "default" :| []
     }
+
+transposeCenterSketch :: Delta3D -> Delta2D -> Position3D -> Position3D
+transposeCenterSketch sketchSize bedSize pos =
+  let halfSketch = scale 0.5 (delta2From3 sketchSize)
+      halfBed = scale 0.5 bedSize
+      diff = delta2To3 (halfBed - halfSketch) mempty
+   in addDelta pos diff
+
+withSketchTranspose :: GCode () -> GCode ()
+withSketchTranspose inner = do
+  env <- ask
+  let sketchSize = env.sketchSize
+  let bedSize = env.bedSize
+  let transpose = transposeCenterSketch sketchSize bedSize
+  local (\env -> env {transpose}) inner
 
 newtype GCode a = GCode (StateT PrintState (ReaderT GCodeEnv (Writer [GCodeLine])) a)
   deriving
     ( Functor,
       Applicative,
       Monad,
-      MonadReader GCodeEnv,
-      MonadState PrintState
+      MonadReader GCodeEnv
     )
 
 instance ToText (GCode a) where
@@ -141,6 +225,14 @@ instance ToText (GCode a) where
       & execWriter
       & map gcodeLineToRaw
       & toText
+
+runGcode :: GCode a -> GCodeEnv -> PrintState -> (a, PrintState, Text)
+runGcode (GCode m) env oldState =
+  let ((val, newState), lines) =
+        runStateT m oldState
+          & (`runReaderT` env)
+          & runWriter
+   in (val, newState, toText $ map gcodeLineToRaw lines)
 
 -- | Random value for any type that implements `Random`
 rand :: (Random a) => GCode a
@@ -171,6 +263,29 @@ raw :: Text -> Text -> GCode ()
 raw extra comm = GCode $ do
   tell [GCodeLine {cmd = Nothing, rawExtra = extra, comment = Just comm}]
 
+nextLayer :: GCode ()
+nextLayer = do
+  env <- ask
+  st <- getPrintState
+
+  let z = fromMm (toMm env.firstLayerHeight + convert st.currentLayer * toMm env.layerHeight)
+
+  modifyPrintState $ MsgChangeCurrentLayer (st.currentLayer + 1)
+
+  moveToZ z
+
+type GCodeColorM a = WriterT [(Text, GCode ())] GCode a
+
+withColors :: ((Text -> GCode () -> GCodeColorM ()) -> GCodeColorM ()) -> GCode ()
+withColors f = do
+  r <- execWriterT (f \txt gc -> tell [(txt, gc)])
+  let mp = Map.fromListWith (++) (map (\(txt, gc) -> (txt, [gc])) r)
+
+  forM_ (zip [0 ..] $ Map.toList mp) $ \(i, (color, gcs)) -> section ("color " <> color) do
+    modifyPrintState $ MsgChangeColor color
+    raw ("T" <> show i) "tool change"
+    forM_ gcs $ \gc -> gc
+
 -------------------------------------------------------------------------------
 
 data Units = Millimeter | Inche
@@ -185,7 +300,7 @@ setUnits u = gcodeFromCmd $ case u of
 autoHome :: GCode ()
 autoHome = do
   env <- ask
-  modify \st -> st {currentPosition = env.autoHomePosition}
+  modifyPrintState $ MsgChangeCurrentPosition env.autoHomePosition
   gcodeFromCmd $ GAutoHome {skipIfTrusted = False}
 
 -------------------------------------------------------------------------------
@@ -230,7 +345,8 @@ operateTool :: Position3D -> Speed -> Delta -> GCode ()
 operateTool v_ speed extr = do
   env <- ask
 
-  modify \st -> st {currentPosition = v_}
+  modifyPrintState $ MsgChangeCurrentPosition v_
+  modifyPrintState $ MsgTrackExtrusion extr
 
   let V3 mx my mz = toMm $ env.transpose v_
 
@@ -353,7 +469,7 @@ getSpeed = do
 getExtrudeLength :: Position3D -> GCode Delta
 getExtrudeLength target = do
   extrudeMM <- getExtrudeMM
-  st <- get
+  st <- getPrintState
   let lineLength = toMm $ pos3Distance st.currentPosition target
   pure (fromMm $ lineLength * extrudeMM)
 
@@ -366,7 +482,7 @@ getExtrudeMM = do
 
 isFirstLayers :: GCode Bool
 isFirstLayers = do
-  st <- get
+  st <- getPrintState
   let (V3 _ _ z) = toMm st.currentPosition
   pure (z <= 0.4)
 
@@ -438,17 +554,17 @@ setPositionXY (toMm -> V2 x y) = do
         extrude = Nothing
       }
 
-_changeColor :: Text -> GCode ()
-_changeColor colorName = do
-  comment ("Change color to: " <> colorName)
-  modify \st -> st {filament = (colorName, 0) : st.filament}
+-- _changeColor :: Text -> GCode ()
+-- _changeColor colorName = do
+--   comment ("Change color to: " <> colorName)
+--   modify \st -> st {filament = (colorName, 0) : st.filament}
 
 data FilamentStrategy = FilamentChange | PreparedFilament
   deriving (Show, Eq)
 
 getCurrentPosition :: GCode Position3D
 getCurrentPosition = do
-  st <- get
+  st <- getPrintState
   pure st.currentPosition
 
 gcodeFromCmd :: GCodeCmd -> GCode ()

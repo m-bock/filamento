@@ -25,22 +25,45 @@ module Filamento.Types
     delta3fromMmVec,
     pos2fromMmVec,
     pos3fromMmVec,
+    pos2From3,
+    delta3From2,
+    delta2From3,
+    delta2To3,
+    OutOf,
+    Count,
+    Total,
+    outOfToProportion,
+    outOfToFraction,
   )
 where
 
+import Data.Aeson (FromJSON, ToJSON)
 import Filamento.Classes
 import Linear
 import qualified Linear as Lin
 import Relude
 
-newtype Delta = Delta Double deriving (Show, Eq, Generic, Num, Ord)
+newtype Delta = Delta Double
+  deriving (Show, Eq, Generic, Num, Ord)
+  deriving (Semigroup, Monoid) via (Sum Double)
+
+instance ToJSON Delta
+
+instance FromJSON Delta
+
+instance Scalable Delta where
+  scale factor (Delta v) = Delta (v * factor)
 
 instance Millimeters Double Delta where
   toMm (Delta v) = v
   fromMm v = Delta v
 
+-------------------------------------------------------------------------------
+
 newtype Position = Position {mm :: Double}
-  deriving (Show, Eq, Num, Fractional, Ord, Real, Enum, Floating)
+  deriving (Show, Eq, Num, Fractional, Ord, Real, Enum, Floating, Generic)
+  deriving (Semigroup, Monoid) via (Sum Double)
+  deriving (ToJSON, FromJSON) via Double
 
 instance Millimeters Double Position where
   toMm (Position v) = v
@@ -50,13 +73,23 @@ instance DeltaApplication Position Delta where
   addDelta (Position p) (Delta d) = Position (p + d)
   subDelta (Position p) (Delta d) = Position (p - d)
 
+-------------------------------------------------------------------------------
+
 newtype Delta2D = Delta2D (V2 Double)
+  deriving (Show, Eq, Num)
+  deriving (Semigroup, Monoid) via (Sum (V2 Double))
 
 delta2fromMm :: Double -> Double -> Delta2D
 delta2fromMm x y = Delta2D (V2 x y)
 
 delta2fromMmVec :: V2 Double -> Delta2D
 delta2fromMmVec v = Delta2D v
+
+delta2To3 :: Delta2D -> Delta -> Delta3D
+delta2To3 (Delta2D (V2 x y)) (Delta z) = Delta3D (V3 x y z)
+
+instance Scalable Delta2D where
+  scale factor (Delta2D v) = Delta2D (v * pure factor)
 
 instance Millimeters (V2 Double) Delta2D where
   toMm (Delta2D v) = v
@@ -72,13 +105,32 @@ instance JustX Delta2D where
 instance JustY Delta2D where
   justY (Delta2D (V2 _ y)) = Delta2D (V2 0 y)
 
+-------------------------------------------------------------------------------
+
 newtype Delta3D = Delta3D (V3 Double)
+  deriving (Show, Eq, Num)
+  deriving (Semigroup, Monoid) via (Sum (V3 Double))
 
 delta3fromMm :: Double -> Double -> Double -> Delta3D
 delta3fromMm x y z = Delta3D (V3 x y z)
 
 delta3fromMmVec :: V3 Double -> Delta3D
 delta3fromMmVec v = Delta3D v
+
+delta3ToMmVec :: Delta3D -> V3 Double
+delta3ToMmVec (Delta3D v) = v
+
+delta3ToMm :: Delta3D -> (Double, Double, Double)
+delta3ToMm (Delta3D (V3 x y z)) = (x, y, z)
+
+delta3From2 :: Delta2D -> Delta -> Delta3D
+delta3From2 (Delta2D (V2 x y)) (Delta z) = Delta3D (V3 x y z)
+
+delta2From3 :: Delta3D -> Delta2D
+delta2From3 (Delta3D (V3 x y _)) = Delta2D (V2 x y)
+
+instance Scalable Delta3D where
+  scale factor (Delta3D v) = Delta3D (v * pure factor)
 
 instance Millimeters (V3 Double) Delta3D where
   toMm (Delta3D v) = v
@@ -97,6 +149,8 @@ instance JustY Delta3D where
 instance JustZ Delta3D where
   justZ (Delta3D (V3 _ _ z)) = Delta3D (V3 0 0 z)
 
+-------------------------------------------------------------------------------
+
 newtype Distance = Distance {mm :: Double}
   deriving (Show, Eq, Generic, Num, Ord)
 
@@ -106,6 +160,8 @@ instance Millimeters Double Distance where
 
 instance Scalable Distance where
   scale factor (Distance d) = Distance (d * factor)
+
+-------------------------------------------------------------------------------
 
 newtype Duration = Duration {ms :: Double}
   deriving (Show, Eq, Generic)
@@ -120,6 +176,8 @@ instance Seconds Double Duration where
 
 factorSecs :: Double
 factorSecs = 1000
+
+-------------------------------------------------------------------------------
 
 newtype Frequency = Frequency {hz :: Double}
   deriving (Show, Eq, Generic)
@@ -137,14 +195,20 @@ freqBeepMid = fromHz 880 -- A5, clear but not harsh
 freqBeepHigh :: Frequency
 freqBeepHigh = fromHz 1320 -- E6, attention-grabbing but not painful
 
+-------------------------------------------------------------------------------
+
 newtype Position2D = Position2D {mm :: V2 Double}
   deriving (Show, Eq, Num)
+  deriving (Semigroup, Monoid) via (Sum (V2 Double))
 
 pos2fromMm :: Double -> Double -> Position2D
 pos2fromMm x y = Position2D (V2 x y)
 
 pos2fromMmVec :: V2 Double -> Position2D
 pos2fromMmVec v = Position2D v
+
+pos2From3 :: Position3D -> Position2D
+pos2From3 (Position3D (V3 x y _)) = Position2D (V2 x y)
 
 instance Millimeters (V2 Double) Position2D where
   toMm (Position2D v) = v
@@ -158,8 +222,11 @@ instance DeltaApplication Position2D Delta2D where
   addDelta pos disp = fromMm (toMm pos + toMm disp)
   subDelta pos disp = fromMm (toMm pos - toMm disp)
 
+-------------------------------------------------------------------------------
+
 newtype Position3D = Position3D {mm :: V3 Double}
   deriving (Show, Eq, Num)
+  deriving (Semigroup, Monoid) via (Sum (V3 Double))
 
 pos3fromMm :: Double -> Double -> Double -> Position3D
 pos3fromMm x y z = Position3D (V3 x y z)
@@ -183,6 +250,8 @@ instance DeltaApplication Position3D Delta3D where
 pos3Distance :: Position3D -> Position3D -> Distance
 pos3Distance (Position3D v1) (Position3D v2) = fromMm (Lin.distance v1 v2)
 
+-------------------------------------------------------------------------------
+
 newtype Proportion = Proportion Double
   deriving (Show, Eq, Ord)
 
@@ -199,6 +268,8 @@ propMin = Proportion 0
 
 propMax :: Proportion
 propMax = Proportion 1
+
+-------------------------------------------------------------------------------
 
 newtype Speed = Speed {mmPerSec :: Double}
   deriving (Show, Eq, Ord)
@@ -217,3 +288,58 @@ newtype Temperature = Temperature {degrees :: Double}
 instance Celsius Double Temperature where
   toCelsius (Temperature t) = t
   fromCelsius t = Temperature t
+
+-------------------------------------------------------------------------------
+
+data OutOf = OutOf Count Total
+  deriving (Show, Eq)
+
+instance FromToInt (Int, Int) OutOf where
+  fromInt (x, y) = OutOf (fromInt x) (fromInt y)
+  toInt (OutOf count total) = (toInt count, toInt total)
+
+instance FromToNatural (Natural, Natural) OutOf where
+  fromNat (x, y) = OutOf (fromNat x) (fromNat y)
+  toNat (OutOf count total) = (toNat count, toNat total)
+
+outOfToProportion :: OutOf -> Proportion
+outOfToProportion (OutOf count total) = fromFraction (toDouble count / toDouble total)
+
+outOfToFraction :: OutOf -> Double
+outOfToFraction (OutOf count total) = toDouble count / toDouble total
+
+-------------------------------------------------------------------------------
+
+newtype Count = Count Natural
+  deriving (Show, Eq)
+
+instance FromToNatural Natural Count where
+  fromNat x = Count x
+  toNat (Count x) = x
+
+instance FromToInt Int Count where
+  fromInt x = Count (max 0 $ fromIntegral x)
+  toInt (Count x) = fromIntegral x
+
+instance FromToDouble Double Count where
+  fromDouble x = Count (max 0 $ floor x)
+  toDouble (Count x) = fromIntegral x
+
+-------------------------------------------------------------------------------
+
+newtype Total = Total Natural
+  deriving (Show, Eq)
+
+instance FromToNatural Natural Total where
+  fromNat x = Total x
+  toNat (Total x) = x
+
+instance FromToInt Int Total where
+  fromInt x = Total (max 0 $ fromIntegral x)
+  toInt (Total x) = fromIntegral x
+
+instance FromToDouble Double Total where
+  fromDouble x = Total (max 0 $ floor x)
+  toDouble (Total x) = fromIntegral x
+
+-------------------------------------------------------------------------------

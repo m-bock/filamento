@@ -58,3 +58,15 @@ class FractionalValue a where
   fromFraction :: Double -> a
   toFraction :: a -> Double
   clampFraction :: Double -> a
+
+class FromToNatural lo hi | hi -> lo where
+  fromNat :: lo -> hi
+  toNat :: hi -> lo
+
+class FromToInt lo hi | hi -> lo where
+  fromInt :: lo -> hi
+  toInt :: hi -> lo
+
+class FromToDouble lo hi | hi -> lo where
+  fromDouble :: lo -> hi
+  toDouble :: hi -> lo

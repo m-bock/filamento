@@ -14,27 +14,42 @@ module Filamento.Lib
     initPrinter,
     filamentChange,
     nextLayer,
+    printLayers,
+    printSketchFrame,
   )
 where
 
+import Control.Monad.RWS.Class (MonadWriter (..))
+import Control.Monad.Writer (WriterT)
+import Control.Monad.Writer.Lazy (execWriterT)
+import Data.Aeson (FromJSON)
+import Data.Aeson.Types (ToJSON)
 import Data.Convertible
+import Data.List.NonEmpty ((<|))
+import qualified Data.Map.Strict as Map
 import Filamento.Classes
 import Filamento.Core
-import Filamento.Math hiding (justX, justY)
 import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Relude
 
-nextLayer :: GCode ()
-nextLayer = do
+printLayers :: (OutOf -> GCode ()) -> GCode ()
+printLayers printLayer = do
   env <- ask
-  st <- get
+  let V3 _ _ sketchHeight = toMm env.sketchSize
+  let countLayers = round ((sketchHeight - toMm env.firstLayerHeight) / toMm env.layerHeight)
+  forM_ [0 .. countLayers - 1] $ \i -> do
+    let outOf = fromInt (i, countLayers)
 
-  let z = fromMm (toMm env.firstLayerHeight + convert st.currentLayer * toMm env.layerHeight)
+    nextLayer
+    printLayer outOf
 
-  modify \st -> st {currentLayer = st.currentLayer + 1}
-
-  moveToZ z
+printSketchFrame :: GCode ()
+printSketchFrame = section "sketchFrame" do
+  env <- ask
+  let size2d = delta2From3 env.sketchSize
+  let centerBed = addDelta mempty (scale 0.5 env.bedSize - scale 0.5 size2d)
+  printRect2d centerBed size2d
 
 withRetract :: GCode a -> GCode a
 withRetract inner = section "retract" do
@@ -50,7 +65,7 @@ withRetract inner = section "retract" do
 
 withZHop :: GCode a -> GCode a
 withZHop inner = section "zHop" do
-  st <- get
+  st <- getPrintState
   env <- ask
   let V3 _ _ z = toMm st.currentPosition
   moveToZ (addDelta (fromMm z) env.zHop)
@@ -76,7 +91,7 @@ printRect2d (toMm -> V2 x y) delta = do
   printRect pos delta
 
 printRect :: Position3D -> Delta2D -> GCode ()
-printRect v1 (toMm -> V2 dx dy) = do
+printRect v1 (toMm -> V2 dx dy) = section "printRect" do
   let dlt3 = fromMm $ V3 dx dy 0
   let v2 = addDelta v1 (justX dlt3)
   let v3 = addDelta v2 (justY dlt3)
@@ -89,12 +104,6 @@ printTestStripes :: GCode ()
 printTestStripes = section "Test Stripes" $ do
   moveToZ (fromMm 0.2)
 
-  -- section "Thick test stripe" do
-  --   moveTo (V2 10.0 5.0)
-  --   extrude 5
-  --   extrudeTo (V2 215.0 5.0)
-  --   extrude (-1)
-
   section "stripe 1" do
     moveTo (pos2fromMm 5 5)
     extrude (fromMmPerSec 2000) 5
@@ -104,20 +113,6 @@ printTestStripes = section "Test Stripes" $ do
   section "stripe 2" do
     withRetract $ withZHop $ moveTo (pos2fromMm 5 10)
     extrudeTo (pos2fromMm 215.0 10)
-
--- raw "G1 Z0.2 F1200" "Move to first layer height"
--- raw "G1 X10 Y5 F3000" "Move to start pos"
--- raw "G1 E5 F500" "Prime nozzle"
--- raw "G1 X215 Y5 E15 F600" "Draw a long test stripe"
--- raw "G1 E-1 F300" "Retract a bit"
--- raw "G1 Z1.0 F1200" "Lift nozzle to avoid dragging"
--- updatePos (fmap Just $ V3 215.0 5.0 1.0)
-
--- withRetract $ moveTo (V2 10.0 10.0)
-
--- moveZ 0.2
-
--- printPolyLine [V2 10.0 10.0, V2 215.0 10.0]
 
 finalPark :: GCode ()
 finalPark = do
@@ -133,7 +128,7 @@ finalPark = do
 homeOrResume :: GCode ()
 homeOrResume = do
   env <- ask
-  st <- get
+  st <- getPrintState
 
   if st.currentLayer == 0
     then do
@@ -236,10 +231,8 @@ filamentChange = do
 purge :: GCode ()
 purge = undefined
 
-type FilamentDef = [(Text, Double)]
-
-getFilamentDef :: GCode a -> FilamentDef
+getFilamentDef :: GCode a -> [FilamentSection]
 getFilamentDef = undefined
 
-printFilamentDef :: FilamentDef -> GCode ()
+printFilamentDef :: [FilamentSection] -> GCode ()
 printFilamentDef = undefined
