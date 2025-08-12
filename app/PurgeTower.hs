@@ -1,6 +1,7 @@
 module PurgeTower where
 
 import Filamento
+import Filamento.Classes
 import Filamento.IO
 import Filamento.Math
 import GHC.List ((!!))
@@ -12,7 +13,7 @@ data Dir = Vert | Horz
 
 purgeTower :: Position2D -> Delta -> Dir -> Int -> GCode ()
 purgeTower (toMm -> V2 x y) (toMm -> size) dir purgeIndex = do
-  let ticks = linspaceByStepLength 0 size 0.4 floor
+  let ticks = map toMm $ linspaceByStepLength (fromMm 0) (fromMm size) (fromMm 0.4) floor
 
   let n = 5
 

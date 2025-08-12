@@ -228,11 +228,10 @@ filamentChange = do
 purge :: GCode ()
 purge = undefined
 
-getFilamentDef :: GCode () -> GCode [FilamentSection]
-getFilamentDef gcode = do
-  gcode
-  st <- gcodeStateGet
-  pure $ reverse st.filament
+getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> [FilamentSection]
+getFilamentDef env state gcode =
+  let (_, finalState, _) = gcodeRun gcode env state
+   in reverse finalState.filament
 
 printFilamentDef :: [FilamentSection] -> GCode ()
 printFilamentDef = undefined

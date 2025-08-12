@@ -304,7 +304,14 @@ type GCodeColorM a = WriterT [(Text, GCode ())] GCode a
 withColors :: ((Text -> GCode () -> GCodeColorM ()) -> GCodeColorM ()) -> GCode ()
 withColors f = do
   r <- execWriterT (f \txt gc -> tell [(txt, gc)])
-  let mp = Map.fromListWith (++) (map (\(txt, gc) -> (txt, [gc])) r)
+  env <- ask
+  let emptyMap =
+        env.colors
+          & fmap (\x -> (x, []))
+          & toList
+          & Map.fromList
+
+      mp = foldr (\(txt, gcode) accum -> Map.insertWith (++) txt [gcode] accum) emptyMap r
 
   forM_ (zip [0 ..] $ Map.toList mp) $ \(i, (color, gcs)) -> section ("color " <> color) do
     gcodeStateModify $ MsgChangeColor color

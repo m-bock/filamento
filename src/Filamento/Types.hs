@@ -48,7 +48,7 @@ import qualified Linear as Lin
 import Relude
 
 newtype Delta = Delta Double
-  deriving (Show, Eq, Generic, Num, Ord)
+  deriving (Show, Eq, Generic, Num, Ord, Fractional, RealFrac, Real)
   deriving (Semigroup, Monoid) via (Sum Double)
 
 deltaFromMm :: Double -> Delta
@@ -237,6 +237,12 @@ instance Millimeters2 Double Position2D where
 instance DeltaApplication Position2D Delta2D where
   addDelta pos disp = fromMm (toMm pos + toMm disp)
   subDelta pos disp = fromMm (toMm pos - toMm disp)
+
+instance JustX Position2D where
+  justX (Position2D (V2 x _)) = Position2D (V2 x 0)
+
+instance JustY Position2D where
+  justY (Position2D (V2 _ y)) = Position2D (V2 0 y)
 
 -------------------------------------------------------------------------------
 
