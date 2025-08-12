@@ -42,6 +42,14 @@ data GCodeCmd
   | GDwell {seconds :: Maybe Int}
   | MSetFanSpeed {speed :: Maybe Int}
   | GCleanNozzle
+  | T0
+  | T1
+  | T2
+  | T3
+  | T4
+  | T5
+  | T6
+  | T7
   deriving (Show, Eq, Generic)
 
 data GCodeLine = GCodeLine
@@ -119,3 +127,19 @@ gcodeToRaw c =
       mkRawGCodeCmd "M106" [('S',) . ArgInt <$> speed]
     GCleanNozzle ->
       mkRawGCodeCmd "G12" []
+    T0 ->
+      mkRawGCodeCmd "T0" []
+    T1 ->
+      mkRawGCodeCmd "T1" []
+    T2 ->
+      mkRawGCodeCmd "T2" []
+    T3 ->
+      mkRawGCodeCmd "T3" []
+    T4 ->
+      mkRawGCodeCmd "T4" []
+    T5 ->
+      mkRawGCodeCmd "T5" []
+    T6 ->
+      mkRawGCodeCmd "T6" []
+    T7 ->
+      mkRawGCodeCmd "T7" []

@@ -32,7 +32,7 @@ printLayers printLayer = do
   env <- ask
   let V3 _ _ sketchHeight = toMm env.sketchSize
   let countLayers = round ((sketchHeight - toMm env.firstLayerHeight) / toMm env.layerHeight)
-  forM_ [0 .. countLayers - 1] $ \i -> do
+  forM_ [0 .. countLayers - 1] $ \i -> section ("layer " <> show i) do
     let outOf = fromInt (i, countLayers)
 
     nextLayer
@@ -232,7 +232,7 @@ getFilamentDef :: GCode () -> GCode [FilamentSection]
 getFilamentDef gcode = do
   gcode
   st <- gcodeStateGet
-  pure $ st.filament
+  pure $ reverse st.filament
 
 printFilamentDef :: [FilamentSection] -> GCode ()
 printFilamentDef = undefined

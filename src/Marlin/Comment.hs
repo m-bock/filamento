@@ -28,6 +28,14 @@ gcodeToComment cmd =
     MMotorsOff -> "Turn all motors off"
     MPlayTone f d -> "Play tone"
     GDwell s -> "Dwell"
+    T0 -> "Select tool 0"
+    T1 -> "Select tool 1"
+    T2 -> "Select tool 2"
+    T3 -> "Select tool 3"
+    T4 -> "Select tool 4"
+    T5 -> "Select tool 5"
+    T6 -> "Select tool 6"
+    T7 -> "Select tool 7"
 
 printNum :: Double -> Text
 printNum = T.pack . printf "%6.2f"

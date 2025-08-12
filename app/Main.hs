@@ -8,11 +8,6 @@ printSketch :: GCode ()
 printSketch = initPrinter do
   ret <-
     getFilamentDef $ withSketchTranspose do
-      printProfile Hill (fromMm 0) (fromMm 20)
-      printProfile Hill (fromMm 20) (fromMm 20)
-      printProfile Hill (fromMm 40) (fromMm 20)
-      printProfile Hill (fromMm 60) (fromMm 20)
-
       printLayers_ do
         withColors
           \color -> do
@@ -40,7 +35,7 @@ printSketch = initPrinter do
                   withRetract $ withZHop $ moveTo p4
                   extrudeTo p1
 
-  printFilament ret
+  printFilament (takeWhile (\x -> x.endPosMm < 200) ret)
 
   pure ()
 

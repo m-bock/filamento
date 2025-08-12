@@ -55,6 +55,8 @@ module Filamento.Core
     gcodeStateGet,
     nextLayer,
     withColors,
+    setTool,
+    resetLayers,
   )
 where
 
@@ -282,8 +284,12 @@ raw :: Text -> Text -> GCode ()
 raw extra comm = GCode $ do
   tell [GCodeLine {cmd = Nothing, rawExtra = extra, comment = Just comm}]
 
+resetLayers :: GCode ()
+resetLayers = section "resetLayers" do
+  gcodeStateModify $ MsgChangeCurrentLayer 0
+
 nextLayer :: GCode ()
-nextLayer = do
+nextLayer = section "nextLayer" do
   env <- ask
   st <- gcodeStateGet
 
@@ -344,6 +350,13 @@ motorsOff = gcodeFromCmd MMotorsOff
 
 pause :: Duration -> GCode ()
 pause dur = gcodeFromCmd $ GDwell {seconds = Just $ round $ toSecs dur}
+
+setTool :: Int -> GCode ()
+setTool i =
+  let toolCmds = [T0, T1, T2, T3, T4, T5, T6, T7]
+      i' = i `mod` (length toolCmds)
+      cmd = toolCmds !!? i'
+   in gcodeFromCmd (fromMaybe T0 cmd)
 
 setFanSpeed :: Proportion -> GCode ()
 setFanSpeed prop =

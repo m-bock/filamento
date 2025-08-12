@@ -18,11 +18,13 @@ module Filamento.Types
     Speed,
     Temperature,
     delta2fromMm,
+    deltaFromMm,
     delta3fromMm,
     pos2fromMm,
     pos3fromMm,
     delta2fromMmVec,
     delta3fromMmVec,
+    delta3FromDelta,
     pos2fromMmVec,
     pos3fromMmVec,
     pos2FromPos,
@@ -48,6 +50,9 @@ import Relude
 newtype Delta = Delta Double
   deriving (Show, Eq, Generic, Num, Ord)
   deriving (Semigroup, Monoid) via (Sum Double)
+
+deltaFromMm :: Double -> Delta
+deltaFromMm v = Delta v
 
 instance ToJSON Delta
 
@@ -118,6 +123,9 @@ instance JustY Delta2D where
 newtype Delta3D = Delta3D (V3 Double)
   deriving (Show, Eq, Num)
   deriving (Semigroup, Monoid) via (Sum (V3 Double))
+
+delta3FromDelta :: Delta -> Delta -> Delta -> Delta3D
+delta3FromDelta (Delta x) (Delta y) (Delta z) = Delta3D (V3 x y z)
 
 delta3fromMm :: Double -> Double -> Double -> Delta3D
 delta3fromMm x y z = Delta3D (V3 x y z)
