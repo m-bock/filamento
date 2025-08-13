@@ -21,6 +21,7 @@ module Filamento.Lib
   )
 where
 
+import qualified Data.List.NonEmpty as NE
 import Filamento.Classes
 import Filamento.Core
 import Filamento.Types
@@ -228,10 +229,10 @@ filamentChange = do
 purge :: GCode ()
 purge = undefined
 
-getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> [FilamentSection]
+getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> NonEmpty FilamentSection
 getFilamentDef env state gcode =
   let (_, finalState, _) = gcodeRun gcode env state
-   in reverse finalState.filament
+   in NE.reverse finalState.filament
 
 printFilamentDef :: [FilamentSection] -> GCode ()
 printFilamentDef = undefined

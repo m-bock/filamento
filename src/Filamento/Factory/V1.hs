@@ -2,7 +2,6 @@ module Filamento.Factory.V1 where
 
 import Data.List (elemIndex, nub, (!!))
 import Filamento
-import Filamento.Math (linspaceByStepLength)
 import Linear
 import Relude
 
@@ -58,20 +57,6 @@ printSnake frontLeft backRight = section "Print Snake" $ do
         section "Left" do
           extrudeTo frontLeft'
 
-printRectByCenter :: Position2D -> Delta2D -> GCode ()
-printRectByCenter center delta = do
-  let deltaHalf = scale 0.5 delta
-      p1 = subDelta center deltaHalf
-      p2 = addDelta p1 (justX delta)
-      p3 = addDelta p2 (justY delta)
-      p4 = subDelta p3 (justX delta)
-
-  moveTo p1
-  extrudeTo p2
-  extrudeTo p3
-  extrudeTo p4
-  extrudeTo p1
-
 data Config = Config
   { overlap :: Delta,
     filamentDia :: Delta
@@ -80,17 +65,24 @@ data Config = Config
 configDefault :: Config
 configDefault =
   Config
-    { overlap = fromMm 0, -- 5.0,
+    { overlap = fromMm 2, -- 5.0,
       filamentDia = fromMm 1.75
     }
 
 getLength :: OutOf -> Profile -> Delta -> Delta
-getLength c profile len =
-  let baseLen = configDefault.overlap + len + configDefault.overlap
-   in baseLen
+getLength outOf profile len =
+  let frac = case profile of
+        Hill -> 1 - (outOfToFraction outOf)
+        Valley -> outOfToFraction outOf
+
+      ov = configDefault.overlap
+   in (scale (frac + frac) ov) + (-ov) + len + (-ov) + (scale (frac + frac) ov)
 
 getWidth :: OutOf -> Delta
-getWidth _ = fromMm 100
+getWidth outOf =
+  let frac = outOfToFraction outOf
+      d = sqrt (0.25 - (frac - 0.5) ^ 2) * 2
+   in deltaFromMm $ d * toMm configDefault.filamentDia
 
 printProfile :: Profile -> Position -> Delta -> GCode ()
 printProfile profile posY len = do
@@ -98,8 +90,11 @@ printProfile profile posY len = do
 
   resetLayers
 
+  local (\env -> env {zHop = scale 1.2 configDefault.filamentDia}) do
+    withRetract $ withZHop $ moveTo rectCenter
+
   printLayers \outOf -> do
-    let size = delta2FromDelta configDefault.filamentDia (getLength outOf profile len)
+    let size = delta2FromDelta (getWidth outOf) (getLength outOf profile len)
     printSnakeByCenter rectCenter size
 
 printFilament :: [FilamentSection] -> GCode ()

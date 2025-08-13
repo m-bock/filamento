@@ -2,6 +2,7 @@ module Filamento.IO where
 
 import Data.Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.List.NonEmpty as NE
 import Filamento.Core
 import Filamento.Types
 import Relude
@@ -16,16 +17,16 @@ data OutputConfig = OutputConfig
 generateGcode :: OutputConfig -> IO ()
 generateGcode OutputConfig {gcodeFile, reportFile, gcode, env} = do
   let gcode' = local (const env) gcode
-  let (_, st, codeStr) = gcodeRun gcode' env gcodeStateInit
-  writeFileLBS reportFile $ encodePretty (reverse st.filament)
+  let (_, st, codeStr) = gcodeRun gcode' env (gcodeStateInit env)
+  writeFileLBS reportFile $ encodePretty (NE.reverse st.filament)
   writeFileText gcodeFile codeStr
 
 saveGCodeToFile :: FilePath -> FilePath -> GCode () -> (GCodeEnv -> GCodeEnv) -> IO ()
 saveGCodeToFile fileName reportFile gcode mkEnv = do
   let env = mkEnv gcodeEnvDefault
   let gcode' = local mkEnv gcode
-  let (_, st, codeStr) = gcodeRun gcode' env gcodeStateInit
-  writeFileLBS reportFile $ encodePretty (reverse st.filament)
+  let (_, st, codeStr) = gcodeRun gcode' env (gcodeStateInit env)
+  writeFileLBS reportFile $ encodePretty (NE.reverse st.filament)
   writeFileText fileName codeStr
 
 data PrintReport = PrintReport

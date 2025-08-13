@@ -57,6 +57,7 @@ module Filamento.Core
     withColors,
     setTool,
     resetLayers,
+    changeColor,
   )
 where
 
@@ -64,6 +65,7 @@ import Control.Monad.Writer
 import Data.Aeson (ToJSON)
 import Data.Aeson.Types (FromJSON)
 import Data.Convertible (convert)
+import Data.List (elemIndex)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Filamento.Classes
@@ -88,11 +90,12 @@ newtype GCode a = GCode (StateT GCodeState (ReaderT GCodeEnv (Writer [GCodeLine]
 
 instance ToText (GCode a) where
   toText (GCode m) =
-    evalStateT m gcodeStateInit
-      & (`runReaderT` gcodeEnvDefault)
-      & execWriter
-      & map gcodeLineToRaw
-      & toText
+    let env = gcodeEnvDefault
+     in evalStateT m (gcodeStateInit env)
+          & (`runReaderT` env)
+          & execWriter
+          & map gcodeLineToRaw
+          & toText
 
 gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> (a, GCodeState, Text)
 gcodeRun (GCode m) env oldState =
@@ -188,7 +191,7 @@ data GCodeState = GCodeState
   { currentLayer :: Int,
     currentPosition :: Position3D,
     stdgen :: StdGen,
-    filament :: [FilamentSection]
+    filament :: NonEmpty FilamentSection
   }
   deriving (Show, Eq)
 
@@ -203,22 +206,14 @@ gcodeStateUpdate msg st = case msg of
   MsgChangeCurrentPosition pos -> st {currentPosition = pos}
   MsgChangeCurrentLayer layer -> st {currentLayer = layer}
   MsgChangeColor color -> case st.filament of
-    h : t ->
+    h :| t ->
       st
-        { filament = FilamentSection {color, endPosMm = h.endPosMm} : h : t
-        }
-    [] ->
-      st
-        { filament = [FilamentSection {color, endPosMm = 0}]
+        { filament = FilamentSection {color, endPosMm = h.endPosMm} :| h : t
         }
   MsgTrackExtrusion extr -> case st.filament of
-    h : t ->
+    h :| t ->
       st
-        { filament = h {endPosMm = addDelta h.endPosMm extr} : t
-        }
-    [] ->
-      st
-        { filament = [FilamentSection {color = "default", endPosMm = 0}]
+        { filament = h {endPosMm = addDelta h.endPosMm extr} :| t
         }
 
 gcodeStateModify :: Msg -> GCode ()
@@ -228,13 +223,13 @@ gcodeStateModify msg = GCode do
 gcodeStateGet :: GCode GCodeState
 gcodeStateGet = GCode $ get
 
-gcodeStateInit :: GCodeState
-gcodeStateInit =
+gcodeStateInit :: GCodeEnv -> GCodeState
+gcodeStateInit env =
   GCodeState
     { currentPosition = fromMm $ V3 0 0 0,
       stdgen = mkStdGen 0,
       currentLayer = 0,
-      filament = []
+      filament = FilamentSection {color = head env.colors, endPosMm = 0} :| []
     }
 
 -------------------------------------------------------------------------------
@@ -314,9 +309,16 @@ withColors f = do
       mp = foldr (\(txt, gcode) accum -> Map.insertWith (++) txt [gcode] accum) emptyMap r
 
   forM_ (zip [0 ..] $ Map.toList mp) $ \(i, (color, gcs)) -> section ("color " <> color) do
-    gcodeStateModify $ MsgChangeColor color
+    changeColor color
     raw ("T" <> show i) "tool change"
     forM_ gcs $ \gc -> gc
+
+changeColor :: Text -> GCode ()
+changeColor color = do
+  env <- ask
+  let i = fromMaybe 0 (elemIndex color (toList env.colors))
+  gcodeStateModify $ MsgChangeColor color
+  raw ("T" <> show i) "tool change"
 
 -------------------------------------------------------------------------------
 

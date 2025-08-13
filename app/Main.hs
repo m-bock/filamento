@@ -39,7 +39,7 @@ printSketch = initPrinter do
   st <- gcodeStateGet
   let ret = getFilamentDef env st p
 
-  printFilament (takeWhile (\x -> x.endPosMm < 200) ret)
+  printFilament (takeWhile (\x -> x.endPosMm < 200) (toList ret))
 
   p
 
@@ -57,7 +57,7 @@ main = do
               hotendTemperature = fromCelsius 205,
               bedTemperature = fromCelsius 65,
               retractLength = fromMm 1.5,
-              colors = "red" :| ["yellow"],
+              colors = "yellow" :| ["red"],
               sketchSize = fromMm3 100 100 5
             }
       }
