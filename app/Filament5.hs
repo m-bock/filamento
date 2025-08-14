@@ -256,7 +256,7 @@ printPhase phase hillIndex = section ("Print Phase = " <> show phase <> " hillIn
 
 printFilament :: GCode ()
 printFilament = do
-  raw "T0" "Select tool 0"
+  setTool 0
 
   let countPrintedHills = round (config.printedDepth / config.depthHill)
       countPrintedValleys = countPrintedHills - 1
@@ -266,7 +266,8 @@ printFilament = do
 
   filamentChange
 
-  raw "T1" "Select tool 1"
+  setTool 1
+
   forM_ [0 .. countPrintedValleys - 1] \i -> do
     printPhase Valley i
 

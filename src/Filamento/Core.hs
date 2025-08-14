@@ -310,7 +310,7 @@ withColors f = do
 
   forM_ (zip [0 ..] $ Map.toList mp) $ \(i, (color, gcs)) -> section ("color " <> color) do
     changeColor color
-    raw ("T" <> show i) "tool change"
+    setTool i
     forM_ gcs $ \gc -> gc
 
 changeColor :: Text -> GCode ()
