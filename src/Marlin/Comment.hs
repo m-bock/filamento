@@ -1,10 +1,7 @@
-module Marlin.Comment where
+module Marlin.Comment (gcodeToComment) where
 
-import qualified Data.Text as T
-import Linear.V3
 import Marlin.Core
 import Relude
-import Text.Printf (printf)
 
 gcodeToComment :: GCodeCmd -> Text
 gcodeToComment cmd =
@@ -12,22 +9,22 @@ gcodeToComment cmd =
     GMillimeterUnits -> "Set units to millimeters"
     GInchUnits -> "Set units to inches"
     GLinearMove {} -> "Linear move"
-    GAutoHome _ -> "Auto home axes"
-    GSetPosition x y z e -> "Set position"
+    GAutoHome {} -> "Auto home axes"
+    GSetPosition {} -> "Set position"
     GCleanNozzle -> "Clean nozzle"
-    MSetBedTemperature t -> "Set bed temperature"
-    MWaitForBedTemperature t -> "Wait for bed temperature"
-    MSSetHotendTemperature t -> "Set hotend temperature"
-    MWaitForHotendTemperature t -> "Wait for hotend temperature"
+    MSetBedTemperature {} -> "Set bed temperature"
+    MWaitForBedTemperature {} -> "Wait for bed temperature"
+    MSSetHotendTemperature {} -> "Set hotend temperature"
+    MWaitForHotendTemperature {} -> "Wait for hotend temperature"
     MSetExtruderRelative -> "Set extruder to relative mode"
     MSetExtruderAbsolute -> "Set extruder to absolute mode"
     MSetHotendOff -> "Turn hotend off"
     MSetBedOff -> "Turn bed off"
     MSetFanOff -> "Turn fan off"
-    MSetFanSpeed s -> "Set fan speed"
+    MSetFanSpeed {} -> "Set fan speed"
     MMotorsOff -> "Turn all motors off"
-    MPlayTone f d -> "Play tone"
-    GDwell s -> "Dwell"
+    MPlayTone {} -> "Play tone"
+    GDwell {} -> "Dwell"
     T0 -> "Select tool 0"
     T1 -> "Select tool 1"
     T2 -> "Select tool 2"
@@ -36,13 +33,3 @@ gcodeToComment cmd =
     T5 -> "Select tool 5"
     T6 -> "Select tool 6"
     T7 -> "Select tool 7"
-
-printNum :: Double -> Text
-printNum = T.pack . printf "%6.2f"
-
-printV3 :: V3 (Maybe Double) -> Text
-printV3 (V3 x y z) = "(" <> printComponent x <> ", " <> printComponent y <> ", " <> printComponent z <> ")"
-
-printComponent :: Maybe Double -> Text
-printComponent Nothing = "_"
-printComponent (Just v) = printNum v
