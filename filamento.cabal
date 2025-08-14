@@ -1,5 +1,5 @@
 cabal-version: 3.8
-name: marlin
+name: filamento
 version: 0.1.0.0
 license: NONE
 author: Michael Bock
