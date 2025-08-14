@@ -41,7 +41,7 @@ printSketch = initPrinter do
 
   printFilament (takeWhile (\x -> x.endPosMm < 200) (toList ret))
 
-  p
+-- p
 
 main :: IO ()
 main = do

@@ -489,9 +489,10 @@ extrudeByZ (toMm -> z) = extrudeByImpl Nothing Nothing (Just z)
 
 -------------------------------------------------------------------------------
 
-extrude :: Speed -> Delta -> GCode ()
-extrude speed extr = do
+extrude :: Delta -> GCode ()
+extrude extr = do
   v <- getCurrentPosition
+  speed <- getExtrudeSpeed
   operateTool v speed extr
 
 -------------------------------------------------------------------------------

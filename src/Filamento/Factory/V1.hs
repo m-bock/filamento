@@ -44,7 +44,7 @@ printSnake frontLeft backRight = section "Print Snake" $ do
         backRight' = addDelta backRight (delta2FromDelta minus minus)
         backLeft' = addDelta backLeft (delta2FromDelta plus minus)
 
-    moveTo frontLeft'
+    withRetract $ withZHop $ moveTo frontLeft'
 
     local (\e -> e {lineWidth = step}) do
       section ("Snake " <> show i) do
@@ -65,7 +65,7 @@ data Config = Config
 configDefault :: Config
 configDefault =
   Config
-    { overlap = fromMm 2, -- 5.0,
+    { overlap = fromMm 2,
       filamentDia = fromMm 1.75
     }
 
@@ -76,6 +76,7 @@ getLength outOf profile len =
         Valley -> outOfToFraction outOf
 
       ov = configDefault.overlap
+      ramp = scale (frac + frac) ov
    in (scale (frac + frac) ov) + (-ov) + len + (-ov) + (scale (frac + frac) ov)
 
 getWidth :: OutOf -> Delta
@@ -86,7 +87,7 @@ getWidth outOf =
 
 printProfile :: Profile -> Position -> Delta -> GCode ()
 printProfile profile posY len = do
-  let rectCenter = addDelta (pos2FromPos 0 posY) (delta2FromDelta mempty (scale 0.5 len))
+  let rectCenter = addDelta (pos2FromPos 0 posY) (delta2FromDelta 20 (scale 0.5 len))
 
   resetLayers
 
@@ -108,7 +109,10 @@ printFilament secs = local
           bedTemperature = fromCelsius 65,
           moveSpeed = fromMmPerSec 2000,
           extrudeSpeed = fromMmPerSec 2500,
-          retractLength = fromMm 1.5
+          retractLength = fromMm 1.5,
+          transpose = \pos ->
+            let V3 x y z = toMm pos
+             in fromMm $ V3 x (y + 20) z
         }
   )
   do
@@ -129,3 +133,5 @@ printFilament secs = local
                 colorIndex = fromMaybe 0 (elemIndex sec.color colors)
             setTool colorIndex
             printProfile profile begin sdist
+
+        filamentChange

@@ -53,11 +53,11 @@ withRetract :: GCode a -> GCode a
 withRetract inner = section "retract" do
   env <- ask
 
-  extrude (fromMmPerSec 2000) (-env.retractLength)
+  extrude (-env.retractLength)
 
   ret <- inner
 
-  extrude (fromMmPerSec 2000) env.retractLength
+  extrude env.retractLength
 
   pure ret
 
@@ -104,9 +104,9 @@ printTestStripes = section "Test Stripes" $ do
 
   section "stripe 1" do
     moveTo (pos2fromMm 5 5)
-    extrude (fromMmPerSec 2000) 5
+    extrude 5
     extrudeTo (pos2fromMm 215.0 5)
-    extrude (fromMmPerSec 2000) (-1)
+    extrude (-1)
 
   section "stripe 2" do
     withRetract $ withZHop $ moveTo (pos2fromMm 5 10)
@@ -118,7 +118,7 @@ finalPark = do
 
   let V3 parkX parkY parkZ = toMm env.parkingPosition
 
-  extrude (fromMmPerSec 2000) (-3)
+  extrude (-3)
 
   moveByZ (fromMm parkZ)
   moveTo (pos2fromMm parkX parkY)
@@ -202,25 +202,9 @@ filamentChange = do
 
     raw "M0" "Pause for filament change"
 
-    extrude (fromMmPerSec 2000) 5
+    extrude 20
 
     pause (fromSecs 2)
-
-    local (\env -> env {extrudeSpeed = fromMmPerSec 200}) $ do
-      extrude (fromMmPerSec 2000) 10
-
-    local (\env -> env {extrudeSpeed = fromMmPerSec 800}) $ do
-      extrude (fromMmPerSec 2000) 200
-
-    local (\env -> env {extrudeSpeed = fromMmPerSec 200}) $ do
-      extrude (fromMmPerSec 2000) 50
-      extrude (fromMmPerSec 2000) (-1)
-
-    playTone_
-
-    local (\env -> env {extrudeSpeed = fromMmPerSec 200}) $ do
-      extrude (fromMmPerSec 2000) (-1)
-      extrude (fromMmPerSec 2000) 1
 
     playTone_
 
