@@ -16,17 +16,42 @@ module Filamento.Lib
     nextLayer,
     printLayers,
     printLayers_,
+    withColors,
     printSketchFrame,
     getFilamentDef,
   )
 where
 
+import Control.Monad.Writer
+import Data.List ((!!))
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
 import Filamento.Classes
 import Filamento.Core
+import Filamento.Math (linspaceByStepLength)
 import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Relude
+
+type GCodeColorM a = WriterT [(Text, GCode ())] GCode a
+
+withColors :: ((Text -> GCode () -> GCodeColorM ()) -> GCodeColorM ()) -> GCode ()
+withColors f = do
+  r <- execWriterT (f \txt gc -> tell [(txt, gc)])
+  env <- ask
+  let emptyMap =
+        env.colors
+          & fmap (\x -> (x, []))
+          & toList
+          & Map.fromList
+
+      mp = foldr (\(txt, gcode) accum -> Map.insertWith (++) txt [gcode] accum) emptyMap r
+
+  forM_ (zip [0 ..] $ Map.toList mp) $ \(i, (color, gcs)) -> section ("color " <> color) do
+    changeColor color
+    setTool i
+    purgeTower (pos2fromMm (100 - fromIntegral i * 30) 100) (fromMm 20) 0
+    forM_ gcs $ \gc -> gc
 
 printLayers :: (OutOf -> GCode ()) -> GCode ()
 printLayers printLayer = do
@@ -35,7 +60,6 @@ printLayers printLayer = do
   let countLayers = round ((sketchHeight - toMm env.firstLayerHeight) / toMm env.layerHeight)
   forM_ [0 .. countLayers - 1] $ \i -> section ("layer " <> show i) do
     let outOf = fromInt (i, countLayers)
-
     nextLayer
     printLayer outOf
 
@@ -116,12 +140,9 @@ finalPark :: GCode ()
 finalPark = do
   env <- ask
 
-  let V3 parkX parkY parkZ = toMm env.parkingPosition
+  -- extrude (-3)
 
-  extrude (-3)
-
-  moveByZ (fromMm parkZ)
-  moveTo (pos2fromMm parkX parkY)
+  moveTo env.parkingPosition
 
 homeOrResume :: GCode ()
 homeOrResume = do
@@ -152,9 +173,9 @@ initPrinter inner = do
 
   heatup homeOrResume
 
-  cleaningOpportunity
+  -- cleaningOpportunity
 
-  printTestStripes
+  -- printTestStripes
 
   ret <- inner
 
@@ -202,9 +223,13 @@ filamentChange = do
 
     raw "M0" "Pause for filament change"
 
-    extrude 20
+    setUnits Millimeter
 
-    pause (fromSecs 2)
+    setExtruderRelative
+
+    -- extrude 30
+
+    -- pause (fromSecs 2)
 
     playTone_
 
@@ -213,10 +238,39 @@ filamentChange = do
 purge :: GCode ()
 purge = undefined
 
-getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> NonEmpty FilamentSection
+getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> [FilamentSection]
 getFilamentDef env state gcode =
   let (_, finalState, _) = gcodeRun gcode env state
-   in NE.reverse finalState.filament
+   in finalState.filament & NE.reverse & NE.filter (\x -> x.endPosMm /= 0)
 
 printFilamentDef :: [FilamentSection] -> GCode ()
 printFilamentDef = undefined
+
+data Dir = Vert | Horz
+  deriving (Show, Eq)
+
+purgeTower :: Position2D -> Delta -> Int -> GCode ()
+purgeTower (toMm -> V2 x y) (toMm -> size) purgeIndex = section "purgeTower" do
+  st <- gcodeStateGet
+  let dir = if odd st.currentLayer then Vert else Horz
+
+  let ticks = map toMm $ linspaceByStepLength (fromMm 0) (fromMm size) (fromMm 0.4) floor
+
+  let n = 5
+
+  let nSections = length ticks `div` n
+  let nTicksPerSection = length ticks `div` nSections
+
+  section "purgeTower" do
+    forM_ [0 .. nSections - 1] \i -> section ("section " <> show i) do
+      let index = i * nTicksPerSection + ((purgeIndex + i) `mod` n)
+      let tick = ticks !! index
+      case dir of
+        Vert -> do
+          section "vertical" do
+            withRetract $ withZHop $ moveTo (pos2fromMm x (y + tick))
+            extrudeByX (fromMm size)
+        Horz -> do
+          section "horizontal" do
+            withRetract $ withZHop $ moveTo (pos2fromMm (x + tick) y)
+            extrudeByY (fromMm size)

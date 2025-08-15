@@ -112,7 +112,7 @@ printFilament secs = local
           retractLength = fromMm 1.5,
           transpose = \pos ->
             let V3 x y z = toMm pos
-             in fromMm $ V3 x (y + 20) z
+             in fromMm $ V3 x (y + 10) z
         }
   )
   do
@@ -132,6 +132,7 @@ printFilament secs = local
                 sdist = signedDistance begin end
                 colorIndex = fromMaybe 0 (elemIndex sec.color colors)
             setTool colorIndex
+            comment ("Print " <> show (sec, secPrev, begin, end, sdist))
             printProfile profile begin sdist
 
         filamentChange

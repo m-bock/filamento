@@ -54,7 +54,6 @@ module Filamento.Core
     FilamentSection (..),
     gcodeStateGet,
     nextLayer,
-    withColors,
     setTool,
     resetLayers,
     changeColor,
@@ -293,25 +292,6 @@ nextLayer = section "nextLayer" do
   gcodeStateModify $ MsgChangeCurrentLayer (st.currentLayer + 1)
 
   moveToZ z
-
-type GCodeColorM a = WriterT [(Text, GCode ())] GCode a
-
-withColors :: ((Text -> GCode () -> GCodeColorM ()) -> GCodeColorM ()) -> GCode ()
-withColors f = do
-  r <- execWriterT (f \txt gc -> tell [(txt, gc)])
-  env <- ask
-  let emptyMap =
-        env.colors
-          & fmap (\x -> (x, []))
-          & toList
-          & Map.fromList
-
-      mp = foldr (\(txt, gcode) accum -> Map.insertWith (++) txt [gcode] accum) emptyMap r
-
-  forM_ (zip [0 ..] $ Map.toList mp) $ \(i, (color, gcs)) -> section ("color " <> color) do
-    changeColor color
-    setTool i
-    forM_ gcs $ \gc -> gc
 
 changeColor :: Text -> GCode ()
 changeColor color = do

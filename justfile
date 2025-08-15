@@ -33,6 +33,9 @@ octo-connect-printer:
          "${OCTOPRINT_URL:-http://localhost:5000}/api/connection" \
          -d '{"command": "connect"}'
 
+    sleep 2
+    just octo-status
+
 octo-disconnect-printer:
     curl -H "X-Api-Key: ${OCTOPRINT_API_KEY}" \
          -H "Content-Type: application/json" \
@@ -54,3 +57,9 @@ dev2: gen octo-upload
 
 octo-start:
     nix-shell -p octoprint --run "octoprint serve"
+
+prusa-show:
+    nix-shell -p prusa-slicer --run "prusa-slicer out/myprint.gcode"
+
+octo-web:
+    chromium http://localhost:5000

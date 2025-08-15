@@ -11,8 +11,11 @@ import Relude
 data Dir = Vert | Horz
   deriving (Show, Eq)
 
-purgeTower :: Position2D -> Delta -> Dir -> Int -> GCode ()
-purgeTower (toMm -> V2 x y) (toMm -> size) dir purgeIndex = do
+purgeTower :: Position2D -> Delta -> Int -> GCode ()
+purgeTower (toMm -> V2 x y) (toMm -> size) purgeIndex = do
+  st <- gcodeStateGet
+  let dir = if odd st.currentLayer then Vert else Horz
+
   let ticks = map toMm $ linspaceByStepLength (fromMm 0) (fromMm size) (fromMm 0.4) floor
 
   let n = 5
@@ -49,7 +52,7 @@ printSketch = do
       moveToZ (fromMm h)
       let dir = if odd i then Vert else Horz
 
-      purgeTower pos delta dir 0
+      purgeTower pos delta 0
 
 main :: IO ()
 main = do
