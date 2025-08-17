@@ -50,7 +50,6 @@ withColors f = do
   forM_ (zip [0 ..] $ Map.toList mp) $ \(i, (color, gcs)) -> section ("color " <> color) do
     changeColor color
     setTool i
-    purgeTower (pos2fromMm (100 - fromIntegral i * 30) 100) (fromMm 20) 0
     forM_ gcs $ \gc -> gc
 
 printLayers :: (OutOf -> GCode ()) -> GCode ()

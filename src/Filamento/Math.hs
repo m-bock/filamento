@@ -11,16 +11,16 @@ justX (V2 x _) = V2 x 0
 justY :: V2 Double -> V2 Double
 justY (V2 _ y) = V2 0 y
 
-linspace :: Double -> Double -> Int -> [Double]
-linspace start end n =
+linspace :: Position -> Position -> Count -> [Position]
+linspace (toMm -> start) (toMm -> end) (toInt -> n) =
   let step = (end - start) / fromIntegral (n - 1)
-   in [start + fromIntegral i * step | i <- [0 .. n - 1]]
+   in [fromMm (start + fromIntegral i * step) | i <- [0 .. n - 1]]
 
 linspaceByStepLength :: Position -> Position -> Delta -> (Delta -> Int) -> [Position]
 linspaceByStepLength start end idealStep f =
   let dist = signedDistance start end
       n = f (dist / idealStep)
-   in map fromMm $ linspace (toMm start) (toMm end) n
+   in linspace start end (fromInt n)
 
 addX :: V2 Double -> Double -> V2 Double
 addX (V2 x y) dx = V2 (x + dx) y

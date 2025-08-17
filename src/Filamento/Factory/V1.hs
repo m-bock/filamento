@@ -98,6 +98,51 @@ printProfile profile posY len = do
     let size = delta2FromDelta (getWidth outOf) (getLength outOf profile len)
     printSnakeByCenter rectCenter size
 
+data SpiralConfig = SpiralConfig
+  { center :: Position3D,
+    radius :: Delta,
+    constant :: Delta
+  }
+
+defaultSpiralConfig :: SpiralConfig
+defaultSpiralConfig =
+  SpiralConfig
+    { center = pos3fromMm 110 110 0,
+      radius = fromMm 100,
+      constant = fromMm (-0.5)
+    }
+
+translateSpiral :: SpiralConfig -> Position3D -> Position3D
+translateSpiral spiralConfig pos = fromMm3 x' y' z
+  where
+    (centerX, centerY, _) = toMm3 spiralConfig.center
+    (x, y, z) = toMm3 pos
+
+    -- Use the simple fnApprox approach that works
+    arcLength = y -- y coordinate represents arc length along spiral
+    spiralConstant = toMm spiralConfig.constant -- Increased magnitude for faster inward spiral
+    baseRadius = toMm spiralConfig.radius -- x offset from tube radius
+
+    -- Simple approximation: angle = arcLength / averageRadius
+    -- For small spiral constants, this works very well
+    averageRadius = baseRadius + spiralConstant * (arcLength / (2 * baseRadius))
+    angle = arcLength / averageRadius
+
+    -- -- Calculate actual spiral radius at this angle
+    spiralRadius = baseRadius + spiralConstant * angle
+
+    -- Convert to world coordinates
+    m = 3 * (pi / 2) -- Starting angle offset
+    finalAngle = m + angle
+
+    -- Calculate the spiral position
+    spiralX = centerX + spiralRadius * cos finalAngle
+    spiralY = centerY + spiralRadius * sin finalAngle
+
+    -- Add x offset along the spiral's tangent direction
+    x' = spiralX + x * cos (finalAngle + pi / 2) -- Perpendicular to radius
+    y' = spiralY + x * sin (finalAngle + pi / 2) -- Perpendicular to radius
+
 printFilament :: [FilamentSection] -> GCode ()
 printFilament secs = local
   ( \env ->
@@ -110,9 +155,7 @@ printFilament secs = local
           moveSpeed = fromMmPerSec 2000,
           extrudeSpeed = fromMmPerSec 2500,
           retractLength = fromMm 1.5,
-          transpose = \pos ->
-            let V3 x y z = toMm pos
-             in fromMm $ V3 x (y + 10) z
+          transpose = translateSpiral defaultSpiralConfig
         }
   )
   do
