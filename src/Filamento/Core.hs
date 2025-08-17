@@ -492,7 +492,7 @@ getExtrudeLength :: Position3D -> GCode Delta
 getExtrudeLength target = do
   extrudeMM <- getExtrudeMM
   st <- gcodeStateGet
-  let lineLength = toMm $ pos3Distance st.currentPosition target
+  let lineLength = toMm $ getDistance st.currentPosition target
   pure (fromMm $ lineLength * extrudeMM)
 
 getExtrudeMM :: GCode Double
@@ -590,8 +590,14 @@ class MoveTo a where
 instance MoveTo Position3D where
   moveTo (toMm -> V3 x y z) = moveToImpl (Just x) (Just y) (Just z)
 
+instance MoveTo (V3 Position) where
+  moveTo (V3 x y z) = moveToImpl (Just $ toMm x) (Just $ toMm y) (Just $ toMm z)
+
 instance MoveTo Position2D where
   moveTo (toMm -> V2 x y) = moveToImpl (Just x) (Just y) Nothing
+
+instance MoveTo (V2 Position) where
+  moveTo (V2 x y) = moveToImpl (Just $ toMm x) (Just $ toMm y) Nothing
 
 class MoveBy a where
   moveBy :: a -> GCode ()
@@ -619,3 +625,15 @@ instance ExtrudeBy Delta3D where
 
 instance ExtrudeBy Delta2D where
   extrudeBy (toMm -> V2 x y) = extrudeByImpl (Just x) (Just y) Nothing
+
+instance ExtrudeTo (V3 Position) where
+  extrudeTo (V3 x y z) = extrudeToImpl (Just $ toMm x) (Just $ toMm y) (Just $ toMm z)
+
+instance ExtrudeTo (V2 Position) where
+  extrudeTo (V2 x y) = extrudeToImpl (Just $ toMm x) (Just $ toMm y) Nothing
+
+instance ExtrudeBy (V3 Delta) where
+  extrudeBy (V3 x y z) = extrudeByImpl (Just $ toMm x) (Just $ toMm y) (Just $ toMm z)
+
+instance ExtrudeBy (V2 Delta) where
+  extrudeBy (V2 x y) = extrudeByImpl (Just $ toMm x) (Just $ toMm y) Nothing

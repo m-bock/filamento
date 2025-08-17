@@ -18,7 +18,7 @@ linspace (toMm -> start) (toMm -> end) (toInt -> n) =
 
 linspaceByStepLength :: Position -> Position -> Delta -> (Delta -> Int) -> [Position]
 linspaceByStepLength start end idealStep f =
-  let dist = signedDistance start end
+  let dist = getDelta start end
       n = f (dist / idealStep)
    in linspace start end (fromInt n)
 
@@ -36,3 +36,22 @@ subY (V2 x y) dy = V2 x (y - dy)
 
 i2d :: (Integral a, Num b) => a -> b
 i2d = fromIntegral
+
+linspace2 :: Position2D -> Position2D -> Count -> [V2 Position]
+linspace2 pos1 pos2 count =
+  let V2 x1 y1 = pos2ToVec pos1
+      V2 x2 y2 = pos2ToVec pos2
+      xs = linspace x1 x2 count
+      ys = linspace y1 y2 count
+   in zipWith V2 xs ys
+
+linspace2ByStepLength :: Position2D -> Position2D -> Delta -> (Delta -> Count) -> [V2 Position]
+linspace2ByStepLength pos1 pos2 idealStep f =
+  let n = f (getDistance pos1 pos2 / idealStep)
+   in linspace2 pos1 pos2 n
+
+itemsWithNext :: [a] -> [(a, a)]
+itemsWithNext xs =
+  case viaNonEmpty tail xs of
+    Just xsTail -> zip xs xsTail
+    Nothing -> []

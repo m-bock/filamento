@@ -2,6 +2,7 @@ module Filamento.Factory.V1 where
 
 import Data.List (elemIndex, nub, (!!))
 import Filamento
+import Filamento.Math (itemsWithNext, linspace2ByStepLength)
 import Linear
 import Relude
 
@@ -13,18 +14,11 @@ splitInterval big small =
       d = big / fromIntegral n
    in (d, n)
 
-printSnakeByCenter :: Position2D -> Delta2D -> GCode ()
-printSnakeByCenter center delta = do
-  let deltaHalf = scale 0.5 delta
-      frontLeft = subDelta center deltaHalf
-      frontRight = addDelta frontLeft (justX delta)
-      backRight = addDelta frontRight (justY delta)
-
-  printSnake frontLeft backRight
-
-printSnake :: Position2D -> Position2D -> GCode ()
-printSnake frontLeft backRight = section "Print Snake" $ do
+printSnake :: Rect2D -> GCode ()
+printSnake rect = section "Print Snake" $ do
   env <- ask
+  let frontLeft = rect2GetMinCorner rect
+      backRight = rect2GetMaxCorner rect
   let size = backRight - frontLeft
       frontRight = frontLeft + justX size
       backLeft = backRight - justX size
@@ -49,13 +43,35 @@ printSnake frontLeft backRight = section "Print Snake" $ do
     local (\e -> e {lineWidth = step}) do
       section ("Snake " <> show i) do
         section "Front" do
-          extrudeTo frontRight'
+          printLine (line2FromPoints frontLeft' frontRight')
         section "Right" do
-          extrudeTo backRight'
+          printLine (line2FromPoints frontRight' backRight')
         section "Back" do
-          extrudeTo backLeft'
+          printLine (line2FromPoints backRight' backLeft')
         section "Left" do
-          extrudeTo frontLeft'
+          printLine (line2FromPoints backLeft' frontLeft')
+
+printLine' :: Line2D -> GCode ()
+printLine' line = do
+  let start = line2GetStart line
+      end = line2GetEnd line
+
+  moveTo start
+  extrudeTo end
+
+printLine :: Line2D -> GCode ()
+printLine line = do
+  let start = line2GetStart line
+      end = line2GetEnd line
+      pts = linspace2ByStepLength start end (fromMm 3) deltaRound
+
+  comment ("pts = " <> show pts)
+  comment ("start = " <> show start)
+  comment ("end = " <> show end)
+
+  forM_ (itemsWithNext pts) $ \(p1, p2) -> do
+    moveTo p1
+    extrudeTo p2
 
 data Config = Config
   { overlap :: Delta,
@@ -96,7 +112,7 @@ printProfile profile posY len = do
 
   printLayers \outOf -> do
     let size = delta2FromDelta (getWidth outOf) (getLength outOf profile len)
-    printSnakeByCenter rectCenter size
+    printSnake (rect2FromCenterSize rectCenter size)
 
 data SpiralConfig = SpiralConfig
   { center :: Position3D,
@@ -172,7 +188,7 @@ printFilament secs = local
             let secPrev = secs !!? (i - 1)
                 begin = maybe 0 (\x -> x.endPosMm) secPrev
                 end = sec.endPosMm
-                sdist = signedDistance begin end
+                sdist = getDelta begin end
                 colorIndex = fromMaybe 0 (elemIndex sec.color colors)
             setTool colorIndex
             comment ("Print " <> show (sec, secPrev, begin, end, sdist))

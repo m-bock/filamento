@@ -71,5 +71,8 @@ class FromToDouble lo hi | hi -> lo where
   fromDouble :: lo -> hi
   toDouble :: hi -> lo
 
-class SignedDistance abs rel | abs -> rel where
-  signedDistance :: abs -> abs -> rel
+class GetDelta abs rel | abs -> rel where
+  getDelta :: abs -> abs -> rel
+
+class Distance lo hi | hi -> lo where
+  getDistance :: hi -> hi -> lo

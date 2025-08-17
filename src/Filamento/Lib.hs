@@ -196,7 +196,7 @@ heatup inner = do
 
   pure ret
 
-printPolygon :: Int -> Position3D -> Distance -> GCode ()
+printPolygon :: Int -> Position3D -> Delta -> GCode ()
 printPolygon n v s'
   | n < 3 = pure () -- Polygons need at least 3 sides
   | s' <= 0 = pure () -- Side length must be positive

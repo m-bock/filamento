@@ -44,10 +44,10 @@ printSketch = withSketchTranspose do
     withColors
       \color -> do
         color "red" do
-          printPurgeTower (square2FromCenterSize (pos2fromMm 20 50) (fromMm 20)) (fromInt 10)
+          printPurgeTower (square2FromCenterSize (pos2fromMm 20 120) (fromMm 20)) (fromInt 10)
 
         color "yellow" do
-          printPurgeTower (square2FromCenterSize (pos2fromMm 80 50) (fromMm 20)) (fromInt 10)
+          printPurgeTower (square2FromCenterSize (pos2fromMm 80 120) (fromMm 20)) (fromInt 10)
 
 printAll :: GCode ()
 printAll = initPrinter do

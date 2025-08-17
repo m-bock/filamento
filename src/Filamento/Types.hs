@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Worphans #-}
+
 module Filamento.Types
   ( Delta,
     Position,
@@ -11,7 +13,6 @@ module Filamento.Types
     freqBeepHigh,
     Position2D,
     Position3D,
-    pos3Distance,
     Proportion,
     propMin,
     propMax,
@@ -33,6 +34,7 @@ module Filamento.Types
     delta2From3,
     delta2To3,
     delta2FromDelta,
+    delta2ToDeltaVec,
     OutOf,
     Count,
     Total,
@@ -60,6 +62,7 @@ module Filamento.Types
     rect2GetCenter,
     posFromMm,
     pos2ToVec,
+    deltaRound,
   )
 where
 
@@ -87,6 +90,9 @@ instance Millimeters Double Delta where
   toMm (Delta v) = v
   fromMm v = Delta v
 
+deltaRound :: Delta -> Count
+deltaRound (Delta v) = Count (round v)
+
 -------------------------------------------------------------------------------
 
 newtype Position = Position {mm :: Double}
@@ -102,8 +108,8 @@ instance DeltaApplication Position Delta where
   addDelta (Position p) (Delta d) = Position (p + d)
   subDelta (Position p) (Delta d) = Position (p - d)
 
-instance SignedDistance Position Delta where
-  signedDistance (Position x) (Position y) = Delta (y - x)
+instance GetDelta Position Delta where
+  getDelta (Position x) (Position y) = Delta (y - x)
 
 posToMm :: Position -> Double
 posToMm (Position x) = x
@@ -128,6 +134,9 @@ delta2fromMmVec v = Delta2D v
 
 delta2To3 :: Delta2D -> Delta -> Delta3D
 delta2To3 (Delta2D (V2 x y)) (Delta z) = Delta3D (V3 x y z)
+
+delta2ToDeltaVec :: Delta2D -> V2 Delta
+delta2ToDeltaVec (Delta2D (V2 x y)) = V2 (Delta x) (Delta y)
 
 instance Scalable Delta2D where
   scale factor (Delta2D v) = Delta2D (v * pure factor)
@@ -192,18 +201,6 @@ instance JustY Delta3D where
 
 instance JustZ Delta3D where
   justZ (Delta3D (V3 _ _ z)) = Delta3D (V3 0 0 z)
-
--------------------------------------------------------------------------------
-
-newtype Distance = Distance {mm :: Double}
-  deriving (Show, Eq, Generic, Num, Ord)
-
-instance Millimeters Double Distance where
-  toMm (Distance d) = d
-  fromMm d = Distance d
-
-instance Scalable Distance where
-  scale factor (Distance d) = Distance (d * factor)
 
 -------------------------------------------------------------------------------
 
@@ -275,9 +272,13 @@ instance JustX Position2D where
 instance JustY Position2D where
   justY (Position2D (V2 _ y)) = Position2D (V2 0 y)
 
-instance SignedDistance Position2D Delta2D where
-  signedDistance (Position2D (V2 x1 y1)) (Position2D (V2 x2 y2)) =
+instance GetDelta Position2D Delta2D where
+  getDelta (Position2D (V2 x1 y1)) (Position2D (V2 x2 y2)) =
     delta2fromMmVec (V2 (x2 - x1) (y2 - y1))
+
+instance Distance Delta Position2D where
+  getDistance (Position2D (V2 x1 y1)) (Position2D (V2 x2 y2)) =
+    fromMm (Lin.distance (V2 x1 y1) (V2 x2 y2))
 
 -------------------------------------------------------------------------------
 
@@ -306,9 +307,9 @@ instance DeltaApplication Position3D Delta3D where
   addDelta pos disp = fromMm (toMm pos + toMm disp)
   subDelta pos disp = fromMm (toMm pos - toMm disp)
 
--- Distance calculation between two 3D positions
-pos3Distance :: Position3D -> Position3D -> Distance
-pos3Distance (Position3D v1) (Position3D v2) = fromMm (Lin.distance v1 v2)
+instance Distance Delta Position3D where
+  getDistance (Position3D (V3 x1 y1 z1)) (Position3D (V3 x2 y2 z2)) =
+    fromMm (Lin.distance (V3 x1 y1 z1) (V3 x2 y2 z2))
 
 -------------------------------------------------------------------------------
 
@@ -412,7 +413,7 @@ rect2FromCorners :: Position2D -> Position2D -> Rect2D
 rect2FromCorners minCorner maxCorner =
   Rect2D
     { minCorner,
-      size = signedDistance maxCorner minCorner
+      size = getDelta maxCorner minCorner
     }
 
 rect2FromMinSize :: Position2D -> Delta2D -> Rect2D
@@ -482,3 +483,24 @@ line2GetStart (Line2D {start}) = start
 
 line2GetEnd :: Line2D -> Position2D
 line2GetEnd (Line2D {end}) = end
+
+-------------------------------------------------------------------------------
+
+instance Millimeters (V2 Double) (V2 Position) where
+  toMm (V2 x y) = V2 (toMm x) (toMm y)
+  fromMm (V2 x y) = V2 (fromMm x) (fromMm y)
+
+instance Millimeters (V3 Double) (V3 Position) where
+  toMm (V3 x y z) = V3 (toMm x) (toMm y) (toMm z)
+  fromMm (V3 x y z) = V3 (fromMm x) (fromMm y) (fromMm z)
+
+instance Millimeters (V2 Double) (V2 Delta) where
+  toMm (V2 x y) = V2 (toMm x) (toMm y)
+  fromMm (V2 x y) = V2 (fromMm x) (fromMm y)
+
+instance Millimeters (V3 Double) (V3 Delta) where
+  toMm (V3 x y z) = V3 (toMm x) (toMm y) (toMm z)
+  fromMm (V3 x y z) = V3 (fromMm x) (fromMm y) (fromMm z)
+
+instance GetDelta (V2 Position) (V2 Delta) where
+  getDelta (V2 x y) (V2 x' y') = V2 (getDelta x x') (getDelta y y')
