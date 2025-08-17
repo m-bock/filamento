@@ -15,7 +15,7 @@ printStripesAlongX square count = do
 
       ys = linspace y1 y2 count
 
-  map (\y -> line2FromPoints (pos2FromPos x1 y) (pos2FromPos x2 y)) ys
+  map (\y -> line2FromPointsDeprec (pos2FromPos x1 y) (pos2FromPos x2 y)) ys
 
 printStripesAlongY :: Square2D -> Count -> [Line2D]
 printStripesAlongY square count = do
@@ -24,7 +24,7 @@ printStripesAlongY square count = do
 
       xs = linspace x1 x2 count
 
-  map (\x -> line2FromPoints (pos2FromPos x y1) (pos2FromPos x y2)) xs
+  map (\x -> line2FromPointsDeprec (pos2FromPos x y1) (pos2FromPos x y2)) xs
 
 printPurgeTower :: Square2D -> Count -> GCode ()
 printPurgeTower square count = do
@@ -37,17 +37,45 @@ printPurgeTower square count = do
     moveTo p1
     extrudeTo p2
 
+data Color = Red | Yellow
+  deriving (Show, Eq)
+
 printSketch :: GCode ()
 printSketch = withSketchTranspose do
   resetLayers
   printLayers_ do
+    let rect = rect2FromCenterSize (pos2fromMm 50 50) (delta2fromMm 50 30)
+        (p1, p2, p3, p4) = rect2GetPoints rect
+
+    comment ("rect: " <> show rect)
+    comment ("p1: " <> show p1)
+    comment ("p2: " <> show p2)
+    comment ("p3: " <> show p3)
+    comment ("p4: " <> show p4)
+
     withColors
       \color -> do
-        color "red" do
-          printPurgeTower (square2FromCenterSize (pos2fromMm 20 120) (fromMm 20)) (fromInt 10)
+        color Red do
+          printPurgeTower (square2FromCenterSize (pos2fromMm 20 120) (fromMm 20)) (fromInt 20)
 
-        color "yellow" do
-          printPurgeTower (square2FromCenterSize (pos2fromMm 80 120) (fromMm 20)) (fromInt 10)
+        color Yellow do
+          printPurgeTower (square2FromCenterSize (pos2fromMm 80 120) (fromMm 20)) (fromInt 20)
+
+        color Red do
+          moveTo p1
+          extrudeTo p2
+
+        color Yellow do
+          moveTo p2
+          extrudeTo p3
+
+        color Red do
+          moveTo p3
+          extrudeTo p4
+
+        color Yellow do
+          moveTo p4
+          extrudeTo p1
 
 printAll :: GCode ()
 printAll = initPrinter do
@@ -82,8 +110,8 @@ main = do
               hotendTemperature = fromCelsius 205,
               bedTemperature = fromCelsius 65,
               retractLength = fromMm 1.5,
-              colors = "red" :| ["yellow"],
-              sketchSize = fromMm3 100 100 20,
+              colors = fmap show $ Red :| [Yellow],
+              sketchSize = fromMm3 100 100 10,
               parkingPosition = pos3fromMm 0 0 20
             }
       }

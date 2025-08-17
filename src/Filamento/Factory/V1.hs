@@ -43,13 +43,13 @@ printSnake rect = section "Print Snake" $ do
     local (\e -> e {lineWidth = step}) do
       section ("Snake " <> show i) do
         section "Front" do
-          printLine (line2FromPoints frontLeft' frontRight')
+          printLine (line2FromPointsDeprec frontLeft' frontRight')
         section "Right" do
-          printLine (line2FromPoints frontRight' backRight')
+          printLine (line2FromPointsDeprec frontRight' backRight')
         section "Back" do
-          printLine (line2FromPoints backRight' backLeft')
+          printLine (line2FromPointsDeprec backRight' backLeft')
         section "Left" do
-          printLine (line2FromPoints backLeft' frontLeft')
+          printLine (line2FromPointsDeprec backLeft' frontLeft')
 
 printLine' :: Line2D -> GCode ()
 printLine' line = do

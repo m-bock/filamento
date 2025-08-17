@@ -63,6 +63,9 @@ module Filamento.Types
     posFromMm,
     pos2ToVec,
     deltaRound,
+    rect2GetPoints,
+    squareGetLines,
+    line2FromPointsDeprec,
   )
 where
 
@@ -441,6 +444,15 @@ rect2GetSize (Rect2D {minCorner, size}) = size
 rect2GetCenter :: Rect2D -> Position2D
 rect2GetCenter (Rect2D {minCorner, size}) = addDelta minCorner (scale 0.5 size)
 
+rect2GetPoints :: Rect2D -> (V2 Position, V2 Position, V2 Position, V2 Position)
+rect2GetPoints (Rect2D {minCorner, size}) = (p1, p2, p3, p4)
+  where
+    size' = delta2ToDeltaVec size
+    p1 = pos2ToVec minCorner
+    p2 = addDelta p1 (justX size')
+    p3 = addDelta p2 (justY size')
+    p4 = subDelta p3 (justX size')
+
 -------------------------------------------------------------------------------
 
 data Square2D = Square2D (Rect2D)
@@ -470,18 +482,30 @@ square2GetMaxCorner (Square2D rect) = rect2GetMaxCorner rect
 square2GetSize :: Square2D -> Delta2D
 square2GetSize (Square2D rect) = rect2GetSize rect
 
+squareGetLines :: Square2D -> (Line2D, Line2D, Line2D, Line2D)
+squareGetLines (Square2D rect) = (line1, line2, line3, line4)
+  where
+    (p1, p2, p3, p4) = rect2GetPoints rect
+    line1 = line2FromPoints p1 p2
+    line2 = line2FromPoints p2 p3
+    line3 = line2FromPoints p3 p4
+    line4 = line2FromPoints p4 p1
+
 -------------------------------------------------------------------------------
 
-data Line2D = Line2D {start :: Position2D, end :: Position2D}
+data Line2D = Line2D {start :: V2 Position, end :: V2 Position}
   deriving (Show, Eq)
 
-line2FromPoints :: Position2D -> Position2D -> Line2D
+line2FromPoints :: V2 Position -> V2 Position -> Line2D
 line2FromPoints p1 p2 = Line2D {start = p1, end = p2}
 
-line2GetStart :: Line2D -> Position2D
+line2FromPointsDeprec :: Position2D -> Position2D -> Line2D
+line2FromPointsDeprec p1 p2 = Line2D {start = pos2ToVec p1, end = pos2ToVec p2}
+
+line2GetStart :: Line2D -> V2 Position
 line2GetStart (Line2D {start}) = start
 
-line2GetEnd :: Line2D -> Position2D
+line2GetEnd :: Line2D -> V2 Position
 line2GetEnd (Line2D {end}) = end
 
 -------------------------------------------------------------------------------
@@ -504,3 +528,22 @@ instance Millimeters (V3 Double) (V3 Delta) where
 
 instance GetDelta (V2 Position) (V2 Delta) where
   getDelta (V2 x y) (V2 x' y') = V2 (getDelta x x') (getDelta y y')
+
+instance JustX (V2 Position) where
+  justX (V2 x _) = V2 x 0
+
+instance JustY (V2 Position) where
+  justY (V2 _ y) = V2 0 y
+
+instance JustX (V2 Delta) where
+  justX (V2 x _) = V2 x 0
+
+instance JustY (V2 Delta) where
+  justY (V2 _ y) = V2 0 y
+
+instance DeltaApplication (V2 Position) (V2 Delta) where
+  addDelta (V2 x y) (V2 dx dy) = V2 (addDelta x dx) (addDelta y dy)
+  subDelta (V2 x y) (V2 dx dy) = V2 (subDelta x dx) (subDelta y dy)
+
+instance Distance Delta (V2 Position) where
+  getDistance pos1 pos2 = fromMm (Lin.distance (toMm pos1) (toMm pos2))

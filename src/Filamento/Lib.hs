@@ -33,9 +33,9 @@ import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Relude
 
-type GCodeColorM a = WriterT [(Text, GCode ())] GCode a
+type GCodeColorM col = WriterT [(col, GCode ())] GCode ()
 
-withColors :: ((Text -> GCode () -> GCodeColorM ()) -> GCodeColorM ()) -> GCode ()
+withColors :: (Show col) => ((col -> GCode () -> GCodeColorM col) -> GCodeColorM col) -> GCode ()
 withColors f = do
   r <- execWriterT (f \txt gc -> tell [(txt, gc)])
   env <- ask
@@ -45,7 +45,7 @@ withColors f = do
           & toList
           & Map.fromList
 
-      mp = foldr (\(txt, gcode) accum -> Map.insertWith (++) txt [gcode] accum) emptyMap r
+      mp = foldr (\(col, gcode) accum -> Map.insertWith (++) (show col) [gcode] accum) emptyMap r
 
   forM_ (zip [0 ..] $ Map.toList mp) $ \(i, (color, gcs)) -> section ("color " <> color) do
     changeColor color
