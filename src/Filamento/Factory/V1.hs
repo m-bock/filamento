@@ -33,10 +33,10 @@ printSnake rect = section "Print Snake" $ do
     let di = fromIntegral i
         plus = (di + 0.5) * step
         minus = -plus
-        frontLeft' = addDelta frontLeft (delta2FromDelta plus plus)
-        frontRight' = addDelta frontRight (delta2FromDelta minus plus)
-        backRight' = addDelta backRight (delta2FromDelta minus minus)
-        backLeft' = addDelta backLeft (delta2FromDelta plus minus)
+        frontLeft' = addDelta frontLeft (V2 plus plus)
+        frontRight' = addDelta frontRight (V2 minus plus)
+        backRight' = addDelta backRight (V2 minus minus)
+        backLeft' = addDelta backLeft (V2 plus minus)
 
     withRetract $ withZHop $ moveTo frontLeft'
 
@@ -103,7 +103,7 @@ getWidth outOf =
 
 printProfile :: Profile -> Position -> Delta -> GCode ()
 printProfile profile posY len = do
-  let rectCenter = addDelta (pos2FromPos 0 posY) (delta2FromDelta 20 (scale 0.5 len))
+  let rectCenter = addDelta (pos2FromPos 0 posY) (V2 20 (scale 0.5 len))
 
   resetLayers
 
@@ -111,7 +111,7 @@ printProfile profile posY len = do
     withRetract $ withZHop $ moveTo rectCenter
 
   printLayers \outOf -> do
-    let size = delta2FromDelta (getWidth outOf) (getLength outOf profile len)
+    let size = V2 (getWidth outOf) (getLength outOf profile len)
     printSnake (rect2FromCenterSize rectCenter size)
 
 data SpiralConfig = SpiralConfig
@@ -163,7 +163,7 @@ printFilament :: [FilamentSection] -> GCode ()
 printFilament secs = local
   ( \env ->
       env
-        { sketchSize = delta3FromDelta 10 10 configDefault.filamentDia,
+        { sketchSize = fromMm $ V3 10 10 (toMm configDefault.filamentDia),
           lineWidth = fromMm 0.4,
           layerHeight = fromMm 0.2,
           hotendTemperature = fromCelsius 205,

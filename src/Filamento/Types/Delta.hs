@@ -38,3 +38,6 @@ instance JustX (V2 Delta) where
 
 instance JustY (V2 Delta) where
   justY (V2 _ y) = V2 0 y
+
+instance Scalable (V2 Delta) where
+  scale factor (V2 x y) = V2 (scale factor x) (scale factor y)

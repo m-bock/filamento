@@ -1,7 +1,6 @@
 module Filamento.TypeOps
   ( Delta,
     Position,
-    Delta2D,
     Delta3D,
     Distance,
     Duration,
@@ -16,12 +15,10 @@ module Filamento.TypeOps
     propMax,
     Speed,
     Temperature,
-    delta2fromMm,
     deltaFromMm,
     delta3fromMm,
     pos2fromMm,
     pos3fromMm,
-    delta2fromMmVec,
     delta3fromMmVec,
     delta3FromDelta,
     pos2fromMmVec,
@@ -29,10 +26,9 @@ module Filamento.TypeOps
     pos2FromPos,
     pos2From3,
     delta3From2,
-    delta2From3,
-    delta2To3,
-    delta2FromDelta,
-    delta2ToDeltaVec,
+    v2DeltaFrom3,
+    v2DeltaToV3,
+    v2DeltaFromMm,
     OutOf,
     Count,
     Total,
@@ -107,44 +103,11 @@ posFromMm x = Position x
 
 -------------------------------------------------------------------------------
 
-newtype Delta2D = Delta2D (V2 Double)
-  deriving (Show, Eq, Num)
-  deriving (Semigroup, Monoid) via (Sum (V2 Double))
-
-delta2FromDelta :: Delta -> Delta -> Delta2D
-delta2FromDelta x y = Delta2D (V2 (toMm x) (toMm y))
-
 v2DeltaFromMm :: V2 Double -> V2 Delta
 v2DeltaFromMm (V2 x y) = V2 (fromMm x) (fromMm y)
 
-delta2fromMm :: Double -> Double -> Delta2D
-delta2fromMm x y = Delta2D (V2 x y)
-
-delta2fromMmVec :: V2 Double -> Delta2D
-delta2fromMmVec v = Delta2D v
-
-delta2To3 :: Delta2D -> Delta -> Delta3D
-delta2To3 (Delta2D (V2 x y)) z = Delta3D (V3 x y (toMm z))
-
-delta2ToDeltaVec :: Delta2D -> V2 Delta
-delta2ToDeltaVec (Delta2D (V2 x y)) = V2 (fromMm x) (fromMm y)
-
-instance Scalable Delta2D where
-  scale factor (Delta2D v) = Delta2D (v * pure factor)
-
-instance Millimeters (V2 Double) Delta2D where
-  toMm (Delta2D v) = v
-  fromMm v = Delta2D v
-
-instance Millimeters2 Double Delta2D where
-  toMm2 (Delta2D (V2 x y)) = (x, y)
-  fromMm2 x y = Delta2D (V2 x y)
-
-instance JustX Delta2D where
-  justX (Delta2D (V2 x _)) = Delta2D (V2 x 0)
-
-instance JustY Delta2D where
-  justY (Delta2D (V2 _ y)) = Delta2D (V2 0 y)
+v2DeltaToV3 :: V2 Delta -> Delta -> V3 Double
+v2DeltaToV3 (V2 x y) z = V3 (toMm x) (toMm y) (toMm z)
 
 -------------------------------------------------------------------------------
 
@@ -163,11 +126,11 @@ delta3fromMmVec v = Delta3D v
 
 -- removed unused helpers
 
-delta3From2 :: Delta2D -> Delta -> Delta3D
-delta3From2 (Delta2D (V2 x y)) z = Delta3D (V3 x y (toMm z))
+delta3From2 :: V2 Delta -> Delta -> Delta3D
+delta3From2 (V2 x y) z = Delta3D (V3 (toMm x) (toMm y) (toMm z))
 
-delta2From3 :: Delta3D -> Delta2D
-delta2From3 (Delta3D (V3 x y _)) = Delta2D (V2 x y)
+v2DeltaFrom3 :: V3 Delta -> V2 Delta
+v2DeltaFrom3 (V3 x y _) = V2 x y
 
 instance Scalable Delta3D where
   scale factor (Delta3D v) = Delta3D (v * pure factor)
@@ -249,7 +212,7 @@ instance Millimeters2 Double Position2D where
   toMm2 (Position2D (V2 x y)) = (x, y)
   fromMm2 x y = Position2D (V2 x y)
 
-instance DeltaApplication Position2D Delta2D where
+instance DeltaApplication Position2D (V2 Delta) where
   addDelta pos disp = fromMm (toMm pos + toMm disp)
   subDelta pos disp = fromMm (toMm pos - toMm disp)
 
@@ -259,9 +222,9 @@ instance JustX Position2D where
 instance JustY Position2D where
   justY (Position2D (V2 _ y)) = Position2D (V2 0 y)
 
-instance GetDelta Position2D Delta2D where
+instance GetDelta Position2D (V2 Delta) where
   getDelta (Position2D (V2 x1 y1)) (Position2D (V2 x2 y2)) =
-    delta2fromMmVec (V2 (x2 - x1) (y2 - y1))
+    V2 (fromMm (x2 - x1)) (fromMm (y2 - y1))
 
 instance Distance Delta Position2D where
   getDistance (Position2D (V2 x1 y1)) (Position2D (V2 x2 y2)) =
@@ -393,7 +356,7 @@ instance FromToDouble Double Total where
 
 -------------------------------------------------------------------------------
 
-data Rect2D = Rect2D {minCorner :: Position2D, size :: Delta2D}
+data Rect2D = Rect2D {minCorner :: Position2D, size :: V2 Delta}
   deriving (Show, Eq)
 
 rect2FromCorners :: Position2D -> Position2D -> Rect2D
@@ -403,17 +366,17 @@ rect2FromCorners minCorner maxCorner =
       size = getDelta maxCorner minCorner
     }
 
-rect2FromMinSize :: Position2D -> Delta2D -> Rect2D
+rect2FromMinSize :: Position2D -> V2 Delta -> Rect2D
 rect2FromMinSize minCorner size = Rect2D minCorner size
 
-rect2FromCenterSize :: Position2D -> Delta2D -> Rect2D
+rect2FromCenterSize :: Position2D -> V2 Delta -> Rect2D
 rect2FromCenterSize center size =
   Rect2D
     { minCorner = subDelta center size',
       size = size
     }
   where
-    size' :: Delta2D
+    size' :: V2 Delta
     size' = scale 0.5 size
 
 rect2GetMinCorner :: Rect2D -> Position2D
@@ -422,7 +385,7 @@ rect2GetMinCorner (Rect2D {minCorner}) = minCorner
 rect2GetMaxCorner :: Rect2D -> Position2D
 rect2GetMaxCorner (Rect2D {minCorner, size}) = addDelta minCorner size
 
-rect2GetSize :: Rect2D -> Delta2D
+rect2GetSize :: Rect2D -> V2 Delta
 rect2GetSize (Rect2D {size}) = size
 
 rect2GetCenter :: Rect2D -> Position2D
@@ -431,11 +394,10 @@ rect2GetCenter (Rect2D {minCorner, size}) = addDelta minCorner (scale 0.5 size)
 rect2GetPoints :: Rect2D -> (V2 Position, V2 Position, V2 Position, V2 Position)
 rect2GetPoints (Rect2D {minCorner, size}) = (p1, p2, p3, p4)
   where
-    size' = delta2ToDeltaVec size
     p1 = pos2ToVec minCorner
-    p2 = addDelta p1 (justX size')
-    p3 = addDelta p2 (justY size')
-    p4 = subDelta p3 (justX size')
+    p2 = addDelta p1 (justX size)
+    p3 = addDelta p2 (justY size)
+    p4 = subDelta p3 (justX size)
 
 -------------------------------------------------------------------------------
 
@@ -445,14 +407,14 @@ data Square2D = Square2D (Rect2D)
 square2FromCenterSize :: Position2D -> Delta -> Square2D
 square2FromCenterSize center size = Square2D (rect2FromCenterSize center size')
   where
-    size' :: Delta2D
-    size' = delta2FromDelta size size
+    size' :: V2 Delta
+    size' = V2 size size
 
 square2FromMinSize :: Position2D -> Delta -> Square2D
 square2FromMinSize minCorner size = Square2D (rect2FromMinSize minCorner size')
   where
-    size' :: Delta2D
-    size' = delta2FromDelta size size
+    size' :: V2 Delta
+    size' = V2 size size
 
 square2ToRect2 :: Square2D -> Rect2D
 square2ToRect2 (Square2D rect) = rect
@@ -463,7 +425,7 @@ square2GetMinCorner (Square2D rect) = rect2GetMinCorner rect
 square2GetMaxCorner :: Square2D -> Position2D
 square2GetMaxCorner (Square2D rect) = rect2GetMaxCorner rect
 
-square2GetSize :: Square2D -> Delta2D
+square2GetSize :: Square2D -> V2 Delta
 square2GetSize (Square2D rect) = rect2GetSize rect
 
 squareGetLines :: Square2D -> (Line2D, Line2D, Line2D, Line2D)
@@ -502,7 +464,6 @@ instance Millimeters (V3 Double) (V3 Position) where
   toMm (V3 x y z) = V3 (toMm x) (toMm y) (toMm z)
   fromMm (V3 x y z) = V3 (fromMm x) (fromMm y) (fromMm z)
 
-
 instance GetDelta (V2 Position) (V2 Delta) where
   getDelta (V2 x y) (V2 x' y') = V2 (getDelta x x') (getDelta y y')
 
@@ -528,10 +489,6 @@ instance IsOld Position2D (V2 Position) where
 instance IsOld Position3D (V3 Position) where
   fromOld (Position3D (V3 x y z)) = V3 (posFromMm x) (posFromMm y) (posFromMm z)
   toOld (V3 x y z) = Position3D (V3 (posToMm x) (posToMm y) (posToMm z))
-
-instance IsOld Delta2D (V2 Delta) where
-  fromOld (Delta2D (V2 x y)) = V2 (fromMm x) (fromMm y)
-  toOld (V2 x y) = Delta2D (V2 (toMm x) (toMm y))
 
 instance IsOld Delta3D (V3 Delta) where
   fromOld (Delta3D (V3 x y z)) = V3 (fromMm x) (fromMm y) (fromMm z)

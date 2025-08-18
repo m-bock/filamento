@@ -129,7 +129,7 @@ data GCodeEnv = Env
     hotendTemperature :: Temperature,
     parkingPosition :: Position3D,
     autoHomePosition :: Position3D,
-    sketchSize :: Delta3D,
+    sketchSize :: V3 Delta,
     layerHeight :: Delta,
     firstLayerHeight :: Delta,
     lineWidth :: Delta,
@@ -139,7 +139,7 @@ data GCodeEnv = Env
     retractSpeed :: Speed,
     zHop :: Delta,
     sectionPath :: [Text],
-    bedSize :: Delta2D,
+    bedSize :: V2 Delta,
     colors :: NonEmpty Text
   }
 
@@ -158,13 +158,13 @@ gcodeEnvDefault =
       firstLayerHeight = fromMm 0.2,
       lineWidth = fromMm 0.4,
       filamentDia = fromMm 1.75,
-      sketchSize = fromMm3 100 100 100,
+      sketchSize = fromMm $ V3 100 100 100,
       transpose = id,
       retractLength = fromMm 1,
       retractSpeed = fromMmPerMin 1800,
       zHop = fromMm 0.4,
       sectionPath = [],
-      bedSize = fromMm2 220 220,
+      bedSize = fromMm $ V2 220 220,
       colors = "default" :| []
     }
 
@@ -234,11 +234,11 @@ gcodeStateInit env =
 -------------------------------------------------------------------------------
 --- Utils
 -------------------------------------------------------------------------------
-transposeCenterSketch :: Delta3D -> Delta2D -> Position3D -> Position3D
+transposeCenterSketch :: V3 Delta -> V2 Delta -> Position3D -> Position3D
 transposeCenterSketch sketchSize bedSize pos =
-  let halfSketch = scale 0.5 (delta2From3 sketchSize)
+  let halfSketch = scale 0.5 (v2DeltaFrom3 sketchSize)
       halfBed = scale 0.5 bedSize
-      diff = delta2To3 (halfBed - halfSketch) mempty
+      diff = delta3From2 (halfBed - halfSketch) mempty
    in addDelta pos diff
 
 withSketchTranspose :: GCode a -> GCode a
@@ -605,7 +605,7 @@ class MoveBy a where
 instance MoveBy Delta3D where
   moveBy (toMm -> V3 x y z) = moveByImpl (Just x) (Just y) (Just z)
 
-instance MoveBy Delta2D where
+instance MoveBy (V2 Delta) where
   moveBy (toMm -> V2 x y) = moveByImpl (Just x) (Just y) Nothing
 
 class ExtrudeTo a where
@@ -622,9 +622,6 @@ class ExtrudeBy a where
 
 instance ExtrudeBy Delta3D where
   extrudeBy (toMm -> V3 x y z) = extrudeByImpl (Just x) (Just y) (Just z)
-
-instance ExtrudeBy Delta2D where
-  extrudeBy (toMm -> V2 x y) = extrudeByImpl (Just x) (Just y) Nothing
 
 instance ExtrudeTo (V3 Position) where
   extrudeTo (V3 x y z) = extrudeToImpl (Just $ toMm x) (Just $ toMm y) (Just $ toMm z)

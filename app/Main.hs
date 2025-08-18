@@ -44,7 +44,7 @@ printSketch :: GCode ()
 printSketch = withSketchTranspose do
   resetLayers
   printLayers_ do
-    let rect = rect2FromCenterSize (pos2fromMm 50 50) (delta2fromMm 50 30)
+    let rect = rect2FromCenterSize (pos2fromMm 50 50) (fromMm $ V2 50 30)
         (p1, p2, p3, p4) = rect2GetPoints rect
 
     comment ("rect: " <> show rect)
@@ -111,7 +111,7 @@ main = do
               bedTemperature = fromCelsius 65,
               retractLength = fromMm 1.5,
               colors = fmap show $ Red :| [Yellow],
-              sketchSize = fromMm3 100 100 10,
+              sketchSize = fromMm $ V3 100 100 10,
               parkingPosition = pos3fromMm 0 0 20
             }
       }

@@ -7,6 +7,8 @@ import Filamento
 -- import Filamento.Lib
 -- import Linear (V3 (..))
 -- import Linear.V2 (V2 (..))
+
+import Linear (V2 (..))
 import Relude
 
 changeEnv :: GCodeEnv -> GCodeEnv
@@ -15,7 +17,7 @@ changeEnv env =
 
 printLayer :: Int -> GCode ()
 printLayer n = section ("Layer " <> T.pack (show n)) $ do
-  printRect (pos3fromMm 100 100 0) (delta2fromMm 50 50)
+  printRect (pos3fromMm 100 100 0) (fromMm $ V2 50 50)
 
 sketch :: GCode ()
 sketch = local changeEnv $ initPrinter $ do

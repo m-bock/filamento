@@ -71,7 +71,6 @@ executable filamento-exe
   import: flags, extensions
   main-is: Main.hs
   other-modules:
-    Filament5
     PurgeTower
     Sketch03
     Try

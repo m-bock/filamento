@@ -72,7 +72,7 @@ printLayers_ gcode = printLayers (const gcode)
 printSketchFrame :: GCode ()
 printSketchFrame = section "sketchFrame" do
   env <- ask
-  let size2d = delta2From3 env.sketchSize
+  let size2d = v2DeltaFrom3 env.sketchSize
   let centerBed = addDelta mempty (scale 0.5 env.bedSize - scale 0.5 size2d)
   printRect2d centerBed size2d
 
@@ -109,13 +109,13 @@ extrudePoints vs = do
   forM_ vs $ \v -> do
     extrudeTo v
 
-printRect2d :: Position2D -> Delta2D -> GCode ()
+printRect2d :: Position2D -> V2 Delta -> GCode ()
 printRect2d (toMm -> V2 x y) delta = do
   (toMm -> V3 _ _ z) <- getCurrentPosition
   let pos = fromMm $ V3 x y z
   printRect pos delta
 
-printRect :: Position3D -> Delta2D -> GCode ()
+printRect :: Position3D -> V2 Delta -> GCode ()
 printRect v1 (toMm -> V2 dx dy) = section "printRect" do
   let dlt3 = fromMm $ V3 dx dy 0
   let v2 = addDelta v1 (justX dlt3)
