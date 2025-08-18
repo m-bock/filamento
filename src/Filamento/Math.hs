@@ -1,7 +1,7 @@
 module Filamento.Math where
 
 import Filamento.Classes
-import Filamento.Types
+import Filamento.TypeOps
 import Linear.V2
 import Relude
 

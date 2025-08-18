@@ -76,3 +76,7 @@ class GetDelta abs rel | abs -> rel where
 
 class Distance lo hi | hi -> lo where
   getDistance :: hi -> hi -> lo
+
+class IsOld old new | old -> new where
+  fromOld :: old -> new
+  toOld :: new -> old

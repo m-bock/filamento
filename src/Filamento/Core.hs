@@ -68,7 +68,7 @@ import Data.List (elemIndex)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Filamento.Classes
-import Filamento.Types
+import Filamento.TypeOps
 import Linear (V2 (..), V3 (..))
 import Marlin.Comment (gcodeToComment)
 import Marlin.Core

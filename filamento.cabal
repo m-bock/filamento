@@ -46,6 +46,7 @@ library
     Filamento.IO
     Filamento.Lib
     Filamento.Math
+    Filamento.TypeOps
     Filamento.Types
     Marlin.Comment
     Marlin.Core

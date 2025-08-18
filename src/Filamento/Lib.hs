@@ -29,7 +29,7 @@ import qualified Data.Map.Strict as Map
 import Filamento.Classes
 import Filamento.Core
 import Filamento.Math (linspaceByStepLength)
-import Filamento.Types
+import Filamento.TypeOps
 import Linear (V2 (..), V3 (..))
 import Relude
 

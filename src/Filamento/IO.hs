@@ -4,7 +4,7 @@ import Data.Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.List.NonEmpty as NE
 import Filamento.Core
-import Filamento.Types
+import Filamento.TypeOps
 import Relude
 
 data OutputConfig = OutputConfig
