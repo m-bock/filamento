@@ -24,11 +24,15 @@ where
 
 import Control.Monad.Writer
 -- import Data.List ((!!))
+
+-- import Filamento.Math (linspaceByStepLength)
+
+import Data.List ((!!))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Filamento.Classes
 import Filamento.Core
--- import Filamento.Math (linspaceByStepLength)
+import Filamento.Math (linspaceByStepLength)
 import Filamento.TypeOps
 import Linear (V2 (..), V3 (..))
 import Relude
