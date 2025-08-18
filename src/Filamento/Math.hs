@@ -11,16 +11,20 @@ justX (V2 x _) = V2 x 0
 justY :: V2 Double -> V2 Double
 justY (V2 _ y) = V2 0 y
 
+-- count >= 2
 linspace :: Position -> Position -> Count -> [Position]
+linspace _ _ n | (n < fromInt 2) = []
 linspace (toMm -> start) (toMm -> end) (toInt -> n) =
   let step = (end - start) / fromIntegral (n - 1)
    in [fromMm (start + fromIntegral i * step) | i <- [0 .. n - 1]]
 
-linspaceByStepLength :: Position -> Position -> Delta -> (Delta -> Int) -> [Position]
-linspaceByStepLength start end idealStep f =
+linspaceByStep :: Position -> Position -> Delta -> (Delta -> Count) -> [Position]
+-- linspaceByStep start end _ _ | start == end = map (const start) [0 ..]
+linspaceByStep _ _ d _ | d <= 0 = []
+linspaceByStep start end idealStep f =
   let dist = getDelta start end
-      n = f (dist / idealStep)
-   in linspace start end (fromInt n)
+      n = f (abs dist / idealStep)
+   in linspace start end (countInc n)
 
 addX :: V2 Double -> Double -> V2 Double
 addX (V2 x y) dx = V2 (x + dx) y
@@ -45,10 +49,11 @@ linspace2 pos1 pos2 count =
       ys = linspace y1 y2 count
    in zipWith V2 xs ys
 
-linspace2ByStepLength :: V2 Position -> V2 Position -> Delta -> (Delta -> Count) -> [V2 Position]
-linspace2ByStepLength pos1 pos2 idealStep f =
+linspace2ByStep :: V2 Position -> V2 Position -> Delta -> (Delta -> Count) -> [V2 Position]
+linspace2ByStep _ _ d _ | d <= 0 = []
+linspace2ByStep pos1 pos2 idealStep f =
   let n = f (getDistance pos1 pos2 / idealStep)
-   in linspace2 pos1 pos2 n
+   in linspace2 pos1 pos2 (countInc n)
 
 itemsWithNext :: [a] -> [(a, a)]
 itemsWithNext xs =

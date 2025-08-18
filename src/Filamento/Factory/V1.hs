@@ -1,73 +1,73 @@
 module Filamento.Factory.V1 where
 
 import Data.List (elemIndex, nub)
+import qualified Debug.Trace as Trace
 import Filamento
-import Filamento.Math (itemsWithNext, linspace2ByStepLength)
+import Filamento.Math (itemsWithNext, linspace2ByStep, linspaceByStep)
 import Linear
 import Relude
 
 data Profile = Hill | Valley deriving (Show)
 
-splitInterval :: Delta -> Delta -> (Delta, Int)
-splitInterval big small =
-  let n = round (big / small)
-      d = big / fromIntegral n
-   in (d, n)
-
-printSnake :: Rect2D -> GCode ()
-printSnake rect = section "Print Snake" $ do
+printSolidRect :: Rect2D -> GCode ()
+printSolidRect rect = section "Solid Rect" $ do
   env <- ask
-  let frontLeft = rect2GetMinCorner rect
-      backRight = rect2GetMaxCorner rect
-  let size = backRight - frontLeft
-      frontRight = frontLeft + justX size
-      backLeft = backRight - justX size
+  let solidRects = getSolidRects rect env.lineWidth
+  forM_ solidRects $ \solidRect -> do
+    printRect' solidRect
 
-      V2 w _ = toMm size
+(|>) :: (Show a) => a -> String -> a
+x |> msg = Trace.trace (msg ++ ": " ++ show x) x
 
-  let (doubleStep, count) = splitInterval (deltaFromMm (abs w)) (scale 2 env.lineWidth)
+getSolidRects :: Rect2D -> Delta -> [Rect2D]
+getSolidRects rect lineWidth =
+  let V2 width depth = rect2GetSize rect
+      rectCenter = rect2GetCenter rect
 
-  let step = doubleStep / 2
+      widths =
+        map (* 2)
+          $ linspaceByStep
+            (posFromDelta $ (width / 2) - (lineWidth / 2))
+            (posFromDelta $ (lineWidth / 2))
+            lineWidth
+            deltaFloor
 
-  forM_ [0 .. count - 1] \i -> do
-    let di = fromIntegral i
-        plus = (di + 0.5) * step
-        minus = -plus
-        frontLeft' = addDelta frontLeft (V2 plus plus)
-        frontRight' = addDelta frontRight (V2 minus plus)
-        backRight' = addDelta backRight (V2 minus minus)
-        backLeft' = addDelta backLeft (V2 plus minus)
+      depths =
+        map (* 2)
+          $ linspaceByStep
+            (posFromDelta $ (depth / 2) - (lineWidth / 2))
+            (posFromDelta $ (lineWidth / 2))
+            lineWidth
+            deltaFloor
+   in zipWith
+        (\x y -> rect2FromCenterSize rectCenter (V2 x y))
+        (map deltaFromPos widths)
+        (map deltaFromPos depths)
 
-    withRetract $ withZHop $ moveTo frontLeft'
+printRect' :: Rect2D -> GCode ()
+printRect' rect = section "Print Rect" $ do
+  let (frontLeft, frontRight, backRight, backLeft) = rect2GetPoints rect
 
-    local (\e -> e {lineWidth = step}) do
-      section ("Snake " <> show i) do
-        section "Front" do
-          printLine (line2FromPointsDeprec frontLeft' frontRight')
-        section "Right" do
-          printLine (line2FromPointsDeprec frontRight' backRight')
-        section "Back" do
-          printLine (line2FromPointsDeprec backRight' backLeft')
-        section "Left" do
-          printLine (line2FromPointsDeprec backLeft' frontLeft')
+      lines = [(frontLeft, frontRight), (frontRight, backRight), (backRight, backLeft), (backLeft, frontLeft)]
 
-printLine' :: Line2D -> GCode ()
-printLine' line = do
-  let start = line2GetStart line
-      end = line2GetEnd line
+  forM_ lines $ \(p1, p2) -> do
+    printLine (line2FromPoints p1 p2)
 
-  moveTo start
-  extrudeTo end
+-- printLine' :: Line2D -> GCode ()
+-- printLine' line = do
+--   let start = line2GetStart line
+--       end = line2GetEnd line
+
+--   moveTo start
+--   extrudeTo end
 
 printLine :: Line2D -> GCode ()
 printLine line = do
   let start = line2GetStart line
       end = line2GetEnd line
-      pts = linspace2ByStepLength start end (fromMm 3) deltaRound
-
-  comment ("pts = " <> show pts)
-  comment ("start = " <> show start)
-  comment ("end = " <> show end)
+      pts = case linspace2ByStep (start |> "start") (end |> "end") (fromMm 3 |> "fromMm 3") deltaRound of
+        [] -> [start, end]
+        vals -> vals
 
   forM_ (itemsWithNext pts) $ \(p1, p2) -> do
     moveTo p1
@@ -95,11 +95,12 @@ getLength outOf profile len =
       _ramp = scale (frac + frac) ov
    in (scale (frac + frac) ov) + (-ov) + len + (-ov) + (scale (frac + frac) ov)
 
-getWidth :: OutOf -> Delta
-getWidth outOf =
-  let frac = outOfToFraction outOf
-      d = sqrt (0.25 - (frac - 0.5) ** 2) * 2
-   in deltaFromMm $ d * toMm configDefault.filamentDia
+getWidth :: Proportion -> Delta
+getWidth prop =
+  let ang = scale 0.5 $ angleFromProportion prop
+      pos = angleSin ang
+      delta = getDelta pos 0
+   in delta * configDefault.filamentDia * 0.5
 
 printProfile :: Profile -> Position -> Delta -> GCode ()
 printProfile profile posY len = do
@@ -111,8 +112,13 @@ printProfile profile posY len = do
     withRetract $ withZHop $ moveTo rectCenter
 
   printLayers \outOf -> do
-    let size = V2 (getWidth outOf) (getLength outOf profile len)
-    printSnake (rect2FromCenterSize rectCenter size)
+    st <- gcodeStateGet
+    env <- ask
+    let V3 _ _ z = toMm st.currentPosition
+        V3 _ _ zMax = toMm env.sketchSize
+        prop = fromFraction (z / zMax)
+    let size = V2 (getWidth prop) (getLength outOf profile len)
+    printSolidRect (rect2FromCenterSize rectCenter size)
 
 data SpiralConfig = SpiralConfig
   { center :: Position3D,
@@ -152,12 +158,12 @@ translateSpiral spiralConfig pos = fromMm3 x' y' z
     finalAngle = m + angle'
 
     -- Calculate the spiral position
-    spiralX = centerX + spiralRadius * cos finalAngle
-    spiralY = centerY + spiralRadius * sin finalAngle
+    x' = centerX + (spiralRadius + x) * cos finalAngle
+    y' = centerY + (spiralRadius + x) * sin finalAngle
 
-    -- Add x offset along the spiral's tangent direction
-    x' = spiralX + x * cos (finalAngle + pi / 2) -- Perpendicular to radius
-    y' = spiralY + x * sin (finalAngle + pi / 2) -- Perpendicular to radius
+-- Add x offset along the spiral's tangent direction
+-- x' = spiralX + x * cos (finalAngle + pi / 2) -- Perpendicular to radius
+-- y' = spiralY + x * sin (finalAngle + pi / 2) -- Perpendicular to radius
 
 printFilament :: [FilamentSection] -> GCode ()
 printFilament secs = local

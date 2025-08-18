@@ -16,7 +16,7 @@ purgeTower (toMm -> V2 x y) (toMm -> size) purgeIndex = do
   st <- gcodeStateGet
   let dir = if odd st.currentLayer then Vert else Horz
 
-  let ticks = map toMm $ linspaceByStepLength (fromMm 0) (fromMm size) (fromMm 0.4) floor
+  let ticks = map toMm $ linspaceByStep (fromMm 0) (fromMm size) (fromMm 0.4) deltaFloor
 
   let n = 5
 
@@ -26,7 +26,8 @@ purgeTower (toMm -> V2 x y) (toMm -> size) purgeIndex = do
   section "purgeTower" do
     forM_ [0 .. nSections - 1] \i -> section ("section " <> show i) do
       let index = i * nTicksPerSection + ((purgeIndex + i) `mod` n)
-      let tick = ticks !! index
+      let safeIndex = max 0 (min index (length ticks - 1))
+      let tick = ticks !! safeIndex
       case dir of
         Vert -> do
           section "vertical" do

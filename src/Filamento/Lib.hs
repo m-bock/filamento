@@ -25,14 +25,14 @@ where
 import Control.Monad.Writer
 -- import Data.List ((!!))
 
--- import Filamento.Math (linspaceByStepLength)
+-- import Filamento.Math (linspaceByStep)
 
 import Data.List ((!!))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Filamento.Classes
 import Filamento.Core
-import Filamento.Math (linspaceByStepLength)
+import Filamento.Math (linspaceByStep)
 import Filamento.TypeOps
 import Linear (V2 (..), V3 (..))
 import Relude
@@ -255,7 +255,7 @@ purgeTower (toMm -> V2 x y) (toMm -> size) purgeIndex = section "purgeTower" do
   st <- gcodeStateGet
   let dir = if odd st.currentLayer then Vert else Horz
 
-  let ticks = map toMm $ linspaceByStepLength (fromMm 0) (fromMm size) (fromMm 0.4) floor
+  let ticks = map toMm $ linspaceByStep (fromMm 0) (fromMm size) (fromMm 0.4) deltaFloor
 
   let n = 5
 

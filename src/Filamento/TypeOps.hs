@@ -27,6 +27,7 @@ module Filamento.TypeOps
     pos2From3,
     delta3From2,
     v2DeltaFrom3,
+    countInc,
     v2DeltaToV3,
     v2DeltaFromMm,
     OutOf,
@@ -40,6 +41,7 @@ module Filamento.TypeOps
     Line2D,
     rect2FromCorners,
     rect2FromMinSize,
+    rect2ToCenterSize,
     rect2FromCenterSize,
     square2FromCenterSize,
     square2FromMinSize,
@@ -54,12 +56,19 @@ module Filamento.TypeOps
     rect2GetMaxCorner,
     rect2GetSize,
     rect2GetCenter,
+    posFromDelta,
+    deltaFromPos,
     posFromMm,
     pos2ToVec,
+    deltaFloor,
     deltaRound,
     rect2GetPoints,
     squareGetLines,
     line2FromPointsDeprec,
+    angleSin,
+    angleCos,
+    angleCircle,
+    angleFromProportion,
     module Export,
   )
 where
@@ -74,8 +83,14 @@ import Relude
 deltaFromMm :: Double -> Delta
 deltaFromMm = fromMm
 
+deltaFloor :: Delta -> Count
+deltaFloor = fromInt . floor . toMm
+
 deltaRound :: Delta -> Count
 deltaRound = fromInt . round . toMm
+
+deltaFromPos :: Position -> Delta
+deltaFromPos pos = getDelta (posFromMm 0) pos
 
 -------------------------------------------------------------------------------
 
@@ -101,6 +116,9 @@ posToMm (Position x) = x
 posFromMm :: Double -> Position
 posFromMm x = Position x
 
+posFromDelta :: Delta -> Position
+posFromDelta d = addDelta (posFromMm 0) d
+
 -------------------------------------------------------------------------------
 
 v2DeltaFromMm :: V2 Double -> V2 Delta
@@ -123,8 +141,6 @@ delta3fromMm x y z = Delta3D (V3 x y z)
 
 delta3fromMmVec :: V3 Double -> Delta3D
 delta3fromMmVec v = Delta3D v
-
--- removed unused helpers
 
 delta3From2 :: V2 Delta -> Delta -> Delta3D
 delta3From2 (V2 x y) z = Delta3D (V3 (toMm x) (toMm y) (toMm z))
@@ -322,8 +338,11 @@ outOfToFraction (OutOf count total) = toDouble count / toDouble total
 -------------------------------------------------------------------------------
 
 newtype Count = Count Natural
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
   deriving (Semigroup, Monoid) via (Sum Natural)
+
+countInc :: Count -> Count
+countInc (Count x) = Count (x + 1)
 
 instance FromToNatural Natural Count where
   fromNat x = Count x
@@ -378,6 +397,9 @@ rect2FromCenterSize center size =
   where
     size' :: V2 Delta
     size' = scale 0.5 size
+
+rect2ToCenterSize :: Rect2D -> (Position2D, V2 Delta)
+rect2ToCenterSize rect = (rect2GetCenter rect, rect2GetSize rect)
 
 rect2GetMinCorner :: Rect2D -> Position2D
 rect2GetMinCorner (Rect2D {minCorner}) = minCorner
@@ -493,3 +515,17 @@ instance IsOld Position3D (V3 Position) where
 instance IsOld Delta3D (V3 Delta) where
   fromOld (Delta3D (V3 x y z)) = V3 (fromMm x) (fromMm y) (fromMm z)
   toOld (V3 x y z) = Delta3D (V3 (toMm x) (toMm y) (toMm z))
+
+-------------------------------------------------------------------------------
+
+angleSin :: Angle -> Position
+angleSin (angleToRad -> a) = fromMm (sin a)
+
+angleCos :: Angle -> Position
+angleCos (angleToRad -> a) = fromMm (cos a)
+
+angleCircle :: Angle -> V2 Position
+angleCircle ang = V2 (angleCos ang) (angleSin ang)
+
+angleFromProportion :: Proportion -> Angle
+angleFromProportion (Proportion f) = angleFromRad (f * 2 * pi)

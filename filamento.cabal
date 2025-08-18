@@ -48,7 +48,6 @@ library
     Filamento.Math
     Filamento.TypeOps
     Filamento.Types
-    Filamento.Types.Delta
     Marlin.Comment
     Marlin.Core
     Marlin.Syntax
@@ -63,6 +62,7 @@ library
     newtype >=0.2.2 && <0.3,
     random >=1.3.1 && <1.4,
     relude >=1.2.2 && <1.3,
+    pretty-simple >=4.0.0 && <4.1,
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -88,5 +88,24 @@ executable filamento-exe
     random >=1.3.1 && <1.4,
     relude >=1.2.2 && <1.3,
     req >=3.13.4 && <3.14,
+
+  default-language: Haskell2010
+
+test-suite filamento-test
+  import: flags, extensions
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+    Filamento.Types.DeltaSpec
+
+  hs-source-dirs: test
+  build-depends:
+    QuickCheck >=2.14.0 && <2.17,
+    base >=4.17.2 && <4.18,
+    filamento,
+    hspec >=2.11.0 && <2.12,
+    hspec-core >=2.11.0 && <2.12,
+    linear >=1.23.2 && <1.24,
+    relude >=1.2.2 && <1.3,
 
   default-language: Haskell2010
