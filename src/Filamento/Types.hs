@@ -1,7 +1,6 @@
 module Filamento.Types
-  ( -- Export list is empty for now
+  ( module Filamento.Types.Delta,
   )
 where
 
--- This module is intentionally empty
--- Add your type definitions here as needed
+import Filamento.Types.Delta

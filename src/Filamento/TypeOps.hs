@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Worphans #-}
-
 module Filamento.TypeOps
   ( Delta,
     Position,
@@ -66,35 +64,22 @@ module Filamento.TypeOps
     rect2GetPoints,
     squareGetLines,
     line2FromPointsDeprec,
+    module Export,
   )
 where
 
 import Data.Aeson (FromJSON, ToJSON)
 import Filamento.Classes
+import Filamento.Types as Export
 import Linear
 import qualified Linear as Lin
 import Relude
 
-newtype Delta = Delta Double
-  deriving (Show, Eq, Generic, Num, Ord, Fractional, RealFrac, Real)
-  deriving (Semigroup, Monoid) via (Sum Double)
-
 deltaFromMm :: Double -> Delta
-deltaFromMm v = Delta v
-
-instance ToJSON Delta
-
-instance FromJSON Delta
-
-instance Scalable Delta where
-  scale factor (Delta v) = Delta (v * factor)
-
-instance Millimeters Double Delta where
-  toMm (Delta v) = v
-  fromMm v = Delta v
+deltaFromMm = fromMm
 
 deltaRound :: Delta -> Count
-deltaRound (Delta v) = Count (round v)
+deltaRound = fromInt . round . toMm
 
 -------------------------------------------------------------------------------
 
@@ -108,11 +93,11 @@ instance Millimeters Double Position where
   fromMm v = Position v
 
 instance DeltaApplication Position Delta where
-  addDelta (Position p) (Delta d) = Position (p + d)
-  subDelta (Position p) (Delta d) = Position (p - d)
+  addDelta (Position p) d = Position (p + toMm d)
+  subDelta (Position p) d = Position (p - toMm d)
 
 instance GetDelta Position Delta where
-  getDelta (Position x) (Position y) = Delta (y - x)
+  getDelta (Position x) (Position y) = fromMm (y - x)
 
 posToMm :: Position -> Double
 posToMm (Position x) = x
@@ -127,7 +112,7 @@ newtype Delta2D = Delta2D (V2 Double)
   deriving (Semigroup, Monoid) via (Sum (V2 Double))
 
 delta2FromDelta :: Delta -> Delta -> Delta2D
-delta2FromDelta (Delta x) (Delta y) = Delta2D (V2 x y)
+delta2FromDelta x y = Delta2D (V2 (toMm x) (toMm y))
 
 v2DeltaFromMm :: V2 Double -> V2 Delta
 v2DeltaFromMm (V2 x y) = V2 (fromMm x) (fromMm y)
@@ -139,10 +124,10 @@ delta2fromMmVec :: V2 Double -> Delta2D
 delta2fromMmVec v = Delta2D v
 
 delta2To3 :: Delta2D -> Delta -> Delta3D
-delta2To3 (Delta2D (V2 x y)) (Delta z) = Delta3D (V3 x y z)
+delta2To3 (Delta2D (V2 x y)) z = Delta3D (V3 x y (toMm z))
 
 delta2ToDeltaVec :: Delta2D -> V2 Delta
-delta2ToDeltaVec (Delta2D (V2 x y)) = V2 (Delta x) (Delta y)
+delta2ToDeltaVec (Delta2D (V2 x y)) = V2 (fromMm x) (fromMm y)
 
 instance Scalable Delta2D where
   scale factor (Delta2D v) = Delta2D (v * pure factor)
@@ -168,7 +153,7 @@ newtype Delta3D = Delta3D (V3 Double)
   deriving (Semigroup, Monoid) via (Sum (V3 Double))
 
 delta3FromDelta :: Delta -> Delta -> Delta -> Delta3D
-delta3FromDelta (Delta x) (Delta y) (Delta z) = Delta3D (V3 x y z)
+delta3FromDelta x y z = Delta3D (V3 (toMm x) (toMm y) (toMm z))
 
 delta3fromMm :: Double -> Double -> Double -> Delta3D
 delta3fromMm x y z = Delta3D (V3 x y z)
@@ -179,7 +164,7 @@ delta3fromMmVec v = Delta3D v
 -- removed unused helpers
 
 delta3From2 :: Delta2D -> Delta -> Delta3D
-delta3From2 (Delta2D (V2 x y)) (Delta z) = Delta3D (V3 x y z)
+delta3From2 (Delta2D (V2 x y)) z = Delta3D (V3 x y (toMm z))
 
 delta2From3 :: Delta3D -> Delta2D
 delta2From3 (Delta3D (V3 x y _)) = Delta2D (V2 x y)
@@ -517,13 +502,6 @@ instance Millimeters (V3 Double) (V3 Position) where
   toMm (V3 x y z) = V3 (toMm x) (toMm y) (toMm z)
   fromMm (V3 x y z) = V3 (fromMm x) (fromMm y) (fromMm z)
 
-instance Millimeters (V2 Double) (V2 Delta) where
-  toMm (V2 x y) = V2 (toMm x) (toMm y)
-  fromMm (V2 x y) = V2 (fromMm x) (fromMm y)
-
-instance Millimeters (V3 Double) (V3 Delta) where
-  toMm (V3 x y z) = V3 (toMm x) (toMm y) (toMm z)
-  fromMm (V3 x y z) = V3 (fromMm x) (fromMm y) (fromMm z)
 
 instance GetDelta (V2 Position) (V2 Delta) where
   getDelta (V2 x y) (V2 x' y') = V2 (getDelta x x') (getDelta y y')
@@ -532,12 +510,6 @@ instance JustX (V2 Position) where
   justX (V2 x _) = V2 x 0
 
 instance JustY (V2 Position) where
-  justY (V2 _ y) = V2 0 y
-
-instance JustX (V2 Delta) where
-  justX (V2 x _) = V2 x 0
-
-instance JustY (V2 Delta) where
   justY (V2 _ y) = V2 0 y
 
 instance DeltaApplication (V2 Position) (V2 Delta) where
@@ -558,9 +530,9 @@ instance IsOld Position3D (V3 Position) where
   toOld (V3 x y z) = Position3D (V3 (posToMm x) (posToMm y) (posToMm z))
 
 instance IsOld Delta2D (V2 Delta) where
-  fromOld (Delta2D (V2 x y)) = V2 (Delta x) (Delta y)
+  fromOld (Delta2D (V2 x y)) = V2 (fromMm x) (fromMm y)
   toOld (V2 x y) = Delta2D (V2 (toMm x) (toMm y))
 
 instance IsOld Delta3D (V3 Delta) where
-  fromOld (Delta3D (V3 x y z)) = V3 (Delta x) (Delta y) (Delta z)
+  fromOld (Delta3D (V3 x y z)) = V3 (fromMm x) (fromMm y) (fromMm z)
   toOld (V3 x y z) = Delta3D (V3 (toMm x) (toMm y) (toMm z))

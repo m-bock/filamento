@@ -48,6 +48,7 @@ library
     Filamento.Math
     Filamento.TypeOps
     Filamento.Types
+    Filamento.Types.Delta
     Marlin.Comment
     Marlin.Core
     Marlin.Syntax
