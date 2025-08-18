@@ -7,8 +7,8 @@ module Filament5 where
 
 import qualified Data.Text as T
 import Filamento
-import Filamento.IO
-import Filamento.Lib
+-- import Filamento.IO
+-- import Filamento.Lib
 import qualified Filamento.Math as Math
 import Linear (V3 (..))
 import Linear.V2 (V2 (..))
@@ -305,12 +305,13 @@ printTestObj = section "Print Test Object" $ do
     withRetract $ withZHop $ moveTo (pos2fromMm 100 100)
     printRect2d (pos2fromMm 100 100) (delta2fromMm 50 20)
 
+isDev :: Bool
 isDev = False
 
 main :: IO ()
 main = do
   ps <- readPersistentState
-  let count = ps.count `mod` 4
+  let _count = ps.count `mod` 4
   let mkEnv env =
         env
           { lineWidth = fromMm 0.4,

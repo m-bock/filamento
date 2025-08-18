@@ -1,8 +1,8 @@
 module PurgeTower where
 
 import Filamento
-import Filamento.Classes
-import Filamento.IO
+-- import Filamento.Classes
+-- import Filamento.IO
 import Filamento.Math
 import GHC.List ((!!))
 import Linear
@@ -43,14 +43,14 @@ printSketch = do
     let pos = fromMm $ V2 100 100
         delta = fromMm 20
 
-    forM_ [0 .. 199] \i -> do
+    forM_ [0 .. (199 :: Int)] \i -> do
       if i == 0
         then setFanSpeedOff
         else setFanSpeedFull
 
       let h = 0.2 + fromIntegral i * 0.2
       moveToZ (fromMm h)
-      let dir = if odd i then Vert else Horz
+      let _dir = if odd i then Vert else Horz
 
       purgeTower pos delta 0
 

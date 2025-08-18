@@ -176,11 +176,7 @@ delta3fromMm x y z = Delta3D (V3 x y z)
 delta3fromMmVec :: V3 Double -> Delta3D
 delta3fromMmVec v = Delta3D v
 
-delta3ToMmVec :: Delta3D -> V3 Double
-delta3ToMmVec (Delta3D v) = v
-
-delta3ToMm :: Delta3D -> (Double, Double, Double)
-delta3ToMm (Delta3D (V3 x y z)) = (x, y, z)
+-- removed unused helpers
 
 delta3From2 :: Delta2D -> Delta -> Delta3D
 delta3From2 (Delta2D (V2 x y)) (Delta z) = Delta3D (V3 x y z)
@@ -442,7 +438,7 @@ rect2GetMaxCorner :: Rect2D -> Position2D
 rect2GetMaxCorner (Rect2D {minCorner, size}) = addDelta minCorner size
 
 rect2GetSize :: Rect2D -> Delta2D
-rect2GetSize (Rect2D {minCorner, size}) = size
+rect2GetSize (Rect2D {size}) = size
 
 rect2GetCenter :: Rect2D -> Position2D
 rect2GetCenter (Rect2D {minCorner, size}) = addDelta minCorner (scale 0.5 size)

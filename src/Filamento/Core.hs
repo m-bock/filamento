@@ -65,7 +65,7 @@ import Data.Aeson (ToJSON)
 import Data.Aeson.Types (FromJSON)
 import Data.Convertible (convert)
 import Data.List (elemIndex)
-import qualified Data.Map.Strict as Map
+-- import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Filamento.Classes
 import Filamento.TypeOps
@@ -98,11 +98,11 @@ instance ToText (GCode a) where
 
 gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> (a, GCodeState, Text)
 gcodeRun (GCode m) env oldState =
-  let ((val, newState), lines) =
+  let ((val, newState), linesOut) =
         runStateT m oldState
           & (`runReaderT` env)
           & runWriter
-   in (val, newState, toText $ map gcodeLineToRaw lines)
+   in (val, newState, toText $ map gcodeLineToRaw linesOut)
 
 gcodeFromCmd :: GCodeCmd -> GCode ()
 gcodeFromCmd cmd = do
@@ -246,8 +246,8 @@ withSketchTranspose inner = do
   env <- ask
   let sketchSize = env.sketchSize
   let bedSize = env.bedSize
-  let transpose = transposeCenterSketch sketchSize bedSize
-  local (\env -> env {transpose}) inner
+  let transposeFn = transposeCenterSketch sketchSize bedSize
+  local (\env' -> env' {transpose = transposeFn}) inner
 
 -- | Random value for any type that implements `Random`
 rand :: (Random a) => GCode a

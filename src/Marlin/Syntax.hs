@@ -49,11 +49,11 @@ instance ToText RawGCodeCmd where
      in Text.pack (printf "%-4s" (Text.unpack cmd)) <> argsText
 
 instance ToText [RawGCodeLine] where
-  toText lines = unlines zipped
+  toText linesList = unlines zipped
     where
-      cmds = map (\x -> maybe "" toText x.cmd <> x.rawExtra) lines
+      cmds = map (\x -> maybe "" toText x.cmd <> x.rawExtra) linesList
       maxLength = fromMaybe 0 $ maximumMay (map T.length cmds)
-      comments = map (maybe "" (\c -> "   ; " <> c) . (\x -> x.comment)) lines
+      comments = map (maybe "" (\c -> "   ; " <> c) . (\x -> x.comment)) linesList
       zipped = zipWith (\cmd comment -> cmd <> (T.replicate (maxLength - T.length cmd) " ") <> comment) cmds comments
 
 maximumMay :: (Foldable t, Ord a) => t a -> Maybe a

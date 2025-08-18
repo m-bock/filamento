@@ -1,6 +1,6 @@
 module Filamento.Factory.V1 where
 
-import Data.List (elemIndex, nub, (!!))
+import Data.List (elemIndex, nub)
 import Filamento
 import Filamento.Math (itemsWithNext, linspace2ByStepLength)
 import Linear
@@ -92,13 +92,13 @@ getLength outOf profile len =
         Valley -> outOfToFraction outOf
 
       ov = configDefault.overlap
-      ramp = scale (frac + frac) ov
+      _ramp = scale (frac + frac) ov
    in (scale (frac + frac) ov) + (-ov) + len + (-ov) + (scale (frac + frac) ov)
 
 getWidth :: OutOf -> Delta
 getWidth outOf =
   let frac = outOfToFraction outOf
-      d = sqrt (0.25 - (frac - 0.5) ^ 2) * 2
+      d = sqrt (0.25 - (frac - 0.5) ** 2) * 2
    in deltaFromMm $ d * toMm configDefault.filamentDia
 
 printProfile :: Profile -> Position -> Delta -> GCode ()
@@ -142,14 +142,14 @@ translateSpiral spiralConfig pos = fromMm3 x' y' z
     -- Simple approximation: angle = arcLength / averageRadius
     -- For small spiral constants, this works very well
     averageRadius = baseRadius + spiralConstant * (arcLength / (2 * baseRadius))
-    angle = arcLength / averageRadius
+    angle' = arcLength / averageRadius
 
     -- -- Calculate actual spiral radius at this angle
-    spiralRadius = baseRadius + spiralConstant * angle
+    spiralRadius = baseRadius + spiralConstant * angle'
 
     -- Convert to world coordinates
     m = 3 * (pi / 2) -- Starting angle offset
-    finalAngle = m + angle
+    finalAngle = m + angle'
 
     -- Calculate the spiral position
     spiralX = centerX + spiralRadius * cos finalAngle

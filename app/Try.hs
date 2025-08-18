@@ -1,8 +1,9 @@
 module Try where
 
-import Data.Foldable (Foldable (..))
+-- import Data.Foldable (Foldable (..))
 import Relude
-import Prelude (Floating (log))
+
+-- import Prelude (Floating (log))
 
 -- Original function (distances grow)
 fnByAngle :: Double -> Double -> (Double, Double)
@@ -23,7 +24,7 @@ fnApprox arcLength spiralConstant circleRadius =
 
 -- Calculate distance between two points
 distance :: (Double, Double) -> (Double, Double) -> Double
-distance (x1, y1) (x2, y2) = sqrt ((x2 - x1) ^ 2 + (y2 - y1) ^ 2)
+distance (x1, y1) (x2, y2) = sqrt ((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 -- Generate consecutive distances for a list of points
 consecutiveDistances :: [(Double, Double)] -> [Double]

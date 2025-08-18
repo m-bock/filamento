@@ -1,7 +1,7 @@
 module Main where
 
-import Data.IntMap.Lazy (restrictKeys)
-import Filament5 (Config (layerCount))
+-- import Data.IntMap.Lazy (restrictKeys)
+-- import Filament5 (Config (layerCount))
 import Filamento
 import Filamento.Factory.V1
 import Filamento.Math
@@ -29,9 +29,9 @@ printStripesAlongY square count = do
 printPurgeTower :: Square2D -> Count -> GCode ()
 printPurgeTower square count = do
   st <- gcodeStateGet
-  let lines = if odd st.currentLayer then printStripesAlongX square count else printStripesAlongY square count
+  let linesToPrint = if odd st.currentLayer then printStripesAlongX square count else printStripesAlongY square count
 
-  forM_ lines $ \line -> do
+  forM_ linesToPrint $ \line -> do
     let p1 = line2GetStart line
         p2 = line2GetEnd line
     moveTo p1
