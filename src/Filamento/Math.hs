@@ -66,3 +66,11 @@ itemsWithNext xs =
   case viaNonEmpty tail xs of
     Just xsTail -> zip xs xsTail
     Nothing -> []
+
+project :: (Double, Double) -> (Double, Double) -> Double -> Double
+project (inMin, inMax) (outMin, outMax) val =
+  let inRange = inMax - inMin
+      outRange = outMax - outMin
+      inVal = val - inMin
+      outVal = inVal * outRange / inRange
+   in outVal + outMin

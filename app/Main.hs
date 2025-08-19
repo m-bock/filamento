@@ -81,14 +81,14 @@ printAll :: GCode ()
 printAll = initPrinter do
   -- printSketchFrame
 
-  moveToZ (fromMm 0.2)
-  testCode
+  -- moveToZ (fromMm 0.2)
+  -- testCode
 
   env <- ask
   st <- gcodeStateGet
   let ret = getFilamentDef env st printSketch
 
-  comment (show ret)
+  -- comment (show ret)
 
   filamentChange
 

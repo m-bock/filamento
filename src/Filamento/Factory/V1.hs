@@ -3,7 +3,9 @@ module Filamento.Factory.V1 where
 import Data.List (elemIndex, nub)
 import qualified Debug.Trace as Trace
 import Filamento
-import Filamento.Math (deltaLinspaceByStep, itemsWithNext, linspace2ByStep, linspaceByStep)
+import Filamento.Math (itemsWithNext, linspace2ByStep, linspaceByStep)
+import qualified Filamento.Math as Math
+import GHC.IO (unsafePerformIO)
 import Linear
 import Relude
 
@@ -16,21 +18,40 @@ testCode = do
 (|>) :: (Show a) => a -> String -> a
 x |> msg = Trace.trace (msg ++ ": " ++ show x) x
 
+-------------------------------------------------------------------------------
+
+data Config = Config
+  { overlap :: Delta,
+    filamentDia :: Delta,
+    splitLinesEvery :: Maybe Delta
+  }
+
+configDefault :: Config
+configDefault =
+  Config
+    { overlap = fromMm 2,
+      filamentDia = fromMm 1.75,
+      splitLinesEvery = Just $ fromMm 3
+    }
+
+-------------------------------------------------------------------------------
+
 printSolidRect :: Rect2D -> Delta -> GCode ()
 printSolidRect frame lineWidth = do
   let V2 frameX2 frameY2 = rect2GetMaxCorner frame
       V2 frameX1 frameY1 = rect2GetMinCorner frame
       spansX = getSpans frameX1 frameX2
       spansY = getSpans frameY1 frameY2
+      spans = reverse $ zip spansX spansY |> "spans"
 
-  forM_ (reverse $ zip spansX spansY) $ \((startX, endX), (startY, endY)) -> do
+  forM_ spans $ \((startX, endX), (startY, endY)) -> do
     let start = V2 startX startY
         end = V2 endX endY
     if (startX == endX) || (startY == endY)
       then
-        printLine (line2FromPoints start end)
+        printLine (line2FromPoints end start)
       else
-        printRect' (rect2FromCorners start end)
+        printRectFilament (rect2FromCorners start end)
   where
     getSpans start end =
       let ticks = linspaceByStep start end lineWidth deltaFloor
@@ -38,18 +59,13 @@ printSolidRect frame lineWidth = do
           count = ceiling (fromIntegral (length ticksCentered) / 2)
        in take count $ zip ticksCentered (reverse ticksCentered)
 
-splitMiddle :: [a] -> ([a], [a])
-splitMiddle xs = splitAt n xs
-  where
-    n = length xs `div` 2
-
-printRect' :: Rect2D -> GCode ()
-printRect' rect = section "Print Rect" $ do
+printRectFilament :: Rect2D -> GCode ()
+printRectFilament rect = section "Print Rect" $ do
   let (frontLeft, frontRight, backRight, backLeft) = rect2GetPoints rect
 
-      lines = [(frontLeft, frontRight), (frontRight, backRight), (backRight, backLeft), (backLeft, frontLeft)]
+      rectLines = [(frontLeft, frontRight), (frontRight, backRight), (backRight, backLeft), (backLeft, frontLeft)]
 
-  forM_ lines $ \(p1, p2) -> do
+  forM_ rectLines $ \(p1, p2) -> do
     printLine (line2FromPoints p1 p2)
 
 printLine :: Line2D -> GCode ()
@@ -66,25 +82,11 @@ printLine line = do
     moveTo p1
     extrudeTo p2
 
-data Config = Config
-  { overlap :: Delta,
-    filamentDia :: Delta,
-    splitLinesEvery :: Maybe Delta
-  }
-
-configDefault :: Config
-configDefault =
-  Config
-    { overlap = fromMm 2,
-      filamentDia = fromMm 1.75,
-      splitLinesEvery = Nothing -- Just $ fromMm 3
-    }
-
-getLength :: OutOf -> Profile -> Delta -> Delta
-getLength outOf profile len =
+getLength :: Proportion -> Profile -> Delta -> Delta
+getLength prop profile len =
   let frac = case profile of
-        Hill -> 1 - (outOfToFraction outOf)
-        Valley -> outOfToFraction outOf
+        Hill -> 1 - (toFraction prop)
+        Valley -> toFraction prop
 
       ov = configDefault.overlap
       _ramp = scale (frac + frac) ov
@@ -94,8 +96,8 @@ getWidth :: Proportion -> Delta
 getWidth prop =
   let ang = scale 0.5 $ angleFromProportion prop
       pos = angleSin ang
-      delta = getDelta pos 0
-   in configDefault.filamentDia -- delta * configDefault.filamentDia * 0.5
+      delta = deltaFromPos pos
+   in delta * configDefault.filamentDia
 
 printProfile :: Profile -> Position -> Delta -> GCode ()
 printProfile profile posY len = do
@@ -106,13 +108,15 @@ printProfile profile posY len = do
   local (\env -> env {zHop = scale 1.2 configDefault.filamentDia}) do
     withRetract $ withZHop $ moveTo rectCenter
 
-  printLayers \outOf -> do
+  printLayers_ do
     st <- gcodeStateGet
     env <- ask
-    let V3 _ _ z = toMm st.currentPosition
+    let V3 _ _ z = toMm st.currentPosition |> "cur pos"
         V3 _ _ zMax = toMm env.sketchSize
-        prop = fromFraction (z / zMax)
-    let size = V2 (getWidth prop) (getLength outOf profile len)
+        frac = z / zMax
+        fracProjected = Math.project (0, 1) (0, 1) frac
+        prop = fromFraction fracProjected |> "prop"
+    let size = V2 (getWidth prop) (getLength prop profile len) |> "size"
     printSolidRect (rect2FromCenterSize rectCenter size) env.lineWidth
 
 data SpiralConfig = SpiralConfig
