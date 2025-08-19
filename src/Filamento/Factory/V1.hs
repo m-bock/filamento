@@ -23,44 +23,25 @@ printSolidRect frame lineWidth = do
       spansX = getSpans frameX1 frameX2
       spansY = getSpans frameY1 frameY2
 
-  forM_ (zip spansX spansY) $ \((startX, endX), (startY, endY)) -> do
-    printRect' (rect2FromCorners (V2 startX startY) (V2 endX endY))
+  forM_ (reverse $ zip spansX spansY) $ \((startX, endX), (startY, endY)) -> do
+    let start = V2 startX startY
+        end = V2 endX endY
+    if (startX == endX) || (startY == endY)
+      then
+        printLine (line2FromPoints start end)
+      else
+        printRect' (rect2FromCorners start end)
   where
     getSpans start end =
       let ticks = linspaceByStep start end lineWidth deltaFloor
           ticksCentered = map (\(pos1, pos2) -> posMiddle pos1 pos2) $ itemsWithNext ticks
-          (l, r) = splitMiddle ticksCentered
-       in zip l (reverse r)
+          count = ceiling (fromIntegral (length ticksCentered) / 2)
+       in take count $ zip ticksCentered (reverse ticksCentered)
 
 splitMiddle :: [a] -> ([a], [a])
 splitMiddle xs = splitAt n xs
   where
     n = length xs `div` 2
-
-getSolidRects' :: Rect2D -> Delta -> [Rect2D]
-getSolidRects' rect lineWidth =
-  let V2 width depth = rect2GetSize rect
-      rectCenter = rect2GetCenter rect
-
-      widths =
-        map (* 2)
-          $ linspaceByStep
-            (posFromDelta $ (width / 2) - (lineWidth / 2))
-            (posFromDelta $ (lineWidth / 2))
-            lineWidth
-            deltaFloor
-
-      depths =
-        map (* 2)
-          $ linspaceByStep
-            (posFromDelta $ (depth / 2) - (lineWidth / 2))
-            (posFromDelta $ (lineWidth / 2))
-            lineWidth
-            deltaFloor
-   in zipWith
-        (\x y -> rect2FromCenterSize rectCenter (V2 x y))
-        (map deltaFromPos widths)
-        (map deltaFromPos depths)
 
 printRect' :: Rect2D -> GCode ()
 printRect' rect = section "Print Rect" $ do
@@ -114,7 +95,7 @@ getWidth prop =
   let ang = scale 0.5 $ angleFromProportion prop
       pos = angleSin ang
       delta = getDelta pos 0
-   in delta * configDefault.filamentDia * 0.5
+   in configDefault.filamentDia -- delta * configDefault.filamentDia * 0.5
 
 printProfile :: Profile -> Position -> Delta -> GCode ()
 printProfile profile posY len = do
