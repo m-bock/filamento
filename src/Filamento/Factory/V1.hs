@@ -3,24 +3,42 @@ module Filamento.Factory.V1 where
 import Data.List (elemIndex, nub)
 import qualified Debug.Trace as Trace
 import Filamento
-import Filamento.Math (itemsWithNext, linspace2ByStep, linspaceByStep)
+import Filamento.Math (deltaLinspaceByStep, itemsWithNext, linspace2ByStep, linspaceByStep)
 import Linear
 import Relude
 
 data Profile = Hill | Valley deriving (Show)
 
-printSolidRect :: Rect2D -> GCode ()
-printSolidRect rect = section "Solid Rect" $ do
-  env <- ask
-  let solidRects = getSolidRects rect env.lineWidth
-  forM_ solidRects $ \solidRect -> do
-    printRect' solidRect
+testCode :: GCode ()
+testCode = do
+  printSolidRect (rect2FromCenterSize (v2PosFromMm 0 0) (fromMm $ V2 6 10)) (fromMm 0.4)
 
 (|>) :: (Show a) => a -> String -> a
 x |> msg = Trace.trace (msg ++ ": " ++ show x) x
 
-getSolidRects :: Rect2D -> Delta -> [Rect2D]
-getSolidRects rect lineWidth =
+printSolidRect :: Rect2D -> Delta -> GCode ()
+printSolidRect frame lineWidth = do
+  let V2 frameX2 frameY2 = rect2GetMaxCorner frame
+      V2 frameX1 frameY1 = rect2GetMinCorner frame
+      spansX = getSpans frameX1 frameX2
+      spansY = getSpans frameY1 frameY2
+
+  forM_ (zip spansX spansY) $ \((startX, endX), (startY, endY)) -> do
+    printRect' (rect2FromCorners (V2 startX startY) (V2 endX endY))
+  where
+    getSpans start end =
+      let ticks = linspaceByStep start end lineWidth deltaFloor
+          ticksCentered = map (\(pos1, pos2) -> posMiddle pos1 pos2) $ itemsWithNext ticks
+          (l, r) = splitMiddle ticksCentered
+       in zip l (reverse r)
+
+splitMiddle :: [a] -> ([a], [a])
+splitMiddle xs = splitAt n xs
+  where
+    n = length xs `div` 2
+
+getSolidRects' :: Rect2D -> Delta -> [Rect2D]
+getSolidRects' rect lineWidth =
   let V2 width depth = rect2GetSize rect
       rectCenter = rect2GetCenter rect
 
@@ -53,21 +71,15 @@ printRect' rect = section "Print Rect" $ do
   forM_ lines $ \(p1, p2) -> do
     printLine (line2FromPoints p1 p2)
 
--- printLine' :: Line2D -> GCode ()
--- printLine' line = do
---   let start = line2GetStart line
---       end = line2GetEnd line
-
---   moveTo start
---   extrudeTo end
-
 printLine :: Line2D -> GCode ()
 printLine line = do
   let start = line2GetStart line
       end = line2GetEnd line
-      pts = case linspace2ByStep (start |> "start") (end |> "end") (fromMm 3 |> "fromMm 3") deltaRound of
-        [] -> [start, end]
-        vals -> vals
+      pts = case configDefault.splitLinesEvery of
+        Nothing -> [start, end]
+        Just val -> case linspace2ByStep start end val deltaRound of
+          [] -> [start, end]
+          vals -> vals
 
   forM_ (itemsWithNext pts) $ \(p1, p2) -> do
     moveTo p1
@@ -75,14 +87,16 @@ printLine line = do
 
 data Config = Config
   { overlap :: Delta,
-    filamentDia :: Delta
+    filamentDia :: Delta,
+    splitLinesEvery :: Maybe Delta
   }
 
 configDefault :: Config
 configDefault =
   Config
     { overlap = fromMm 2,
-      filamentDia = fromMm 1.75
+      filamentDia = fromMm 1.75,
+      splitLinesEvery = Nothing -- Just $ fromMm 3
     }
 
 getLength :: OutOf -> Profile -> Delta -> Delta
@@ -118,7 +132,7 @@ printProfile profile posY len = do
         V3 _ _ zMax = toMm env.sketchSize
         prop = fromFraction (z / zMax)
     let size = V2 (getWidth prop) (getLength outOf profile len)
-    printSolidRect (rect2FromCenterSize rectCenter size)
+    printSolidRect (rect2FromCenterSize rectCenter size) env.lineWidth
 
 data SpiralConfig = SpiralConfig
   { center :: V3 Position,

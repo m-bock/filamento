@@ -11,6 +11,12 @@ justX (V2 x _) = V2 x 0
 justY :: V2 Double -> V2 Double
 justY (V2 _ y) = V2 0 y
 
+deltaLinspace :: Delta -> Delta -> Count -> [Delta]
+deltaLinspace d1 d2 count = map deltaFromPos $ linspace (posFromDelta d1) (posFromDelta d2) count
+
+deltaLinspaceByStep :: Delta -> Delta -> Delta -> (Delta -> Count) -> [Delta]
+deltaLinspaceByStep d1 d2 idealStep f = map deltaFromPos $ linspaceByStep (posFromDelta d1) (posFromDelta d2) idealStep f
+
 -- count >= 2
 linspace :: Position -> Position -> Count -> [Position]
 linspace _ _ n | (n < fromInt 2) = []

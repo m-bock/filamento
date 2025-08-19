@@ -1,49 +1,55 @@
 module Filamento.TypeOps
-  ( freqBeepLow,
-    freqBeepMid,
-    freqBeepHigh,
+  ( angleCircle,
+    angleCos,
+    angleFromProportion,
+    angleSin,
+    deltaFloor,
     deltaFromMm,
-    v2DeltaToV3,
-    v2DeltaFromMm,
-    v3DeltaFromMm,
-    v3DeltaFromV2,
-    v3DeltaDropZ,
-    v2PosFromMm,
-    v2PosDropZ,
-    v3PosFromMm,
+    deltaMiddle,
+    deltaFromPos,
+    deltaRound,
+    freqBeepHigh,
+    freqBeepLow,
+    freqBeepMid,
     outOfToCountTotal,
-    outOfToProportion,
     outOfToFraction,
+    outOfToProportion,
+    posFromDelta,
+    posFromMm,
     posToMm,
-    rect2FromCorners,
-    rect2ToCenterSize,
+    posMiddle,
     rect2FromCenterSize,
-    square2ToRect2,
+    rect2FromCorners,
+    rect2GetCenter,
+    rect2GetMaxCorner,
+    rect2GetPoints,
+    rect2GetSize,
+    rect2ToCenterSize,
+    rect2ToCorners,
+    rect2ToMinSize,
+    square2FromCenterSize,
+    square2GetCenter,
+    square2GetMaxCorner,
     square2GetMinCorner,
     square2GetSize,
-    square2FromCenterSize,
-    square2GetMaxCorner,
-    rect2GetSize,
-    rect2GetCenter,
-    rect2GetPoints,
+    square2ToCenterSize,
+    square2ToRect2,
     squareGetLines,
-    angleSin,
-    angleCos,
-    angleCircle,
-    angleFromProportion,
+    v2DeltaFromMm,
+    v2DeltaToV3,
+    v2PosDropZ,
+    v2PosFromMm,
+    v3DeltaDropZ,
+    v3DeltaFromMm,
+    v3DeltaFromV2,
+    v3PosFromMm,
     module Export,
-    deltaFromPos,
-    deltaFloor,
-    deltaRound,
-    posFromMm,
-    posFromDelta,
   )
 where
 
 import Filamento.Classes
 import Filamento.Types as Export
 import Linear
-import qualified Linear as Lin
 import Relude
 
 deltaFromMm :: Double -> Delta
@@ -58,6 +64,9 @@ deltaRound = fromInt . round . toMm
 deltaFromPos :: Position -> Delta
 deltaFromPos pos = getDelta (posFromMm 0) pos
 
+deltaMiddle :: Delta -> Delta -> Delta
+deltaMiddle d1 d2 = addDelta d1 (scale 0.5 (getDelta d1 d2))
+
 -------------------------------------------------------------------------------
 
 posFromDelta :: Delta -> Position
@@ -68,6 +77,9 @@ posToMm = toMm
 
 posFromMm :: Double -> Position
 posFromMm = fromMm
+
+posMiddle :: Position -> Position -> Position
+posMiddle p1 p2 = addDelta p1 (scale 0.5 (getDelta p1 p2))
 
 -------------------------------------------------------------------------------
 
@@ -127,7 +139,7 @@ outOfToFraction (outOfToCountTotal -> (count, total)) = toDouble count / toDoubl
 
 rect2FromCorners :: V2 Position -> V2 Position -> Rect2D
 rect2FromCorners minCorner maxCorner =
-  rect2FromMinSize minCorner (getDelta maxCorner minCorner)
+  rect2FromMinSize minCorner (getDelta minCorner maxCorner)
 
 rect2ToCorners :: Rect2D -> (V2 Position, V2 Position)
 rect2ToCorners rect = (rect2GetMinCorner rect, rect2GetMaxCorner rect)

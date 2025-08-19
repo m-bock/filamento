@@ -85,6 +85,13 @@ instance Scalable (V2 Delta) where
 instance Scalable (V3 Delta) where
   scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)
 
+instance GetDelta Delta Delta where
+  getDelta (Delta x) (Delta y) = Delta (y - x)
+
+instance DeltaApplication Delta Delta where
+  addDelta (Delta x) (Delta y) = Delta (x + y)
+  subDelta (Delta x) (Delta y) = Delta (x - y)
+
 -------------------------------------------------------------------------------
 
 newtype Angle = Angle {rad :: Double}

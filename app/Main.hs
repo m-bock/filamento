@@ -81,6 +81,9 @@ printAll :: GCode ()
 printAll = initPrinter do
   -- printSketchFrame
 
+  moveToZ (fromMm 0.2)
+  testCode
+
   env <- ask
   st <- gcodeStateGet
   let ret = getFilamentDef env st printSketch
