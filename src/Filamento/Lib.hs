@@ -72,7 +72,7 @@ printLayers_ gcode = printLayers (const gcode)
 printSketchFrame :: GCode ()
 printSketchFrame = section "sketchFrame" do
   env <- ask
-  let size2d = v2DeltaFrom3 env.sketchSize
+  let size2d = v3DeltaDropZ env.sketchSize
   let centerBed = addDelta mempty (scale 0.5 env.bedSize - scale 0.5 size2d)
   printRect2d centerBed size2d
 
@@ -98,24 +98,24 @@ withZHop inner = section "zHop" do
   moveToZ (fromMm z)
   pure ret
 
-printPolyLine :: [Position3D] -> GCode ()
+printPolyLine :: [V3 Position] -> GCode ()
 printPolyLine [] = pure ()
 printPolyLine (v : vs) = do
   moveTo v
   extrudePoints vs
 
-extrudePoints :: [Position3D] -> GCode ()
+extrudePoints :: [V3 Position] -> GCode ()
 extrudePoints vs = do
   forM_ vs $ \v -> do
     extrudeTo v
 
-printRect2d :: Position2D -> V2 Delta -> GCode ()
+printRect2d :: V2 Position -> V2 Delta -> GCode ()
 printRect2d (toMm -> V2 x y) delta = do
   (toMm -> V3 _ _ z) <- getCurrentPosition
   let pos = fromMm $ V3 x y z
   printRect pos delta
 
-printRect :: Position3D -> V2 Delta -> GCode ()
+printRect :: V3 Position -> V2 Delta -> GCode ()
 printRect v1 (toMm -> V2 dx dy) = section "printRect" do
   let dlt3 = fromMm $ V3 dx dy 0
   let v2 = addDelta v1 (justX dlt3)
@@ -130,14 +130,14 @@ printTestStripes = section "Test Stripes" $ do
   moveToZ (fromMm 0.2)
 
   section "stripe 1" do
-    moveTo (pos2fromMm 5 5)
+    moveTo (v2PosFromMm 5 5)
     extrude 5
-    extrudeTo (pos2fromMm 215.0 5)
+    extrudeTo (v2PosFromMm 215.0 5)
     extrude (-1)
 
   section "stripe 2" do
-    withRetract $ withZHop $ moveTo (pos2fromMm 5 10)
-    extrudeTo (pos2fromMm 215.0 10)
+    withRetract $ withZHop $ moveTo (v2PosFromMm 5 10)
+    extrudeTo (v2PosFromMm 215.0 10)
 
 finalPark :: GCode ()
 finalPark = do
@@ -162,7 +162,7 @@ homeOrResume = do
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
-  moveTo (pos3fromMm 0 0 2)
+  moveTo (v3PosFromMm 0 0 2)
   playTone_
   pause (fromSecs 10)
 
@@ -172,7 +172,7 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  moveTo (pos3fromMm 0 0 0)
+  moveTo (v3PosFromMm 0 0 0)
 
   heatup homeOrResume
 
@@ -200,7 +200,7 @@ heatup inner = do
 
   pure ret
 
-printPolygon :: Int -> Position3D -> Delta -> GCode ()
+printPolygon :: Int -> V3 Position -> Delta -> GCode ()
 printPolygon n v s'
   | n < 3 = pure () -- Polygons need at least 3 sides
   | s' <= 0 = pure () -- Side length must be positive
@@ -210,7 +210,7 @@ printPolygon n v s'
           points =
             [ addDelta
                 v
-                (delta3fromMm (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
+                (fromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
               | i <- [0 .. n - 1]
             ]
       case viaNonEmpty head points of
@@ -250,7 +250,7 @@ getFilamentDef env state' gcode =
 data Dir = Vert | Horz
   deriving (Show, Eq)
 
-purgeTower :: Position2D -> Delta -> Int -> GCode ()
+purgeTower :: V2 Position -> Delta -> Int -> GCode ()
 purgeTower (toMm -> V2 x y) (toMm -> size) purgeIndex = section "purgeTower" do
   st <- gcodeStateGet
   let dir = if odd st.currentLayer then Vert else Horz
@@ -269,9 +269,9 @@ purgeTower (toMm -> V2 x y) (toMm -> size) purgeIndex = section "purgeTower" do
       case dir of
         Vert -> do
           section "vertical" do
-            withRetract $ withZHop $ moveTo (pos2fromMm x (y + tick))
+            withRetract $ withZHop $ moveTo (v2PosFromMm x (y + tick))
             extrudeByX (fromMm size)
         Horz -> do
           section "horizontal" do
-            withRetract $ withZHop $ moveTo (pos2fromMm (x + tick) y)
+            withRetract $ withZHop $ moveTo (v2PosFromMm (x + tick) y)
             extrudeByY (fromMm size)

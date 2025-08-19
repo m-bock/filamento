@@ -10,21 +10,21 @@ import Relude
 
 printStripesAlongX :: Square2D -> Count -> [Line2D]
 printStripesAlongX square count = do
-  let V2 x1 y1 = pos2ToVec $ square2GetMinCorner square
-      V2 x2 y2 = pos2ToVec $ square2GetMaxCorner square
+  let V2 x1 y1 = square2GetMinCorner square
+      V2 x2 y2 = square2GetMaxCorner square
 
       ys = linspace y1 y2 count
 
-  map (\y -> line2FromPointsDeprec (pos2FromPos x1 y) (pos2FromPos x2 y)) ys
+  map (\y -> line2FromPoints (V2 x1 y) (V2 x2 y)) ys
 
 printStripesAlongY :: Square2D -> Count -> [Line2D]
 printStripesAlongY square count = do
-  let V2 x1 y1 = pos2ToVec $ square2GetMinCorner square
-      V2 x2 y2 = pos2ToVec $ square2GetMaxCorner square
+  let V2 x1 y1 = square2GetMinCorner square
+      V2 x2 y2 = square2GetMaxCorner square
 
       xs = linspace x1 x2 count
 
-  map (\x -> line2FromPointsDeprec (pos2FromPos x y1) (pos2FromPos x y2)) xs
+  map (\x -> line2FromPoints (V2 x y1) (V2 x y2)) xs
 
 printPurgeTower :: Square2D -> Count -> GCode ()
 printPurgeTower square count = do
@@ -44,7 +44,7 @@ printSketch :: GCode ()
 printSketch = withSketchTranspose do
   resetLayers
   printLayers_ do
-    let rect = rect2FromCenterSize (pos2fromMm 50 50) (fromMm $ V2 50 30)
+    let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fromMm $ V2 50 30)
         (p1, p2, p3, p4) = rect2GetPoints rect
 
     comment ("rect: " <> show rect)
@@ -56,10 +56,10 @@ printSketch = withSketchTranspose do
     withColors
       \color -> do
         color Red do
-          printPurgeTower (square2FromCenterSize (pos2fromMm 20 120) (fromMm 20)) (fromInt 20)
+          printPurgeTower (square2FromCenterSize (v2PosFromMm 20 120) (fromMm 20)) (fromInt 20)
 
         color Yellow do
-          printPurgeTower (square2FromCenterSize (pos2fromMm 80 120) (fromMm 20)) (fromInt 20)
+          printPurgeTower (square2FromCenterSize (v2PosFromMm 80 120) (fromMm 20)) (fromInt 20)
 
         color Red do
           moveTo p1
@@ -79,7 +79,7 @@ printSketch = withSketchTranspose do
 
 printAll :: GCode ()
 printAll = initPrinter do
-  printSketchFrame
+  -- printSketchFrame
 
   env <- ask
   st <- gcodeStateGet
@@ -112,6 +112,6 @@ main = do
               retractLength = fromMm 1.5,
               colors = fmap show $ Red :| [Yellow],
               sketchSize = fromMm $ V3 100 100 10,
-              parkingPosition = pos3fromMm 0 0 20
+              parkingPosition = v3PosFromMm 0 0 20
             }
       }

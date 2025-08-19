@@ -11,7 +11,7 @@ import Relude
 data Dir = Vert | Horz
   deriving (Show, Eq)
 
-purgeTower :: Position2D -> Delta -> Int -> GCode ()
+purgeTower :: V2 Position -> Delta -> Int -> GCode ()
 purgeTower (toMm -> V2 x y) (toMm -> size) purgeIndex = do
   st <- gcodeStateGet
   let dir = if odd st.currentLayer then Vert else Horz
@@ -31,11 +31,11 @@ purgeTower (toMm -> V2 x y) (toMm -> size) purgeIndex = do
       case dir of
         Vert -> do
           section "vertical" do
-            withRetract $ withZHop $ moveTo (pos2fromMm y (x + tick))
+            withRetract $ withZHop $ moveTo (v2PosFromMm y (x + tick))
             extrudeByX (fromMm size)
         Horz -> do
           section "horizontal" do
-            withRetract $ withZHop $ moveTo (pos2fromMm (x + tick) y)
+            withRetract $ withZHop $ moveTo (v2PosFromMm (x + tick) y)
             extrudeByY (fromMm size)
 
 printSketch :: GCode ()

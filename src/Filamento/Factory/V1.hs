@@ -104,7 +104,7 @@ getWidth prop =
 
 printProfile :: Profile -> Position -> Delta -> GCode ()
 printProfile profile posY len = do
-  let rectCenter = addDelta (pos2FromPos 0 posY) (V2 20 (scale 0.5 len))
+  let rectCenter = addDelta (V2 0 posY) (V2 20 (scale 0.5 len))
 
   resetLayers
 
@@ -121,7 +121,7 @@ printProfile profile posY len = do
     printSolidRect (rect2FromCenterSize rectCenter size)
 
 data SpiralConfig = SpiralConfig
-  { center :: Position3D,
+  { center :: V3 Position,
     radius :: Delta,
     constant :: Delta
   }
@@ -129,16 +129,16 @@ data SpiralConfig = SpiralConfig
 defaultSpiralConfig :: SpiralConfig
 defaultSpiralConfig =
   SpiralConfig
-    { center = pos3fromMm 110 110 0,
+    { center = v3PosFromMm 110 110 0,
       radius = fromMm 100,
       constant = fromMm (-0.5)
     }
 
-translateSpiral :: SpiralConfig -> Position3D -> Position3D
-translateSpiral spiralConfig pos = fromMm3 x' y' z
+translateSpiral :: SpiralConfig -> V3 Position -> V3 Position
+translateSpiral spiralConfig pos = v3PosFromMm x' y' z
   where
-    (centerX, centerY, _) = toMm3 spiralConfig.center
-    (x, y, z) = toMm3 pos
+    V3 centerX centerY _ = toMm spiralConfig.center
+    V3 x y z = toMm pos
 
     -- Use the simple fnApprox approach that works
     arcLength = y -- y coordinate represents arc length along spiral

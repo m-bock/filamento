@@ -127,14 +127,14 @@ data GCodeEnv = Env
     extrudeSpeedFirstLayer :: Speed,
     bedTemperature :: Temperature,
     hotendTemperature :: Temperature,
-    parkingPosition :: Position3D,
-    autoHomePosition :: Position3D,
+    parkingPosition :: V3 Position,
+    autoHomePosition :: V3 Position,
     sketchSize :: V3 Delta,
     layerHeight :: Delta,
     firstLayerHeight :: Delta,
     lineWidth :: Delta,
     filamentDia :: Delta,
-    transpose :: Position3D -> Position3D,
+    transpose :: V3 Position -> V3 Position,
     retractLength :: Delta,
     retractSpeed :: Speed,
     zHop :: Delta,
@@ -188,14 +188,14 @@ instance ToJSON FilamentSection
 
 data GCodeState = GCodeState
   { currentLayer :: Int,
-    currentPosition :: Position3D,
+    currentPosition :: V3 Position,
     stdgen :: StdGen,
     filament :: NonEmpty FilamentSection
   }
   deriving (Show, Eq)
 
 data Msg
-  = MsgChangeCurrentPosition Position3D
+  = MsgChangeCurrentPosition (V3 Position)
   | MsgTrackExtrusion Delta
   | MsgChangeCurrentLayer Int
   | MsgChangeColor Text
@@ -234,11 +234,11 @@ gcodeStateInit env =
 -------------------------------------------------------------------------------
 --- Utils
 -------------------------------------------------------------------------------
-transposeCenterSketch :: V3 Delta -> V2 Delta -> Position3D -> Position3D
+transposeCenterSketch :: V3 Delta -> V2 Delta -> V3 Position -> V3 Position
 transposeCenterSketch sketchSize bedSize pos =
-  let halfSketch = scale 0.5 (v2DeltaFrom3 sketchSize)
+  let halfSketch = scale 0.5 (v3DeltaDropZ sketchSize)
       halfBed = scale 0.5 bedSize
-      diff = delta3From2 (halfBed - halfSketch) mempty
+      diff = v3DeltaFromV2 (halfBed - halfSketch) 0
    in addDelta pos diff
 
 withSketchTranspose :: GCode a -> GCode a
@@ -362,7 +362,7 @@ setFanSpeedFull = setFanSpeed (clampFraction 1)
 
 --------------------------------------------------------------------------------
 
-operateTool :: Position3D -> Speed -> Delta -> GCode ()
+operateTool :: V3 Position -> Speed -> Delta -> GCode ()
 operateTool v_ speed extr = do
   env <- ask
 
@@ -390,7 +390,7 @@ moveToImpl mx my mz = do
       newX = fromMaybe x mx
       newY = fromMaybe y my
       newZ = fromMaybe z mz
-  operateTool (pos3fromMm newX newY newZ) speed 0
+  operateTool (v3PosFromMm newX newY newZ) speed 0
 
 moveToX :: Position -> GCode ()
 moveToX (toMm -> x) =
@@ -488,7 +488,7 @@ getSpeed = do
       then env.moveSpeedFirstLayer
       else env.moveSpeed
 
-getExtrudeLength :: Position3D -> GCode Delta
+getExtrudeLength :: V3 Position -> GCode Delta
 getExtrudeLength target = do
   extrudeMM <- getExtrudeMM
   st <- gcodeStateGet
@@ -556,7 +556,7 @@ waitForHotendTemperature temp = do
       { degrees = Just $ round $ toCelsius temp
       }
 
-setPositionXYZ :: Position3D -> GCode ()
+setPositionXYZ :: V3 Position -> GCode ()
 setPositionXYZ (toMm -> V3 x y z) = do
   gcodeFromCmd
     $ GSetPosition
@@ -566,7 +566,7 @@ setPositionXYZ (toMm -> V3 x y z) = do
         extrude = Nothing
       }
 
-setPositionXY :: Position2D -> GCode ()
+setPositionXY :: V2 Position -> GCode ()
 setPositionXY (toMm -> V2 x y) = do
   gcodeFromCmd
     $ GSetPosition
@@ -579,7 +579,7 @@ setPositionXY (toMm -> V2 x y) = do
 data FilamentStrategy = FilamentChange | PreparedFilament
   deriving (Show, Eq)
 
-getCurrentPosition :: GCode Position3D
+getCurrentPosition :: GCode (V3 Position)
 getCurrentPosition = do
   st <- gcodeStateGet
   pure st.currentPosition
@@ -587,14 +587,8 @@ getCurrentPosition = do
 class MoveTo a where
   moveTo :: a -> GCode ()
 
-instance MoveTo Position3D where
-  moveTo (toMm -> V3 x y z) = moveToImpl (Just x) (Just y) (Just z)
-
 instance MoveTo (V3 Position) where
   moveTo (V3 x y z) = moveToImpl (Just $ toMm x) (Just $ toMm y) (Just $ toMm z)
-
-instance MoveTo Position2D where
-  moveTo (toMm -> V2 x y) = moveToImpl (Just x) (Just y) Nothing
 
 instance MoveTo (V2 Position) where
   moveTo (V2 x y) = moveToImpl (Just $ toMm x) (Just $ toMm y) Nothing
@@ -602,26 +596,14 @@ instance MoveTo (V2 Position) where
 class MoveBy a where
   moveBy :: a -> GCode ()
 
-instance MoveBy Delta3D where
-  moveBy (toMm -> V3 x y z) = moveByImpl (Just x) (Just y) (Just z)
-
 instance MoveBy (V2 Delta) where
   moveBy (toMm -> V2 x y) = moveByImpl (Just x) (Just y) Nothing
 
 class ExtrudeTo a where
   extrudeTo :: a -> GCode ()
 
-instance ExtrudeTo Position3D where
-  extrudeTo (toMm -> V3 x y z) = extrudeToImpl (Just x) (Just y) (Just z)
-
-instance ExtrudeTo Position2D where
-  extrudeTo (toMm -> V2 x y) = extrudeToImpl (Just x) (Just y) Nothing
-
 class ExtrudeBy a where
   extrudeBy :: a -> GCode ()
-
-instance ExtrudeBy Delta3D where
-  extrudeBy (toMm -> V3 x y z) = extrudeByImpl (Just x) (Just y) (Just z)
 
 instance ExtrudeTo (V3 Position) where
   extrudeTo (V3 x y z) = extrudeToImpl (Just $ toMm x) (Just $ toMm y) (Just $ toMm z)
