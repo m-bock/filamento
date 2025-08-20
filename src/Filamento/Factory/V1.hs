@@ -108,16 +108,34 @@ printProfile profile posY len = do
   local (\env -> env {zHop = scale 1.2 configDefault.filamentDia}) do
     withRetract $ withZHop $ moveTo rectCenter
 
-  printLayers_ do
-    st <- gcodeStateGet
+  moveToZ (fromMm 0.0)
+
+  whileSketchZ do
     env <- ask
-    let V3 _ _ z = toMm st.currentPosition |> "cur pos"
-        V3 _ _ zMax = toMm env.sketchSize
-        frac = z / zMax
-        fracProjected = Math.project (0, 1) (0, 1) frac
-        prop = fromFraction fracProjected |> "prop"
-    let size = V2 (getWidth prop) (getLength prop profile len) |> "size"
-    printSolidRect (rect2FromCenterSize rectCenter size) env.lineWidth
+    prop <- getZProgress
+    let z =
+          let isInner = fromFraction 0.25 < prop && prop < fromFraction 0.75
+           in if isInner then fromMm 0.2 else fromMm 0.1
+    moveByZ z
+    let rectMinWidth = 2 * env.lineWidth
+        rectWidth = max rectMinWidth (getWidth prop)
+        rectLength = getLength prop profile len
+        rectSize = V2 rectWidth rectLength
+        rect = rect2FromCenterSize rectCenter rectSize
+    printSolidRect rect env.lineWidth
+
+-- printLayers_ do
+--   st <- gcodeStateGet
+--   env <- ask
+--   let V3 _ _ z = toMm st.currentPosition |> "cur pos"
+--       V3 _ _ zMax = toMm env.sketchSize
+--       frac = z / zMax
+--       fracProjected = Math.project (0, 1) (0, 1) frac
+--       prop = fromFraction fracProjected |> "prop"
+--       rectWidth = max (scale 2 env.lineWidth) (getWidth prop)
+--       rectLength = getLength prop profile len
+--       rectSize = V2 rectWidth rectLength |> "size"
+--   printSolidRect (rect2FromCenterSize rectCenter rectSize) env.lineWidth
 
 data SpiralConfig = SpiralConfig
   { center :: V3 Position,
@@ -176,7 +194,7 @@ printFilament secs = local
           moveSpeed = fromMmPerSec 2000,
           extrudeSpeed = fromMmPerSec 2500,
           retractLength = fromMm 1.5,
-          transpose = translateSpiral defaultSpiralConfig
+          transpose = id -- translateSpiral defaultSpiralConfig
         }
   )
   do
@@ -196,7 +214,6 @@ printFilament secs = local
                 sdist = getDelta begin end
                 colorIndex = fromMaybe 0 (elemIndex sec.color colors)
             setTool colorIndex
-            comment ("Print " <> show (sec, secPrev, begin, end, sdist))
             printProfile profile begin sdist
 
         filamentChange

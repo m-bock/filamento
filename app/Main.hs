@@ -46,13 +46,6 @@ printSketch = withSketchTranspose do
   printLayers_ do
     let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fromMm $ V2 50 30)
         (p1, p2, p3, p4) = rect2GetPoints rect
-
-    comment ("rect: " <> show rect)
-    comment ("p1: " <> show p1)
-    comment ("p2: " <> show p2)
-    comment ("p3: " <> show p3)
-    comment ("p4: " <> show p4)
-
     withColors
       \color -> do
         color Red do

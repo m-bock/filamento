@@ -18,7 +18,9 @@ module Filamento.Lib
     printLayers_,
     withColors,
     printSketchFrame,
+    whileSketchZ,
     getFilamentDef,
+    getZProgress,
   )
 where
 
@@ -55,6 +57,26 @@ withColors f = do
     changeColor color
     setTool i
     forM_ gcs $ \gc -> gc
+
+whileSketchZ :: GCode () -> GCode ()
+whileSketchZ inner = do
+  st <- gcodeStateGet
+  env <- ask
+  let V3 _ _ sketchHeight = toMm env.sketchSize
+  let V3 _ _ z = toMm st.currentPosition
+  if z < sketchHeight
+    then do
+      inner
+      whileSketchZ inner
+    else pure ()
+
+getZProgress :: GCode Proportion
+getZProgress = do
+  st <- gcodeStateGet
+  env <- ask
+  let V3 _ _ sketchHeight = toMm env.sketchSize
+  let V3 _ _ z = toMm st.currentPosition
+  pure (fromFraction (z / sketchHeight))
 
 printLayers :: (OutOf -> GCode ()) -> GCode ()
 printLayers printLayer = do
