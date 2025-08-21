@@ -67,10 +67,10 @@ itemsWithNext xs =
     Just xsTail -> zip xs xsTail
     Nothing -> []
 
-project :: (Double, Double) -> (Double, Double) -> Double -> Double
-project (inMin, inMax) (outMin, outMax) val =
-  let inRange = inMax - inMin
-      outRange = outMax - outMin
-      inVal = val - inMin
-      outVal = inVal * outRange / inRange
-   in outVal + outMin
+project :: Range -> Range -> Position -> Position
+project rangeIn rangeOut val =
+  let inDelta = rangeToDelta rangeIn
+      outDelta = rangeToDelta rangeOut
+      inVal = val - rangeGetFrom rangeIn
+      outVal = scale (toMm outDelta / toMm inDelta) inVal
+   in outVal + rangeGetFrom rangeOut

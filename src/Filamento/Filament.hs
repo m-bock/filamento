@@ -1,15 +1,16 @@
-module Filamento.Factory.V1
+module Filamento.Filament
   ( printFilament,
     FilamentConfig (..),
     printFilament_,
   )
 where
 
-import Data.Foldable (Foldable (maximum))
 import Data.List (elemIndex, nub)
 import qualified Data.Text as Text
 import Filamento
+import Filamento.Debug
 import Filamento.Math (itemsWithNext, linspace2ByStep, linspaceByStep)
+import GHC.List ((!!))
 import Linear
 import Relude
 import Text.Printf (printf)
@@ -43,7 +44,7 @@ filamentConfigDefault =
       filamentDia = fromMm 1.75,
       splitLinesEvery = Just $ fromMm 3,
       spiralCenter = v3PosFromMm 110 110 0,
-      spiralRadius = fromMm 100,
+      spiralRadius = fromMm 75,
       spiralConstant = fromMm (-0.5),
       disableSpiral = False
     }
@@ -110,11 +111,11 @@ getLength config prop profile len =
       ramp = scale (frac + frac) ov
    in ramp + (-ov) + len + (-ov) + ramp
 
-getWidth :: FilamentConfig -> Proportion -> Delta
-getWidth config propY =
+getWidth :: Delta -> Proportion -> Delta
+getWidth filamentDia propY =
   let y = toFraction propY
       w = sqrt (1 - 4 * (y - 0.5) ^ 2)
-   in scale w config.filamentDia
+   in scale w filamentDia
 
 printFilamentSegment :: FilamentConfig -> (Rect2D -> GCode ()) -> FilamentSegment -> GCode ()
 printFilamentSegment config printPlane profile = do
@@ -128,24 +129,21 @@ printFilamentSegment config printPlane profile = do
   moveToZ (fromMm 0.0)
 
   whileSketchZ do
-    oldProp <- getZProgress
-
-    let z =
-          let isInner = fromFraction 0.25 < oldProp && oldProp < fromFraction 0.75
-           in if isInner then fromMm 0.2 else fromMm 0.1
-
-    moveByZ z
+    st <- gcodeStateGet
+    let layerHeight = getLayerHeight config (fromInt st.currentLayer)
+    moveByZ layerHeight
+    incLayers
 
     prop <- getZProgress
 
-    let rectWidth = max 0 $ getWidth config prop
+    let rectWidth = max 0 $ getWidth config.filamentDia prop
         rectLength = getLength config prop profile.profileType profile.depth
         rectSize = V2 rectWidth rectLength
         rect = rect2FromCenterSize rectCenter rectSize
 
     comment ("prop = " <> Text.pack (printf "%.3f" (toFraction prop)))
     section (Text.pack $ printf "%.3f" (toFraction prop)) do
-      local (\env -> env {layerHeight = z}) do
+      local (\env -> env {layerHeight = layerHeight}) do
         printPlane rect
 
 printFilamentChain :: (FilamentSegment -> GCode ()) -> [FilamentSection] -> GCode ()
@@ -222,3 +220,12 @@ printFilament mkConfig secs = section "filament" do
 
 printFilament_ :: [FilamentSection] -> GCode ()
 printFilament_ = printFilament id
+
+-------------------------------------------------------------------------------
+
+getLayerHeight :: FilamentConfig -> Count -> Delta
+getLayerHeight config layerIndex =
+  let layerTotal = fromInt (round (config.filamentDia / 0.2)) :: Total
+      outOf = outOfFromCountTotal layerIndex layerTotal
+      prop = outOfToProportion outOf
+   in 0.1

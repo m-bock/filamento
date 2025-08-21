@@ -126,7 +126,7 @@ v3PosFromMm x y z = V3 (posFromMm x) (posFromMm y) (posFromMm z)
 
 -------------------------------------------------------------------------------
 
-outOfToCountTotal :: OutOf -> (Count, Count)
+outOfToCountTotal :: OutOf -> (Count, Total)
 outOfToCountTotal outOf = (outOfGetCount outOf, outOfGetTotal outOf)
 
 outOfToProportion :: OutOf -> Proportion

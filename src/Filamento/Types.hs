@@ -30,6 +30,11 @@ module Filamento.Types
     outOfGetCount,
     outOfGetTotal,
     outOfFromCountTotal,
+    Range,
+    rangeFromPos,
+    rangeToDelta,
+    rangeGetFrom,
+    rangeGetTo,
   )
 where
 
@@ -170,6 +175,15 @@ instance Distance Delta (V3 Position) where
         (V3 (toMm x1) (toMm y1) (toMm z1))
         (V3 (toMm x2) (toMm y2) (toMm z2))
 
+instance Scalable Position where
+  scale factor (Position p) = Position (p * factor)
+
+instance Scalable (V2 Position) where
+  scale factor (V2 x y) = V2 (scale factor x) (scale factor y)
+
+instance Scalable (V3 Position) where
+  scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)
+
 -------------------------------------------------------------------------------
 
 newtype Duration = Duration {ms :: Double}
@@ -279,16 +293,16 @@ instance FromToDouble Double Total where
 
 -------------------------------------------------------------------------------
 
-data OutOf = OutOf {count :: Count, total :: Count}
+data OutOf = OutOf {count :: Count, total :: Total}
   deriving (Show, Eq)
 
-outOfFromCountTotal :: Count -> Count -> OutOf
+outOfFromCountTotal :: Count -> Total -> OutOf
 outOfFromCountTotal count total = OutOf {count, total}
 
 outOfGetCount :: OutOf -> Count
 outOfGetCount (OutOf {count}) = count
 
-outOfGetTotal :: OutOf -> Count
+outOfGetTotal :: OutOf -> Total
 outOfGetTotal (OutOf {total}) = total
 
 instance FromToInt (Int, Int) OutOf where
@@ -338,3 +352,20 @@ propMin = Proportion 0
 
 propMax :: Proportion
 propMax = Proportion 1
+
+-------------------------------------------------------------------------------
+
+data Range = Range {from :: Position, to :: Position}
+  deriving (Show, Eq, Ord)
+
+rangeFromPos :: Position -> Position -> Range
+rangeFromPos from to = Range {from, to}
+
+rangeToDelta :: Range -> Delta
+rangeToDelta (Range {from, to}) = getDelta from to
+
+rangeGetFrom :: Range -> Position
+rangeGetFrom (Range {from}) = from
+
+rangeGetTo :: Range -> Position
+rangeGetTo (Range {to}) = to

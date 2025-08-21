@@ -3,8 +3,10 @@ module Main where
 -- import Data.IntMap.Lazy (restrictKeys)
 -- import Filament5 (Config (layerCount))
 import Filamento
-import Filamento.Factory.V1
+import Filamento.Filament
 import Filamento.Math
+import GHC.Conc
+import Graphics.Gnuplot.Simple
 import Linear
 import Relude
 
@@ -81,21 +83,21 @@ printAll = initPrinter do
   st <- gcodeStateGet
   let ret = getFilamentDef env st printSketch
 
-  -- comment (show ret)
+  printTestStripes
 
-  filamentChange
+  -- filamentChange
 
   resetLayers
   printFilament
-    (\cfg -> cfg {disableSpiral = True})
-    (take 10 (toList ret))
+    (\cfg -> cfg {disableSpiral = False})
+    (toList ret)
 
   filamentChange
 
   printSketch
 
-main :: IO ()
-main = do
+mainGen :: IO ()
+mainGen =
   generateGcode
     OutputConfig
       { gcodeFile = "out/myprint.gcode",
@@ -113,3 +115,15 @@ main = do
               parkingPosition = v3PosFromMm 0 0 20
             }
       }
+
+mainPlot :: IO ()
+mainPlot = do
+  pure ()
+
+-- let out = toMm <$> getLayerHeights
+-- putStrLn $ show out
+-- plotList [] out
+-- threadDelay 5000000 -- wait 5s
+
+main :: IO ()
+main = mainGen

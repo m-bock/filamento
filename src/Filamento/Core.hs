@@ -57,6 +57,7 @@ module Filamento.Core
     setTool,
     resetLayers,
     changeColor,
+    incLayers,
   )
 where
 
@@ -281,6 +282,11 @@ raw extra comm = GCode $ do
 resetLayers :: GCode ()
 resetLayers = section "resetLayers" do
   gcodeStateModify $ MsgChangeCurrentLayer 0
+
+incLayers :: GCode ()
+incLayers = do
+  st <- gcodeStateGet
+  gcodeStateModify $ MsgChangeCurrentLayer (st.currentLayer + 1)
 
 nextLayer :: GCode ()
 nextLayer = section "nextLayer" do

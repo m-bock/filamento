@@ -9,8 +9,8 @@ gcodeToComment cmd =
     GMillimeterUnits -> "Set units to millimeters"
     GInchUnits -> "Set units to inches"
     GLinearMove {extrude} -> case extrude of
-      Just _ -> "Linear move with extrusion"
-      Nothing -> "Linear move"
+      Just e | e > 0 -> "Linear move with extrusion"
+      _ -> "Linear move"
     GAutoHome {} -> "Auto home axes"
     GSetPosition {} -> "Set position"
     GCleanNozzle -> "Clean nozzle"
