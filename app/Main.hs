@@ -86,7 +86,9 @@ printAll = initPrinter do
   filamentChange
 
   resetLayers
-  printFilament (toList ret)
+  printFilament
+    (\cfg -> cfg {disableSpiral = True})
+    (take 10 (toList ret))
 
   filamentChange
 
