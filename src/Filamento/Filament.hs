@@ -149,7 +149,8 @@ printFilamentSegment config printPlane profile = do
   local (\env -> env {zHop = scale @Double 1.2 config.filamentDia}) do
     withRetract $ withZHop $ moveTo (V2 0 profile.pos)
 
-  let layerHeight = fromMm 0.2 :: Delta
+  env <- ask
+  let layerHeight = env.layerHeight
 
   moveToZ (posFromDelta layerHeight)
   incLayers
@@ -273,11 +274,13 @@ printFilament mkConfig secs = section "filament" do
         env
           { sketchSize = fromMm $ V3 10 10 (toMm config.filamentDia),
             lineWidth = fromMm 0.4,
-            layerHeight = fromMm 0.2,
-            firstLayerHeight = fromMm 0.2,
+            layerHeight = fromMm 0.18,
+            firstLayerHeight = fromMm 0.18,
             hotendTemperature = fromCelsius 205,
             bedTemperature = fromCelsius 65,
-            transpose = if config.disableSpiral then id else translateSpiral config
+            transpose = if config.disableSpiral then id else translateSpiral config,
+            moveSpeed = fromMmPerSec 150,
+            extrudeSpeed = fromMmPerSec 70
           }
     )
     do
