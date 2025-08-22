@@ -34,8 +34,8 @@ class Hertz lo hi | hi -> lo where
   fromHz :: lo -> hi
   toHz :: hi -> lo
 
-class Scalable a where
-  scale :: Double -> a -> a
+class Scalable factor a where
+  scale :: factor -> a -> a
 
 class JustX a where
   justX :: a -> a

@@ -142,20 +142,23 @@ getWidth filamentDia propY =
 
 printFilamentSegment :: FilamentConfig -> (Rect2D -> GCode ()) -> FilamentSegment -> GCode ()
 printFilamentSegment config printPlane profile = do
-  let rectCenter = V2 0 (addDelta profile.pos (scale 0.5 profile.depth))
+  let rectCenter = V2 0 (addDelta profile.pos (scale @Double 0.5 profile.depth))
 
   resetLayers
 
-  local (\env -> env {zHop = scale 1.2 config.filamentDia}) do
+  local (\env -> env {zHop = scale @Double 1.2 config.filamentDia}) do
     withRetract $ withZHop $ moveTo rectCenter
 
-  moveToZ (fromMm 0)
+  let layerHeight = fromMm 0.2 :: Delta
 
-  whileTrue
-    ( do
-        st <- gcodeStateGet
-        pure (st.currentLayer == 0)
-    )
+  moveToZ (posFromDelta layerHeight)
+  incLayers
+
+  whileSketchZ_
+    -- ( do
+    --     st <- gcodeStateGet
+    --     pure (st.currentLayer == 0)
+    -- )
     do
       st <- gcodeStateGet
 
@@ -164,10 +167,6 @@ printFilamentSegment config printPlane profile = do
           setFanOff
         else do
           setFanSpeedFull
-
-      let layerHeight = getLayerHeight config (fromInt st.currentLayer)
-      moveByZ layerHeight
-      incLayers
 
       prop <- getZProgress
 
@@ -181,6 +180,44 @@ printFilamentSegment config printPlane profile = do
         local (\env -> env {layerHeight = layerHeight}) do
           printPlane rect
 
+      moveByZ layerHeight
+      incLayers
+
+ironFinish :: FilamentConfig -> [FilamentSection] -> GCode ()
+ironFinish config secs = section "ironFinish" do
+  env <- ask
+
+  moveByZ (-env.layerHeight)
+  decLayers
+
+  outOf <- getLayerProgress
+  let prop = outOfToProportion (outOf |> "outOf") |> "prop"
+
+  let width = getWidth config.filamentDia prop |> "width"
+      depth = case viaNonEmpty last secs of
+        Just val -> val.endPosMm |> "depth"
+        Nothing -> 0 |> "depth"
+
+      startX = subDelta 0 $ scale @Double 0.5 width
+      endX = addDelta 0 $ scale @Double 0.5 width
+      step = env.lineWidth / 2
+
+      xs = linspaceByStep startX endX step deltaRound
+
+  forM_ (zip xs [0 ..]) $ \(x, i) -> do
+    let vec1 = V2 x 0
+        vec2 = V2 x depth
+        line =
+          if even i
+            then line2FromPoints vec2 vec1
+            else line2FromPoints vec1 vec2
+
+        lineSegs = getLines config line
+
+    forM_ lineSegs $ \lineSeq -> do
+      moveTo (line2GetStart lineSeq)
+      moveTo (line2GetEnd lineSeq)
+
 printFilamentChain :: (FilamentSegment -> GCode ()) -> [FilamentSection] -> GCode ()
 printFilamentChain innerPrintSegment secs = do
   let secsWithIndex = zip [0 ..] secs
@@ -191,6 +228,7 @@ printFilamentChain innerPrintSegment secs = do
 
   forM_ [(Hill, evens), (Valley, odds)] $ \(profileType, items) -> do
     local (\env -> env {transpose = id}) do
+      filamentChange
       printTestStripes
 
     section (show profileType) do
@@ -205,7 +243,6 @@ printFilamentChain innerPrintSegment secs = do
           setTool colorIndex
 
           innerPrintSegment segment
-      filamentChange
 
 translateSpiral :: FilamentConfig -> V3 Position -> V3 Position
 translateSpiral config pos = v3PosFromMm x' y' z
@@ -253,6 +290,7 @@ printFilament mkConfig secs = section "filament" do
             )
         )
         secs
+      ironFinish config secs
 
 printFilament_ :: [FilamentSection] -> GCode ()
 printFilament_ = printFilament id

@@ -65,7 +65,7 @@ deltaFromPos :: Position -> Delta
 deltaFromPos pos = getDelta (posFromMm 0) pos
 
 deltaMiddle :: Delta -> Delta -> Delta
-deltaMiddle d1 d2 = addDelta d1 (scale 0.5 (getDelta d1 d2))
+deltaMiddle d1 d2 = addDelta d1 (scale @Double 0.5 (getDelta d1 d2))
 
 -------------------------------------------------------------------------------
 
@@ -79,7 +79,7 @@ posFromMm :: Double -> Position
 posFromMm = fromMm
 
 posMiddle :: Position -> Position -> Position
-posMiddle p1 p2 = addDelta p1 (scale 0.5 (getDelta p1 p2))
+posMiddle p1 p2 = addDelta p1 (scale @Double 0.5 (getDelta p1 p2))
 
 -------------------------------------------------------------------------------
 
@@ -149,7 +149,7 @@ rect2FromCenterSize center size =
   rect2FromMinSize (subDelta center size') size
   where
     size' :: V2 Delta
-    size' = scale 0.5 size
+    size' = scale @Double 0.5 size
 
 rect2ToCenterSize :: Rect2D -> (V2 Position, V2 Delta)
 rect2ToCenterSize rect = (rect2GetCenter rect, rect2GetSize rect)
@@ -161,7 +161,7 @@ rect2GetMaxCorner :: Rect2D -> V2 Position
 rect2GetMaxCorner (rect2ToMinSize -> (minCorner, size)) = addDelta minCorner size
 
 rect2GetCenter :: Rect2D -> V2 Position
-rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = addDelta minCorner (scale 0.5 size)
+rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = addDelta minCorner (scale @Double 0.5 size)
 
 rect2GetPoints :: Rect2D -> (V2 Position, V2 Position, V2 Position, V2 Position)
 rect2GetPoints rect = (p1, p2, p3, p4)
@@ -175,13 +175,13 @@ rect2GetPoints rect = (p1, p2, p3, p4)
 -------------------------------------------------------------------------------
 
 square2FromCenterSize :: V2 Position -> Delta -> Square2D
-square2FromCenterSize center size = square2FromMinSize (addDelta center (pure $ scale 0.5 size)) size
+square2FromCenterSize center size = square2FromMinSize (addDelta center (pure $ scale @Double 0.5 size)) size
 
 square2ToCenterSize :: Square2D -> (V2 Position, V2 Delta)
 square2ToCenterSize square = (square2GetCenter square, square2GetSize square)
 
 square2GetCenter :: Square2D -> V2 Position
-square2GetCenter square = addDelta (square2GetMinCorner square) (scale 0.5 (square2GetSize square))
+square2GetCenter square = addDelta (square2GetMinCorner square) (scale @Double 0.5 (square2GetSize square))
 
 square2GetMaxCorner :: Square2D -> V2 Position
 square2GetMaxCorner square = addDelta (square2GetMinCorner square) (square2GetSize square)

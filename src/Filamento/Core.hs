@@ -58,6 +58,7 @@ module Filamento.Core
     resetLayers,
     changeColor,
     incLayers,
+    decLayers,
   )
 where
 
@@ -237,8 +238,8 @@ gcodeStateInit env =
 -------------------------------------------------------------------------------
 transposeCenterSketch :: V3 Delta -> V2 Delta -> V3 Position -> V3 Position
 transposeCenterSketch sketchSize bedSize pos =
-  let halfSketch = scale 0.5 (v3DeltaDropZ sketchSize)
-      halfBed = scale 0.5 bedSize
+  let halfSketch = scale @Double 0.5 (v3DeltaDropZ sketchSize)
+      halfBed = scale @Double 0.5 bedSize
       diff = v3DeltaFromV2 (halfBed - halfSketch) 0
    in addDelta pos diff
 
@@ -287,6 +288,11 @@ incLayers :: GCode ()
 incLayers = do
   st <- gcodeStateGet
   gcodeStateModify $ MsgChangeCurrentLayer (st.currentLayer + 1)
+
+decLayers :: GCode ()
+decLayers = do
+  st <- gcodeStateGet
+  gcodeStateModify $ MsgChangeCurrentLayer (st.currentLayer - 1)
 
 nextLayer :: GCode ()
 nextLayer = section "nextLayer" do
@@ -382,7 +388,7 @@ operateTool v_ speed extr = do
       { x = Just mx,
         y = Just my,
         z = Just mz,
-        feedrate = Just $ round $ toMmPerSec speed,
+        feedrate = Just $ round $ toMmPerMin speed,
         extrude = Just $ coerce $ toMm extr
       }
 

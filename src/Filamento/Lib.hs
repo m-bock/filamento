@@ -17,6 +17,7 @@ module Filamento.Lib
     nextLayer,
     printLayers,
     whileTrue,
+    getLayerProgress,
     printLayers_,
     withColors,
     printSketchFrame,
@@ -92,6 +93,15 @@ getZProgress = do
   let V3 _ _ z = toMm st.currentPosition
   pure (fromFraction (z / sketchHeight))
 
+-- TODO: This works only if firstLayerHeight equals layerHeight
+getLayerProgress :: GCode OutOf
+getLayerProgress = do
+  st <- gcodeStateGet
+  env <- ask
+  let V3 _ _ sketchHeight = env.sketchSize
+  let layerTotal = fromInt (round (toMm sketchHeight / toMm env.layerHeight)) :: Total
+  pure $ outOfFromCountTotal (fromInt st.currentLayer) layerTotal
+
 printLayers :: (OutOf -> GCode ()) -> GCode ()
 printLayers printLayer = do
   env <- ask
@@ -109,7 +119,7 @@ printSketchFrame :: GCode ()
 printSketchFrame = section "sketchFrame" do
   env <- ask
   let size2d = v3DeltaDropZ env.sketchSize
-  let centerBed = addDelta mempty (scale 0.5 env.bedSize - scale 0.5 size2d)
+  let centerBed = addDelta mempty (scale @Double 0.5 env.bedSize - scale @Double 0.5 size2d)
   printRect2d centerBed size2d
 
 withRetract :: GCode a -> GCode a

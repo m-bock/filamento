@@ -54,7 +54,7 @@ instance ToJSON Delta
 
 instance FromJSON Delta
 
-instance Scalable Delta where
+instance Scalable Double Delta where
   scale factor (Delta v) = Delta (v * factor)
 
 instance Millimeters Double Delta where
@@ -84,10 +84,10 @@ instance JustY (V3 Delta) where
 instance JustZ (V3 Delta) where
   justZ (V3 _ _ z) = V3 0 0 z
 
-instance Scalable (V2 Delta) where
+instance Scalable Double (V2 Delta) where
   scale factor (V2 x y) = V2 (scale factor x) (scale factor y)
 
-instance Scalable (V3 Delta) where
+instance Scalable Double (V3 Delta) where
   scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)
 
 instance GetDelta Delta Delta where
@@ -102,7 +102,7 @@ instance DeltaApplication Delta Delta where
 newtype Angle = Angle {rad :: Double}
   deriving (Show, Eq, Generic)
 
-instance Scalable Angle where
+instance Scalable Double Angle where
   scale factor (Angle a) = Angle (a * factor)
 
 angleFromRad :: Double -> Angle
@@ -175,13 +175,13 @@ instance Distance Delta (V3 Position) where
         (V3 (toMm x1) (toMm y1) (toMm z1))
         (V3 (toMm x2) (toMm y2) (toMm z2))
 
-instance Scalable Position where
+instance Scalable Double Position where
   scale factor (Position p) = Position (p * factor)
 
-instance Scalable (V2 Position) where
+instance Scalable Double (V2 Position) where
   scale factor (V2 x y) = V2 (scale factor x) (scale factor y)
 
-instance Scalable (V3 Position) where
+instance Scalable Double (V3 Position) where
   scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)
 
 -------------------------------------------------------------------------------
