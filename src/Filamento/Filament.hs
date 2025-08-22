@@ -147,7 +147,7 @@ printFilamentSegment config printPlane profile = do
   resetLayers
 
   local (\env -> env {zHop = scale @Double 1.2 config.filamentDia}) do
-    withRetract $ withZHop $ moveTo rectCenter
+    withRetract $ withZHop $ moveTo (V2 0 profile.pos)
 
   let layerHeight = fromMm 0.2 :: Delta
 
@@ -162,7 +162,7 @@ printFilamentSegment config printPlane profile = do
     do
       st <- gcodeStateGet
 
-      if st.currentLayer == 0
+      if st.currentLayer == 1
         then do
           setFanOff
         else do
