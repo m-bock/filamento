@@ -83,8 +83,6 @@ printAll = initPrinter do
   st <- gcodeStateGet
   let ret = getFilamentDef env st printSketch
 
-  printTestStripes
-
   -- filamentChange
 
   resetLayers

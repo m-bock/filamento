@@ -147,25 +147,25 @@ data GCodeEnv = Env
 gcodeEnvDefault :: GCodeEnv
 gcodeEnvDefault =
   Env
-    { moveSpeed = fromMmPerSec 10000,
-      extrudeSpeed = fromMmPerSec 2000,
-      moveSpeedFirstLayer = fromMmPerSec 1000,
-      extrudeSpeedFirstLayer = fromMmPerSec 800,
+    { moveSpeed = fromMmPerSec 150,
+      extrudeSpeed = fromMmPerSec 35,
+      moveSpeedFirstLayer = fromMmPerSec 17,
+      extrudeSpeedFirstLayer = fromMmPerSec 13,
       bedTemperature = fromCelsius 60,
       hotendTemperature = fromCelsius 210,
       parkingPosition = fromMm $ V3 0 225 120,
       autoHomePosition = fromMm $ V3 145.50 94.00 1.56,
-      layerHeight = fromMm 0.4,
+      layerHeight = fromMm 0.2,
       firstLayerHeight = fromMm 0.2,
       lineWidth = fromMm 0.4,
       filamentDia = fromMm 1.75,
       sketchSize = fromMm $ V3 100 100 100,
       transpose = id,
       retractLength = fromMm 1,
-      retractSpeed = fromMmPerMin 1800,
+      retractSpeed = fromMmPerSec 30,
       zHop = fromMm 0.4,
       sectionPath = [],
-      bedSize = fromMm $ V2 220 220,
+      bedSize = fromMm $ V2 225 225,
       colors = "default" :| []
     }
 
@@ -511,8 +511,9 @@ getExtrudeMM = do
 isFirstLayers :: GCode Bool
 isFirstLayers = do
   st <- gcodeStateGet
+  env <- ask
   let (V3 _ _ z) = toMm st.currentPosition
-  pure (z <= 0.4)
+  pure (z <= toMm env.firstLayerHeight)
 
 getExtrudeSpeed :: GCode Speed
 getExtrudeSpeed = do

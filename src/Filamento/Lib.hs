@@ -11,10 +11,12 @@ module Filamento.Lib
     printTestStripes,
     finalPark,
     homeOrResume,
+    whileSketchZ_,
     initPrinter,
     filamentChange,
     nextLayer,
     printLayers,
+    whileTrue,
     printLayers_,
     withColors,
     printSketchFrame,
@@ -58,16 +60,28 @@ withColors f = do
     setTool i
     forM_ gcs $ \gc -> gc
 
-whileSketchZ :: GCode () -> GCode ()
-whileSketchZ inner = do
+whileSketchZ_ :: GCode () -> GCode ()
+whileSketchZ_ inner = whileSketchZ propMax inner
+
+whileSketchZ :: Proportion -> GCode () -> GCode ()
+whileSketchZ prop inner = do
   st <- gcodeStateGet
   env <- ask
   let V3 _ _ sketchHeight = toMm env.sketchSize
   let V3 _ _ z = toMm st.currentPosition
-  if z < sketchHeight
+  if z < (toFraction prop) * sketchHeight
     then do
       inner
-      whileSketchZ inner
+      whileSketchZ prop inner
+    else pure ()
+
+whileTrue :: GCode Bool -> GCode () -> GCode ()
+whileTrue pred inner = do
+  b <- pred
+  if b
+    then do
+      inner
+      whileTrue pred inner
     else pure ()
 
 getZProgress :: GCode Proportion

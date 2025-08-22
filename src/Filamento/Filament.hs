@@ -42,9 +42,9 @@ filamentConfigDefault =
   FilamentConfig
     { overlap = fromMm 2,
       filamentDia = fromMm 1.75,
-      splitLinesEvery = Just $ fromMm 3,
+      splitLinesEvery = Just $ fromMm 6,
       spiralCenter = v3PosFromMm 110 110 0,
-      spiralRadius = fromMm 75,
+      spiralRadius = fromMm 95,
       spiralConstant = fromMm (-0.5),
       disableSpiral = False
     }
@@ -82,13 +82,38 @@ printRectFilament :: FilamentConfig -> Rect2D -> GCode ()
 printRectFilament config rect = do
   let (frontLeft, frontRight, backRight, backLeft) = rect2GetPoints rect
 
-      rectLines = [(frontLeft, frontRight), (frontRight, backRight), (backRight, backLeft), (backLeft, frontLeft)]
+      rectLines = [(frontRight, backRight), (backRight, backLeft), (backLeft, frontLeft), (frontLeft, frontRight)]
 
   forM_ rectLines $ \(p1, p2) -> do
     printLineFilament config (line2FromPoints p1 p2)
 
 printLineFilament :: FilamentConfig -> Line2D -> GCode ()
 printLineFilament config line = do
+  let start = line2GetStart line
+
+  do
+    st <- gcodeStateGet
+    let V3 curX curY _ = st.currentPosition
+        arrivalLine = line2FromPoints (V2 curX curY) start
+        arrivalLines = getLines config arrivalLine
+
+        isFar = getDistance start (V2 curX curY) > 10
+
+    if isFar
+      then withRetract $ withZHop $ do
+        forM_ arrivalLines $ \lineSeq -> do
+          moveTo (line2GetEnd lineSeq)
+      else forM_ arrivalLines $ \lineSeq -> do
+        moveTo (line2GetEnd lineSeq)
+
+  let actualLines = getLines config line
+
+  forM_ actualLines $ \lineSeq -> do
+    moveTo (line2GetStart lineSeq)
+    extrudeTo (line2GetEnd lineSeq)
+
+getLines :: FilamentConfig -> Line2D -> [Line2D]
+getLines config line = do
   let start = line2GetStart line
       end = line2GetEnd line
       pts = case config.splitLinesEvery of
@@ -97,9 +122,7 @@ printLineFilament config line = do
           [] -> [start, end]
           vals -> vals
 
-  forM_ (itemsWithNext pts) $ \(p1, p2) -> do
-    moveTo p1
-    extrudeTo p2
+  map (\(p1, p2) -> line2FromPoints p1 p2) (itemsWithNext pts)
 
 getLength :: FilamentConfig -> Proportion -> ProfileType -> Delta -> Delta
 getLength config prop profile len =
@@ -119,32 +142,44 @@ getWidth filamentDia propY =
 
 printFilamentSegment :: FilamentConfig -> (Rect2D -> GCode ()) -> FilamentSegment -> GCode ()
 printFilamentSegment config printPlane profile = do
-  let rectCenter = addDelta (V2 0 profile.pos) (V2 20 (scale 0.5 profile.depth))
+  let rectCenter = V2 0 (addDelta profile.pos (scale 0.5 profile.depth))
 
   resetLayers
 
   local (\env -> env {zHop = scale 1.2 config.filamentDia}) do
     withRetract $ withZHop $ moveTo rectCenter
 
-  moveToZ (fromMm 0.0)
+  moveToZ (fromMm 0)
 
-  whileSketchZ do
-    st <- gcodeStateGet
-    let layerHeight = getLayerHeight config (fromInt st.currentLayer)
-    moveByZ layerHeight
-    incLayers
+  whileTrue
+    ( do
+        st <- gcodeStateGet
+        pure (st.currentLayer == 0)
+    )
+    do
+      st <- gcodeStateGet
 
-    prop <- getZProgress
+      if st.currentLayer == 0
+        then do
+          setFanOff
+        else do
+          setFanSpeedFull
 
-    let rectWidth = max 0 $ getWidth config.filamentDia prop
-        rectLength = getLength config prop profile.profileType profile.depth
-        rectSize = V2 rectWidth rectLength
-        rect = rect2FromCenterSize rectCenter rectSize
+      let layerHeight = getLayerHeight config (fromInt st.currentLayer)
+      moveByZ layerHeight
+      incLayers
 
-    comment ("prop = " <> Text.pack (printf "%.3f" (toFraction prop)))
-    section (Text.pack $ printf "%.3f" (toFraction prop)) do
-      local (\env -> env {layerHeight = layerHeight}) do
-        printPlane rect
+      prop <- getZProgress
+
+      let rectWidth = max 0 $ getWidth config.filamentDia prop
+          rectLength = getLength config prop profile.profileType profile.depth
+          rectSize = V2 rectWidth rectLength
+          rect = rect2FromCenterSize rectCenter rectSize
+
+      comment ("prop = " <> Text.pack (printf "%.3f" (toFraction prop)))
+      section (Text.pack $ printf "%.3f" (toFraction prop)) do
+        local (\env -> env {layerHeight = layerHeight}) do
+          printPlane rect
 
 printFilamentChain :: (FilamentSegment -> GCode ()) -> [FilamentSection] -> GCode ()
 printFilamentChain innerPrintSegment secs = do
@@ -155,6 +190,9 @@ printFilamentChain innerPrintSegment secs = do
   let colors = map (\x -> x.color) secs & nub
 
   forM_ [(Hill, evens), (Valley, odds)] $ \(profileType, items) -> do
+    local (\env -> env {transpose = id}) do
+      printTestStripes
+
     section (show profileType) do
       forM_ items $ \(i, sec) -> do
         section (show i) do
@@ -199,11 +237,9 @@ printFilament mkConfig secs = section "filament" do
           { sketchSize = fromMm $ V3 10 10 (toMm config.filamentDia),
             lineWidth = fromMm 0.4,
             layerHeight = fromMm 0.2,
+            firstLayerHeight = fromMm 0.2,
             hotendTemperature = fromCelsius 205,
             bedTemperature = fromCelsius 65,
-            moveSpeed = fromMmPerSec 2000,
-            extrudeSpeed = fromMmPerSec 2500,
-            retractLength = fromMm 1.5,
             transpose = if config.disableSpiral then id else translateSpiral config
           }
     )
@@ -225,7 +261,6 @@ printFilament_ = printFilament id
 
 getLayerHeight :: FilamentConfig -> Count -> Delta
 getLayerHeight config layerIndex =
-  let layerTotal = fromInt (round (config.filamentDia / 0.2)) :: Total
-      outOf = outOfFromCountTotal layerIndex layerTotal
-      prop = outOfToProportion outOf
-   in 0.1
+  if layerIndex == fromInt 0
+    then 0.2
+    else 0.2
