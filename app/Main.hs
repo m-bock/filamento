@@ -36,7 +36,7 @@ printPurgeTower square count = do
   forM_ linesToPrint $ \line -> do
     let p1 = line2GetStart line
         p2 = line2GetEnd line
-    moveTo p1
+    withRetract $ withZHop $ moveTo p1
     extrudeTo p2
 
 data Color = Red | Yellow
@@ -51,25 +51,25 @@ printSketch = withSketchTranspose do
     withColors
       \color -> do
         color Red do
-          printPurgeTower (square2FromCenterSize (v2PosFromMm 20 120) (fromMm 20)) (fromInt 20)
+          printPurgeTower (square2FromCenterSize (v2PosFromMm 20 100) (fromMm 40)) (fromInt 40)
 
         color Yellow do
-          printPurgeTower (square2FromCenterSize (v2PosFromMm 80 120) (fromMm 20)) (fromInt 20)
+          printPurgeTower (square2FromCenterSize (v2PosFromMm 80 100) (fromMm 40)) (fromInt 40)
 
         color Red do
-          moveTo p1
+          withRetract $ withZHop $ moveTo p1
           extrudeTo p2
 
         color Yellow do
-          moveTo p2
+          withRetract $ withZHop $ moveTo p2
           extrudeTo p3
 
         color Red do
-          moveTo p3
+          withRetract $ withZHop $ moveTo p3
           extrudeTo p4
 
         color Yellow do
-          moveTo p4
+          withRetract $ withZHop $ moveTo p4
           extrudeTo p1
 
 printAll :: GCode ()

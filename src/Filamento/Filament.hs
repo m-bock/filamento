@@ -6,6 +6,7 @@ module Filamento.Filament
 where
 
 import Data.List (elemIndex, nub)
+import qualified Data.List as L
 import qualified Data.Text as Text
 import Filamento
 import Filamento.Debug
@@ -44,7 +45,7 @@ filamentConfigDefault =
       filamentDia = fromMm 1.75,
       splitLinesEvery = Just $ fromMm 6,
       spiralCenter = v3PosFromMm 110 110 0,
-      spiralRadius = fromMm 95,
+      spiralRadius = fromMm 105,
       spiralConstant = fromMm (-0.5),
       disableSpiral = False
     }
@@ -201,7 +202,7 @@ ironFinish config secs = section "ironFinish" do
 
       startX = subDelta 0 $ scale @Double 0.5 width
       endX = addDelta 0 $ scale @Double 0.5 width
-      step = env.lineWidth / 2
+      step = env.lineWidth
 
       xs = linspaceByStep startX endX step deltaRound
 
@@ -215,9 +216,39 @@ ironFinish config secs = section "ironFinish" do
 
         lineSegs = getLines config line
 
-    forM_ lineSegs $ \lineSeq -> do
-      moveTo (line2GetStart lineSeq)
-      moveTo (line2GetEnd lineSeq)
+    local (\env -> env {moveSpeed = fromMmPerSec 50}) do
+      forM_ lineSegs $ \lineSeq -> do
+        moveTo (line2GetStart lineSeq)
+        moveTo (line2GetEnd lineSeq)
+
+printTestStripes' :: GCode ()
+printTestStripes' = section "Test Stripes" $ do
+  moveToZ (fromMm 0.2)
+
+  section "stripe 1" do
+    let lines = getLines filamentConfigDefault (line2FromPoints (v2PosFromMm (5) 0) (v2PosFromMm (5) 215.0))
+        firstLine = L.head lines
+        firstVec = line2GetStart firstLine
+
+    withRetract $ withZHop $ moveTo firstVec
+    extrude 5
+
+    forM_ lines $ \line -> do
+      moveTo (line2GetStart line)
+      extrudeTo (line2GetEnd line)
+
+    extrude (-1)
+
+  section "stripe 2" do
+    let lines = getLines filamentConfigDefault (line2FromPoints (v2PosFromMm (5) 230) (v2PosFromMm (5) 445.0))
+        firstLine = L.head lines
+        firstVec = line2GetStart firstLine
+
+    withRetract $ withZHop $ moveTo firstVec
+
+    forM_ lines $ \line -> do
+      moveTo (line2GetStart line)
+      extrudeTo (line2GetEnd line)
 
 printFilamentChain :: (FilamentSegment -> GCode ()) -> [FilamentSection] -> GCode ()
 printFilamentChain innerPrintSegment secs = do
@@ -228,9 +259,8 @@ printFilamentChain innerPrintSegment secs = do
   let colors = map (\x -> x.color) secs & nub
 
   forM_ [(Hill, evens), (Valley, odds)] $ \(profileType, items) -> do
-    local (\env -> env {transpose = id}) do
-      filamentChange
-      printTestStripes
+    filamentChange
+    printTestStripes'
 
     section (show profileType) do
       forM_ items $ \(i, sec) -> do
@@ -276,6 +306,8 @@ printFilament mkConfig secs = section "filament" do
             lineWidth = fromMm 0.4,
             layerHeight = fromMm 0.18,
             firstLayerHeight = fromMm 0.18,
+            -- moveSpeedFirstLayer = fromMmPerSec 40,
+            -- extrudeSpeedFirstLayer = fromMmPerSec 30,
             hotendTemperature = fromCelsius 205,
             bedTemperature = fromCelsius 65,
             transpose = if config.disableSpiral then id else translateSpiral config,

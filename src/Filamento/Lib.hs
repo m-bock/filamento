@@ -178,12 +178,12 @@ printTestStripes = section "Test Stripes" $ do
   section "stripe 1" do
     moveTo (v2PosFromMm 5 5)
     extrude 5
-    extrudeTo (v2PosFromMm 215.0 5)
+    extrudeTo (v2PosFromMm 5 215.0)
     extrude (-1)
 
   section "stripe 2" do
-    withRetract $ withZHop $ moveTo (v2PosFromMm 5 10)
-    extrudeTo (v2PosFromMm 215.0 10)
+    withRetract $ withZHop $ moveTo (v2PosFromMm 10 5)
+    extrudeTo (v2PosFromMm 10 215.0)
 
 finalPark :: GCode ()
 finalPark = do
