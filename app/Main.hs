@@ -19,24 +19,36 @@ printStripesAlongX square count = do
 
   map (\y -> line2FromPoints (V2 x1 y) (V2 x2 y)) ys
 
-printStripesAlongY :: Square2D -> Count -> [Line2D]
-printStripesAlongY square count = do
-  let V2 x1 y1 = square2GetMinCorner square
-      V2 x2 y2 = square2GetMaxCorner square
+printStripesAlongY :: Position -> Rect2D -> Count -> [Line2D]
+printStripesAlongY z rect count = do
+  let V2 x1 y1 = rect2GetMinCorner rect
+      V2 x2 y2 = rect2GetMaxCorner rect
 
       xs = linspace x1 x2 count
 
-  map (\x -> line2FromPoints (V2 x y1) (V2 x y2)) xs
+      shift = z * 8
 
-printPurgeTower :: Square2D -> Count -> GCode ()
-printPurgeTower square count = do
+  map (\x -> line2FromPoints (V2 x (y1 + shift)) (V2 x (y2 + shift))) xs
+
+printPurgeTower :: Rect2D -> Count -> GCode ()
+printPurgeTower rect count = do
   st <- gcodeStateGet
-  let linesToPrint = if odd st.currentLayer then printStripesAlongX square count else printStripesAlongY square count
+  let V3 _ _ curZ = st.currentPosition
+  let linesToPrint = printStripesAlongY curZ rect count
 
-  forM_ linesToPrint $ \line -> do
-    let p1 = line2GetStart line
-        p2 = line2GetEnd line
-    withRetract $ withZHop $ moveTo p1
+  forM_ (zip [0 ..] linesToPrint) $ \(i, line) -> do
+    let (p1, p2) =
+          if odd i
+            then
+              (line2GetStart line, line2GetEnd line)
+            else
+              (line2GetEnd line, line2GetStart line)
+
+    if i == 0
+      then do
+        withRetract $ withZHop $ moveTo p1
+      else do
+        moveTo p1
     extrudeTo p2
 
 data Color = Red | Yellow
@@ -46,15 +58,22 @@ printSketch :: GCode ()
 printSketch = withSketchTranspose do
   resetLayers
   printLayers_ do
+    st <- gcodeStateGet
+    if st.currentLayer == 1
+      then do
+        setFanOff
+      else do
+        setFanSpeedFull
+
     let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fromMm $ V2 50 30)
         (p1, p2, p3, p4) = rect2GetPoints rect
     withColors
       \color -> do
         color Red do
-          printPurgeTower (square2FromCenterSize (v2PosFromMm 20 100) (fromMm 40)) (fromInt 40)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMm $ V2 50 15)) (fromInt 80)
 
         color Yellow do
-          printPurgeTower (square2FromCenterSize (v2PosFromMm 80 100) (fromMm 40)) (fromInt 40)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm 32 (-55)) (fromMm $ V2 50 15)) (fromInt 80)
 
         color Red do
           withRetract $ withZHop $ moveTo p1
@@ -109,7 +128,7 @@ mainGen =
               bedTemperature = fromCelsius 65,
               retractLength = fromMm 1.5,
               colors = fmap show $ Red :| [Yellow],
-              sketchSize = fromMm $ V3 100 100 10,
+              sketchSize = fromMm $ V3 100 100 2,
               parkingPosition = v3PosFromMm 0 0 20
             }
       }
