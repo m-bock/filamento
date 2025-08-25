@@ -2,6 +2,8 @@ module Main where
 
 -- import Data.IntMap.Lazy (restrictKeys)
 -- import Filament5 (Config (layerCount))
+
+import Data.ByteString (findIndex)
 import Filamento
 import Filamento.Filament
 import Filamento.Math
@@ -51,8 +53,28 @@ printPurgeTower rect count = do
         moveTo p1
     extrudeTo p2
 
-data Color = Red | Yellow
-  deriving (Show, Eq)
+data Colors = Colors
+  { red :: Text,
+    yellow :: Text
+  }
+
+colors :: Colors
+colors = Colors {red = "red", yellow = "yellow"}
+
+allColors :: NonEmpty Text
+allColors = colors.red :| [colors.yellow]
+
+nextColor :: Text -> Text
+nextColor c = case c of
+  "red" -> "yellow"
+  "yellow" -> "red"
+  _ -> c
+
+prevColor :: Text -> Text
+prevColor c = case c of
+  "red" -> "yellow"
+  "yellow" -> "red"
+  _ -> c
 
 printSketch :: GCode ()
 printSketch = withSketchTranspose do
@@ -69,25 +91,25 @@ printSketch = withSketchTranspose do
         (p1, p2, p3, p4) = rect2GetPoints rect
     withColors
       \color -> do
-        color Red do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMm $ V2 50 15)) (fromInt 80)
+        color colors.red do
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMm $ V2 25 15)) (fromInt 40)
 
-        color Yellow do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm 32 (-55)) (fromMm $ V2 50 15)) (fromInt 80)
+        color colors.yellow do
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm 6 (-55)) (fromMm $ V2 25 15)) (fromInt 40)
 
-        color Red do
+        color colors.red do
           withRetract $ withZHop $ moveTo p1
           extrudeTo p2
 
-        color Yellow do
+        color colors.yellow do
           withRetract $ withZHop $ moveTo p2
           extrudeTo p3
 
-        color Red do
+        color colors.red do
           withRetract $ withZHop $ moveTo p3
           extrudeTo p4
 
-        color Yellow do
+        color colors.yellow do
           withRetract $ withZHop $ moveTo p4
           extrudeTo p1
 
@@ -105,13 +127,23 @@ printAll = initPrinter do
   -- filamentChange
 
   resetLayers
-  printFilament
-    (\cfg -> cfg {disableSpiral = False})
-    (toList ret)
+  dia <-
+    printFilament
+      (\cfg -> cfg {disableSpiral = False})
+      ( case (viaNonEmpty head ret, viaNonEmpty last ret) of
+          (Just fi, Just la) ->
+            [FilamentSection (prevColor fi.color) (fromMm (70))]
+              ++ map
+                (\v -> v {endPosMm = 70 + (v.endPosMm * 0.98)})
+                ret
+              ++ [FilamentSection (nextColor la.color) (fromMm (70 + 150) + la.endPosMm)]
+          _ -> []
+      )
 
   filamentChange
 
-  printSketch
+  local (\env -> env {filamentDia = dia} :: GCodeEnv) do
+    printSketch
 
 mainGen :: IO ()
 mainGen =
@@ -127,7 +159,7 @@ mainGen =
               hotendTemperature = fromCelsius 205,
               bedTemperature = fromCelsius 65,
               retractLength = fromMm 1.5,
-              colors = fmap show $ Red :| [Yellow],
+              colors = allColors,
               sketchSize = fromMm $ V3 100 100 2,
               parkingPosition = v3PosFromMm 0 0 20
             }

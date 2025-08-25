@@ -11,6 +11,7 @@ import qualified Data.Text as Text
 import Filamento
 import Filamento.Debug
 import Filamento.Math (itemsWithNext, linspace2ByStep, linspaceByStep)
+import GHC.IO (unsafePerformIO)
 import GHC.List ((!!))
 import Linear
 import Relude
@@ -296,7 +297,7 @@ translateSpiral config pos = v3PosFromMm x' y' z
     x' = centerX + (spiralRadius + x) * cos finalAngle
     y' = centerY + (spiralRadius + x) * sin finalAngle
 
-printFilament :: (FilamentConfig -> FilamentConfig) -> [FilamentSection] -> GCode ()
+printFilament :: (FilamentConfig -> FilamentConfig) -> [FilamentSection] -> GCode Delta
 printFilament mkConfig secs = section "filament" do
   let config = mkConfig filamentConfigDefault
   local
@@ -327,7 +328,26 @@ printFilament mkConfig secs = section "filament" do
         secs
       ironFinish config secs
 
-printFilament_ :: [FilamentSection] -> GCode ()
+      st <- gcodeStateGet
+      env <- ask
+
+      let actualLength = (head st.filament).endPosMm
+          requestedLength = case viaNonEmpty last secs of
+            Just l -> l.endPosMm
+            Nothing -> 0
+
+          prop = fromFraction (toMm actualLength / toMm requestedLength) :: Proportion
+          dia = deltaFromMm (toMm env.filamentDia * sqrt (toFraction prop))
+
+      -- Force evaluation and log the values
+      _ <- Relude.trace ("actualLength: " ++ show actualLength) (pure ())
+      _ <- Relude.trace ("requestedLength: " ++ show requestedLength) (pure ())
+      _ <- Relude.trace ("prop: " ++ show prop) (pure ())
+      _ <- Relude.trace ("dia: " ++ show dia) (pure ())
+
+      pure dia
+
+printFilament_ :: [FilamentSection] -> GCode Delta
 printFilament_ = printFilament id
 
 -------------------------------------------------------------------------------

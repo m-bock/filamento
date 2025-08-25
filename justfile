@@ -51,7 +51,7 @@ octo-status:
 show:
     code out/myprint.gcode
 
-dev1: gen octo-cancel-print octo-print
+dev1: gen octo-connect-printer octo-print
 
 dev2: gen octo-upload
 
