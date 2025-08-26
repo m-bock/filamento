@@ -121,7 +121,7 @@ printAll = initPrinter do
 
   env <- ask
   st <- gcodeStateGet
-  let ret = getFilamentDef env st printSketch
+  ret <- liftIO $ getFilamentDef env st printSketch
 
   -- filamentChange
 
@@ -145,24 +145,29 @@ printAll = initPrinter do
     printSketch
 
 mainGen :: IO ()
-mainGen =
-  generateGcode
-    OutputConfig
-      { gcodeFile = "out/myprint.gcode",
-        reportFile = "out/myprint-report.json",
-        gcode = printAll,
-        env =
-          gcodeEnvDefault
-            { lineWidth = fromMm 0.6,
-              layerHeight = fromMm 0.3,
-              hotendTemperature = fromCelsius 205,
-              bedTemperature = fromCelsius 65,
-              retractLength = fromMm 1.5,
-              colors = allColors,
-              sketchSize = fromMm $ V3 100 100 10,
-              parkingPosition = v3PosFromMm 0 0 20
-            }
-      }
+mainGen = do
+  let gCodeFile = "out/myprint.gcode"
+  writeFileText gCodeFile ""
+
+  _ <-
+    gcodeRun
+      printAll
+      ( gcodeEnvDefault
+          { lineWidth = fromMm 0.6,
+            layerHeight = fromMm 0.3,
+            hotendTemperature = fromCelsius 205,
+            bedTemperature = fromCelsius 65,
+            retractLength = fromMm 1.5,
+            colors = allColors,
+            sketchSize = fromMm $ V3 100 100 10,
+            parkingPosition = v3PosFromMm 0 0 20,
+            emitGCode = do
+              st <- gcodeStateGet
+              writeFileText gCodeFile $ toText $ st.gCode
+          }
+      )
+      (gcodeStateInit gcodeEnvDefault)
+  pure ()
 
 mainPlot :: IO ()
 mainPlot = do

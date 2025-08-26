@@ -7,27 +7,33 @@ import Filamento.Core
 import Filamento.TypeOps
 import Relude
 
-data OutputConfig = OutputConfig
-  { gcodeFile :: FilePath,
-    reportFile :: FilePath,
-    gcode :: GCode (),
-    env :: GCodeEnv
+-- data OutputConfig = OutputConfig
+--   { gcodeFile :: FilePath,
+--     reportFile :: FilePath,
+--     gcode :: GCode (),
+--     env :: GCodeEnv
+--   }
+
+data GCodeItf = GCodeItf
+  { emitGCode :: GCode ()
   }
 
-generateGcode :: OutputConfig -> IO ()
-generateGcode OutputConfig {gcodeFile, reportFile, gcode, env} = do
-  let gcode' = local (const env) gcode
-  let (_, st, codeStr) = gcodeRun gcode' env (gcodeStateInit env)
-  writeFileLBS reportFile $ encodePretty (NE.reverse st.filament)
-  writeFileText gcodeFile codeStr
+mkGCodeItfCatFile :: FilePath -> GCodeItf
+mkGCodeItfCatFile = undefined
 
-saveGCodeToFile :: FilePath -> FilePath -> GCode () -> (GCodeEnv -> GCodeEnv) -> IO ()
-saveGCodeToFile fileName reportFile gcode mkEnv = do
-  let env = mkEnv gcodeEnvDefault
-  let gcode' = local mkEnv gcode
-  let (_, st, codeStr) = gcodeRun gcode' env (gcodeStateInit env)
-  writeFileLBS reportFile $ encodePretty (NE.reverse st.filament)
-  writeFileText fileName codeStr
+mkGCodeItfSilent :: GCode () -> GCodeItf
+mkGCodeItfSilent = undefined
+
+mkGCodeItfOctoAPI :: GCode () -> GCodeItf
+mkGCodeItfOctoAPI = undefined
+
+-- generateGcode :: OutputConfig -> IO ()
+-- generateGcode OutputConfig {gcodeFile, reportFile, gcode, env} = do
+--   let gcode' = local (const env) gcode
+--   (_, st) <- gcodeRun gcode' env (gcodeStateInit env)
+
+--   writeFileLBS reportFile $ encodePretty (NE.reverse st.filament)
+--   writeFileText gcodeFile $ toText st.gCode
 
 data PrintReport = PrintReport
   { gcodeFile :: FilePath,

@@ -81,42 +81,26 @@ import System.Random
 --- GCode
 -------------------------------------------------------------------------------
 
-newtype GCode a = GCode (StateT GCodeState (ReaderT GCodeEnv (Writer [GCodeLine])) a)
+newtype GCode a = GCode (StateT GCodeState (ReaderT GCodeEnv IO) a)
   deriving
     ( Functor,
       Applicative,
       Monad,
-      MonadReader GCodeEnv
+      MonadReader GCodeEnv,
+      MonadIO
     )
 
-instance ToText (GCode a) where
-  toText (GCode m) =
-    let env = gcodeEnvDefault
-     in evalStateT m (gcodeStateInit env)
-          & (`runReaderT` env)
-          & execWriter
-          & map gcodeLineToRaw
-          & toText
-
-gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> (a, GCodeState, Text)
-gcodeRun (GCode m) env oldState =
-  let ((val, newState), linesOut) =
-        runStateT m oldState
-          & (`runReaderT` env)
-          & runWriter
-   in (val, newState, toText $ map gcodeLineToRaw linesOut)
+gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> IO (a, GCodeState)
+gcodeRun (GCode m) env oldState = do
+  val <-
+    runStateT m oldState
+      & (`runReaderT` env)
+  pure val
 
 gcodeFromCmd :: GCodeCmd -> GCode ()
 gcodeFromCmd cmd = do
   env <- ask
-  GCode
-    $ tell
-    $ pure
-    $ GCodeLine
-      { cmd = Just cmd,
-        rawExtra = "",
-        comment = Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)
-      }
+  gcodeStateModify $ MsgAddGCodeLine GCodeLine {cmd = Just cmd, rawExtra = "", comment = Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)}
 
 -------------------------------------------------------------------------------
 --- GCodeEnv
@@ -142,7 +126,8 @@ data GCodeEnv = Env
     zHop :: Delta,
     sectionPath :: [Text],
     bedSize :: V2 Delta,
-    colors :: NonEmpty Text
+    colors :: NonEmpty Text,
+    emitGCode :: GCode ()
   }
 
 gcodeEnvDefault :: GCodeEnv
@@ -167,7 +152,8 @@ gcodeEnvDefault =
       zHop = fromMm 0.4,
       sectionPath = [],
       bedSize = fromMm $ V2 225 225,
-      colors = "default" :| []
+      colors = "default" :| [],
+      emitGCode = pure ()
     }
 
 -------------------------------------------------------------------------------
@@ -192,7 +178,8 @@ data GCodeState = GCodeState
   { currentLayer :: Int,
     currentPosition :: V3 Position,
     stdgen :: StdGen,
-    filament :: NonEmpty FilamentSection
+    filament :: NonEmpty FilamentSection,
+    gCode :: [GCodeLine]
   }
   deriving (Show, Eq)
 
@@ -201,6 +188,7 @@ data Msg
   | MsgTrackExtrusion Delta
   | MsgChangeCurrentLayer Int
   | MsgChangeColor Text
+  | MsgAddGCodeLine GCodeLine
 
 gcodeStateUpdate :: Msg -> GCodeState -> GCodeState
 gcodeStateUpdate msg st = case msg of
@@ -216,6 +204,7 @@ gcodeStateUpdate msg st = case msg of
       st
         { filament = h {endPosMm = addDelta h.endPosMm extr} :| t
         }
+  MsgAddGCodeLine line -> st {gCode = st.gCode <> [line]}
 
 gcodeStateModify :: Msg -> GCode ()
 gcodeStateModify msg = GCode do
@@ -270,15 +259,13 @@ toTextSectionPath path =
   "[ " <> Text.intercalate " / " path <> " ] "
 
 newline :: GCode ()
-newline = GCode $ tell [GCodeLine {cmd = Nothing, rawExtra = "", comment = Nothing}]
+newline = gcodeStateModify $ MsgAddGCodeLine GCodeLine {cmd = Nothing, rawExtra = "", comment = Nothing}
 
 comment :: Text -> GCode ()
-comment c = GCode $ do
-  tell [GCodeLine {cmd = Nothing, rawExtra = "", comment = Just c}]
+comment c = gcodeStateModify $ MsgAddGCodeLine GCodeLine {cmd = Nothing, rawExtra = "", comment = Just c}
 
 raw :: Text -> Text -> GCode ()
-raw extra comm = GCode $ do
-  tell [GCodeLine {cmd = Nothing, rawExtra = extra, comment = Just comm}]
+raw extra comm = gcodeStateModify $ MsgAddGCodeLine GCodeLine {cmd = Nothing, rawExtra = extra, comment = Just comm}
 
 resetLayers :: GCode ()
 resetLayers = section "resetLayers" do

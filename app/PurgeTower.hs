@@ -56,19 +56,4 @@ printSketch = do
       purgeTower pos delta 0
 
 main :: IO ()
-main = do
-  generateGcode
-    OutputConfig
-      { gcodeFile = "out/myprint.gcode",
-        reportFile = "out/myprint-report.json",
-        gcode = printSketch,
-        env =
-          gcodeEnvDefault
-            { lineWidth = fromMm 0.6,
-              layerHeight = fromMm 0.3,
-              hotendTemperature = fromCelsius 205,
-              bedTemperature = fromCelsius 65,
-              retractLength = fromMm 1.5,
-              colors = "red" :| ["yellow"]
-            }
-      }
+main = pure ()

@@ -30,7 +30,4 @@ sketch = local changeEnv $ initPrinter $ do
     printLayer i
 
 main :: IO ()
-main = do
-  let codeStr = toText sketch
-  writeFileText "out/myprint.gcode" codeStr
-  putStrLn $ T.unpack codeStr
+main = pure ()

@@ -293,10 +293,10 @@ filamentChange = do
 
 -- purge TODO: implement or remove
 
-getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> [FilamentSection]
-getFilamentDef env state' gcode =
-  let (_, finalState, _) = gcodeRun gcode env state'
-   in finalState.filament & NE.reverse & NE.filter (\x -> x.endPosMm /= 0)
+getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> IO [FilamentSection]
+getFilamentDef env state' gcode = do
+  (_, finalState) <- gcodeRun gcode env state'
+  pure $ finalState.filament & NE.reverse & NE.filter (\x -> x.endPosMm /= 0)
 
 -- printFilamentDef TODO: implement or remove
 
