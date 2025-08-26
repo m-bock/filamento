@@ -28,8 +28,7 @@ printStripesAlongY z rect count = do
 
       xs = linspace x1 x2 count
 
-      shift = z * 8
-
+      shift = 0 -- z * 8
   map (\x -> line2FromPoints (V2 x (y1 + shift)) (V2 x (y2 + shift))) xs
 
 printPurgeTower :: Rect2D -> Count -> GCode ()
@@ -92,10 +91,10 @@ printSketch = withSketchTranspose do
     withColors
       \color -> do
         color colors.red do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMm $ V2 25 15)) (fromInt 40)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMm $ V2 12.5 30)) (fromInt 20)
 
         color colors.yellow do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm 6 (-55)) (fromMm $ V2 25 15)) (fromInt 40)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fromMm $ V2 12.5 30)) (fromInt 20)
 
         color colors.red do
           withRetract $ withZHop $ moveTo p1
@@ -134,7 +133,7 @@ printAll = initPrinter do
           (Just fi, Just la) ->
             [FilamentSection (prevColor fi.color) (fromMm (70))]
               ++ map
-                (\v -> v {endPosMm = 70 + (v.endPosMm * 0.98)})
+                (\v -> v {endPosMm = 70 + (v.endPosMm * 1.00)})
                 ret
               ++ [FilamentSection (nextColor la.color) (fromMm (70 + 150) + la.endPosMm)]
           _ -> []
@@ -160,7 +159,7 @@ mainGen =
               bedTemperature = fromCelsius 65,
               retractLength = fromMm 1.5,
               colors = allColors,
-              sketchSize = fromMm $ V3 100 100 2,
+              sketchSize = fromMm $ V3 100 100 10,
               parkingPosition = v3PosFromMm 0 0 20
             }
       }
