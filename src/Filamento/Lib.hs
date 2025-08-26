@@ -276,6 +276,10 @@ filamentChange = do
 
     setExtruderRelative
 
+    extrude (fromMm 80)
+
+    raw "M0" "Pause for filament change"
+
     -- extrude 30
 
     -- pause (fromSecs 2)
