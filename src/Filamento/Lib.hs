@@ -218,8 +218,6 @@ initPrinter inner = do
 
   setExtruderRelative
 
-  moveTo (v3PosFromMm 0 0 0)
-
   heatup homeOrResume
 
   -- cleaningOpportunity
@@ -266,19 +264,24 @@ printPolygon n v s'
 filamentChange :: GCode ()
 filamentChange = do
   section "Filament Change" $ do
-    finalPark
+    comment "Split below"
+
+    heatup finalPark
 
     playTone_
 
     raw "M0" "Pause for filament change"
 
     setUnits Millimeter
-
     setExtruderRelative
 
-    extrude (fromMm 80)
+    local (\env -> env {extrudeSpeed = fromMmPerMin 150}) $ do
+      extrude (fromMm 80)
 
     raw "M0" "Pause for filament change"
+
+    setUnits Millimeter
+    setExtruderRelative
 
     -- extrude 30
 

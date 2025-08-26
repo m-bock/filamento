@@ -173,5 +173,9 @@ mainPlot = do
 -- plotList [] out
 -- threadDelay 5000000 -- wait 5s
 
+mainTry :: IO ()
+mainTry = do
+  putStrLn "Hello, World!"
+
 main :: IO ()
 main = mainGen
