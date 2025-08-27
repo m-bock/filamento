@@ -219,7 +219,8 @@ gcodeStateInit env =
     { currentPosition = fromMm $ V3 0 0 0,
       stdgen = mkStdGen 0,
       currentLayer = 0,
-      filament = FilamentSection {color = head env.colors, endPosMm = 0} :| []
+      filament = FilamentSection {color = head env.colors, endPosMm = 0} :| [],
+      gCode = []
     }
 
 -------------------------------------------------------------------------------

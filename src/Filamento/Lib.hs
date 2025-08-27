@@ -278,6 +278,8 @@ filamentChange = do
     local (\env -> env {extrudeSpeed = fromMmPerMin 150}) $ do
       extrude (fromMm 80)
 
+    playTone_
+
     raw "M0" "Pause for filament change"
 
     setUnits Millimeter
