@@ -23,6 +23,7 @@ module Filamento.Core
     moveByZ,
     moveToX,
     moveToY,
+    withFixedRegister,
     moveToZ,
     moveByX,
     moveByY,
@@ -128,7 +129,7 @@ data GCodeEnv = Env
     sectionPath :: [Text],
     bedSize :: V2 Delta,
     colors :: NonEmpty Text,
-    emitGCode :: GCode ()
+    emitGCode :: Text -> GCode ()
   }
 
 gcodeEnvDefault :: GCodeEnv
@@ -154,7 +155,7 @@ gcodeEnvDefault =
       sectionPath = [],
       bedSize = fromMm $ V2 225 225,
       colors = "default" :| [],
-      emitGCode = pure ()
+      emitGCode = \_ -> pure ()
     }
 
 -------------------------------------------------------------------------------
@@ -180,7 +181,8 @@ data GCodeState = GCodeState
     currentPosition :: V3 Position,
     stdgen :: StdGen,
     filament :: NonEmpty FilamentSection,
-    gCode :: [GCodeLine]
+    gCode :: [GCodeLine],
+    flowCorrection :: Double -- -1 .. 1
   }
   deriving (Show, Eq)
 
@@ -191,6 +193,8 @@ data Msg
   | MsgChangeColor Text
   | MsgAddGCodeLine GCodeLine
   | MsgDropGCodeLines
+  | MsgChangeFlowCorrection Double
+  | MsgOverrideFilament (NonEmpty FilamentSection)
 
 gcodeStateUpdate :: Msg -> GCodeState -> GCodeState
 gcodeStateUpdate msg st = case msg of
@@ -208,6 +212,8 @@ gcodeStateUpdate msg st = case msg of
         }
   MsgAddGCodeLine line -> st {gCode = line : st.gCode}
   MsgDropGCodeLines -> st {gCode = []}
+  MsgChangeFlowCorrection fc -> st {flowCorrection = fc}
+  MsgOverrideFilament fs -> st {filament = fs}
 
 readAndDropGCodeLines :: GCode [GCodeLine]
 readAndDropGCodeLines = do
@@ -229,8 +235,22 @@ gcodeStateInit env =
       stdgen = mkStdGen 0,
       currentLayer = 0,
       filament = FilamentSection {color = head env.colors, endPosMm = 0} :| [],
-      gCode = []
+      gCode = [],
+      flowCorrection = 0
     }
+
+-------------------------------------------------------------------------------
+
+withFixedRegister :: V3 Position -> GCode a -> GCode a
+withFixedRegister pos inner = do
+  st <- gcodeStateGet
+  ret <- inner
+  extr <- getExtrudeLength pos
+  gcodeStateModify $ MsgOverrideFilament st.filament
+  gcodeStateModify $ MsgChangeCurrentPosition pos
+  gcodeStateModify $ MsgTrackExtrusion extr
+
+  pure ret
 
 -------------------------------------------------------------------------------
 --- Utils
