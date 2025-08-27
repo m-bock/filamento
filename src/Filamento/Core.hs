@@ -53,6 +53,7 @@ module Filamento.Core
     gcodeRun,
     FilamentSection (..),
     gcodeStateGet,
+    readAndDropGCodeLines,
     nextLayer,
     setTool,
     resetLayers,
@@ -189,6 +190,7 @@ data Msg
   | MsgChangeCurrentLayer Int
   | MsgChangeColor Text
   | MsgAddGCodeLine GCodeLine
+  | MsgDropGCodeLines
 
 gcodeStateUpdate :: Msg -> GCodeState -> GCodeState
 gcodeStateUpdate msg st = case msg of
@@ -204,7 +206,14 @@ gcodeStateUpdate msg st = case msg of
       st
         { filament = h {endPosMm = addDelta h.endPosMm extr} :| t
         }
-  MsgAddGCodeLine line -> st {gCode = st.gCode <> [line]}
+  MsgAddGCodeLine line -> st {gCode = line : st.gCode}
+  MsgDropGCodeLines -> st {gCode = []}
+
+readAndDropGCodeLines :: GCode [GCodeLine]
+readAndDropGCodeLines = do
+  st <- gcodeStateGet
+  gcodeStateModify MsgDropGCodeLines
+  pure $ reverse st.gCode
 
 gcodeStateModify :: Msg -> GCode ()
 gcodeStateModify msg = GCode do

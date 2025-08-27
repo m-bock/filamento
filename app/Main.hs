@@ -144,6 +144,8 @@ printAll = initPrinter do
   local (\env -> env {filamentDia = dia} :: GCodeEnv) do
     printSketch
 
+  env.emitGCode
+
 mainGen :: IO ()
 mainGen = do
   let gCodeFile = "out/myprint.gcode"
@@ -162,8 +164,9 @@ mainGen = do
             sketchSize = fromMm $ V3 100 100 10,
             parkingPosition = v3PosFromMm 0 0 20,
             emitGCode = do
-              st <- gcodeStateGet
-              writeFileText gCodeFile $ toText $ st.gCode
+              putTextLn "emitGCode"
+              gcl <- readAndDropGCodeLines
+              appendFileText gCodeFile $ toText gcl
           }
       )
       (gcodeStateInit gcodeEnvDefault)

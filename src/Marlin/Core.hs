@@ -59,6 +59,9 @@ data GCodeLine = GCodeLine
   }
   deriving (Show, Eq)
 
+instance ToText [GCodeLine] where
+  toText gcl = toText $ map gcodeLineToRaw gcl
+
 gcodeLineToRaw :: GCodeLine -> RawGCodeLine
 gcodeLineToRaw (GCodeLine mcmd extra mComment) =
   RawGCodeLine
