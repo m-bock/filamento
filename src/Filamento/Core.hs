@@ -54,7 +54,7 @@ module Filamento.Core
     gcodeRun,
     FilamentSection (..),
     gcodeStateGet,
-    readAndDropGCodeLines,
+    emitGCode,
     nextLayer,
     setTool,
     resetLayers,
@@ -135,8 +135,15 @@ data GCodeEnv = Env
     sectionPath :: [Text],
     bedSize :: V2 Delta,
     colors :: NonEmpty Text,
-    emitGCode :: Text -> GCode ()
+    emitGCode :: Text -> [GCodeLine] -> IO ()
   }
+
+emitGCode :: Text -> GCode ()
+emitGCode tag = do
+  st <- gcodeStateGet
+  env <- ask
+  gcodeStateModify MsgDropGCodeLines
+  liftIO $ env.emitGCode tag $ reverse st.gCode
 
 gcodeEnvDefault :: GCodeEnv
 gcodeEnvDefault =
@@ -161,7 +168,7 @@ gcodeEnvDefault =
       sectionPath = [],
       bedSize = fromMm $ V2 225 225,
       colors = "default" :| [],
-      emitGCode = \_ -> pure ()
+      emitGCode = \_ _ -> pure ()
     }
 
 -------------------------------------------------------------------------------
@@ -220,12 +227,6 @@ gcodeStateUpdate msg st = case msg of
   MsgDropGCodeLines -> st {gCode = []}
   MsgChangeFlowCorrection fc -> st {flowCorrection = fc}
   MsgOverrideFilament fs -> st {filament = fs}
-
-readAndDropGCodeLines :: GCode [GCodeLine]
-readAndDropGCodeLines = do
-  st <- gcodeStateGet
-  gcodeStateModify MsgDropGCodeLines
-  pure $ reverse st.gCode
 
 gcodeStateModify :: Msg -> GCode ()
 gcodeStateModify msg = GCode do
