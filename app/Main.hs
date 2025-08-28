@@ -13,6 +13,7 @@ import Env
 import Filamento
 import Filamento.Filament
 import Filamento.Math
+import qualified Filamento.Octo as Octo
 import GHC.Conc
 import Graphics.Gnuplot.Simple
 import Linear
@@ -381,7 +382,15 @@ mainTry = do
   -- You can find this in OctoPrint Settings -> API
   loadDotenv
   envVars <- parseEnvVars
-  sendFile envVars.octoApiKey "out/myprint.gcode"
+  -- manager <- Octo.getManager
+  -- let httpConfig =
+  --       Octo.HttpCfg
+  --         { manager,
+  --           apiKey = envVars.octoApiKey,
+  --           baseUrl = "http://localhost:5000"
+  --         }
+  -- res <- Octo.sendFile httpConfig "out/xmyprint.gcode"
+  -- putStrLn $ show res
   putStrLn "Hello, World!"
 
 main :: IO ()

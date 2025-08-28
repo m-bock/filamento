@@ -64,14 +64,17 @@ module Filamento.Core
   )
 where
 
+-- import qualified Data.Map.Strict as Map
+
+import Control.Monad.Error (MonadError)
 import Control.Monad.Writer
 import Data.Aeson (ToJSON)
 import Data.Aeson.Types (FromJSON)
 import Data.Convertible (convert)
 import Data.List (elemIndex)
--- import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Filamento.Classes
+import Filamento.Error
 import Filamento.TypeOps
 import Linear (V2 (..), V3 (..))
 import Marlin.Comment (gcodeToComment)
@@ -83,19 +86,22 @@ import System.Random
 --- GCode
 -------------------------------------------------------------------------------
 
-newtype GCode a = GCode (StateT GCodeState (ReaderT GCodeEnv IO) a)
+newtype GCode a = GCode (ExceptT Err (StateT GCodeState (ReaderT GCodeEnv IO)) a)
   deriving
     ( Functor,
       Applicative,
       Monad,
       MonadReader GCodeEnv,
-      MonadIO
+      MonadIO,
+      MonadError Err
     )
 
-gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> IO (a, GCodeState)
-gcodeRun (GCode m) env oldState = do
+gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> IO (Either Err a, GCodeState)
+gcodeRun (GCode act) env oldState = do
   val <-
-    runStateT m oldState
+    act
+      & runExceptT
+      & (`runStateT` oldState)
       & (`runReaderT` env)
   pure val
 
