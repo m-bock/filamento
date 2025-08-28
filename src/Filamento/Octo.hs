@@ -7,9 +7,9 @@ import Marlin.Core (GCodeLine)
 import Octo.API
 import Relude
 
-sendGCode :: OctoHttpCfg -> [GCodeLine] -> IO ()
+sendGCode :: OctoHttpCfg -> Text -> IO ()
 sendGCode cfg gcode = do
-  sendText cfg (toText gcode)
+  sendText cfg gcode
 
   let go = do
         threadDelay 1_000_000 -- 1s
@@ -17,14 +17,14 @@ sendGCode cfg gcode = do
         case jobState of
           OctoStateOperational -> do
             pure ()
-          OctoStateClosed -> do
+          _ -> do
             go
 
   go
 
 getJobState :: OctoHttpCfg -> IO OctoState
 getJobState cfg = do
-  job <- getApiJob cfg
+  job <- getApiConnection cfg
   pure job.current.state
 
 sendText :: OctoHttpCfg -> Text -> IO ()

@@ -21,6 +21,8 @@ import Network.HTTP.Client
 import Network.HTTP.Client.MultipartFormData
 import qualified Network.HTTP.Req as Req
 import Network.HTTP.Types.Status
+import Network.URI (URI, parseURI)
+import Octo.API (OctoHttpCfg (..))
 import Relude
 import System.Directory (doesFileExist)
 import System.Environment (setEnv)
@@ -28,7 +30,8 @@ import qualified System.IO as IO
 
 data EnvVars = EnvVars
   { dryRun :: Bool,
-    octoApiKey :: Text
+    octoApiKey :: Text,
+    octoUrl :: URI
   }
 
 parseEnvVars :: IO EnvVars
@@ -37,6 +40,10 @@ parseEnvVars =
     $ EnvVars
     <$> switch "DRY" (help "Dry run")
     <*> var (str <=< nonempty) "OCTO_API_KEY" (help "OctoPrint API key")
+    <*> var envReadUri "OCTO_URL" (help "OctoPrint URL")
+
+envReadUri :: (AsUnread e) => Env.Reader e URI
+envReadUri = Env.eitherReader \str -> maybe (Left "Invalid URI") Right $ parseURI str
 
 printStripesAlongX :: Square2D -> Count -> [Line2D]
 printStripesAlongX square count = do
@@ -382,15 +389,17 @@ mainTry = do
   -- You can find this in OctoPrint Settings -> API
   loadDotenv
   envVars <- parseEnvVars
-  -- manager <- Octo.getManager
-  -- let httpConfig =
-  --       Octo.HttpCfg
-  --         { manager,
-  --           apiKey = envVars.octoApiKey,
-  --           baseUrl = "http://localhost:5000"
-  --         }
-  -- res <- Octo.sendFile httpConfig "out/xmyprint.gcode"
-  -- putStrLn $ show res
+  manager <- newManager defaultManagerSettings
+  let httpConfig =
+        OctoHttpCfg
+          { manager,
+            apiKey = envVars.octoApiKey,
+            baseUrl = envVars.octoUrl
+          }
+  res <- Octo.getJobState httpConfig
+  res <- Octo.sendGCode httpConfig "G28"
+  putStrLn $ show res
+
   putStrLn "Hello, World!"
 
 main :: IO ()

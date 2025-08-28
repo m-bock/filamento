@@ -74,6 +74,8 @@ library
     random >=1.3.1 && <1.4,
     relude >=1.2.2 && <1.3,
     req >=3.13.0 && <3.14,
+    string-conv >=0.2.0 && <0.3,
+    string-conversions,
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -101,10 +103,12 @@ executable filamento-exe
     lens-aeson >=1.2.3 && <1.3,
     linear >=1.23.2 && <1.24,
     mtl >=2.2.2 && <2.3,
+    network-uri >=2.6.4 && <2.7,
     optparse-applicative >=0.11 && <0.19,
     random >=1.3.1 && <1.4,
     relude >=1.2.2 && <1.3,
     req >=3.13.0 && <3.14,
+    string-conversions,
 
   default-language: Haskell2010
 

@@ -1,9 +1,9 @@
 module Octo.API
   ( postApiFilesLocal,
-    getApiJob,
+    getApiConnection,
     OctoHttpCfg (..),
     RequestPostApiFilesLocal (..),
-    ResponseGetApiJob (..),
+    ResponseGetApiConnection (..),
     JobCurrent (..),
     OctoState (..),
   )
@@ -14,6 +14,8 @@ import qualified Autodocodec as AD
 import Autodocodec.DerivingVia (Autodocodec)
 import Control.Exception (throwIO)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode)
+import qualified Data.ByteString.Lazy as LB
+import Data.String.Conversions (cs)
 import GHC.IO (catchException)
 import GHC.IO.Exception (userError)
 import Network.HTTP.Client
@@ -89,16 +91,16 @@ postApiFilesLocal cfg req = do
     mkOctoError ErrOcto4 do
       throwIO (userError $ show (response.responseStatus, response.responseBody))
 
-data ResponseGetApiJob = ResponseGetApiJob
+data ResponseGetApiConnection = ResponseGetApiConnection
   { current :: JobCurrent
   }
   deriving (Show, Eq)
-  deriving (FromJSON, ToJSON) via (Autodocodec ResponseGetApiJob)
+  deriving (FromJSON, ToJSON) via (Autodocodec ResponseGetApiConnection)
 
-instance HasCodec ResponseGetApiJob where
+instance HasCodec ResponseGetApiConnection where
   codec =
     AD.object "StatusResponse"
-      $ ResponseGetApiJob
+      $ ResponseGetApiConnection
       <$> (AD.requiredField' "current" .= (\x -> x.current))
 
 data JobCurrent = JobCurrent
@@ -116,6 +118,7 @@ instance HasCodec JobCurrent where
 data OctoState
   = OctoStateOperational
   | OctoStateClosed
+  | OctoStatePrinting
   deriving (Show, Eq, Enum, Bounded)
   deriving (FromJSON, ToJSON) via (Autodocodec OctoState)
 
@@ -123,14 +126,15 @@ instance HasCodec OctoState where
   codec = AD.boundedEnumCodec $ \case
     OctoStateOperational -> "Operational"
     OctoStateClosed -> "Closed"
+    OctoStatePrinting -> "Printing"
 
-getApiJob :: OctoHttpCfg -> IO ResponseGetApiJob
-getApiJob cfg = do
+getApiConnection :: OctoHttpCfg -> IO ResponseGetApiConnection
+getApiConnection cfg = do
   initialRequest <- mkOctoError ErrOcto1 (requestFromURI cfg.baseUrl)
   let request =
         initialRequest
           { method = "GET",
-            path = "/api/job",
+            path = "/api/connection",
             requestHeaders = mkCommonHeaders cfg
           }
   response <- mkOctoError ErrOcto3 $ httpLbs request cfg.manager
@@ -140,6 +144,11 @@ getApiJob cfg = do
       throwIO (userError $ show (response.responseStatus, response.responseBody))
 
   res <- mkOctoError ErrOcto6 do
-    either (throwIO . userError) pure (eitherDecode response.responseBody)
+    parseEitherIO response.responseBody
 
   pure res
+
+parseEitherIO :: (FromJSON a) => LB.ByteString -> IO a
+parseEitherIO str = case eitherDecode str of
+  Left msg -> throwIO (userError $ cs $ cs msg <> "\n" <> str)
+  Right x -> pure x
