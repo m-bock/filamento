@@ -1,6 +1,5 @@
 module Main where
 
-import qualified Configuration.Dotenv as Dotenv
 import Control.Concurrent (threadDelay)
 import Control.Lens ((^?))
 import Data.Aeson
@@ -17,10 +16,18 @@ import Filamento.Math
 import GHC.Conc
 import Graphics.Gnuplot.Simple
 import Linear
+import Network.HTTP.Client
+import Network.HTTP.Client.MultipartFormData
+import qualified Network.HTTP.Req as Req
+import Network.HTTP.Types.Status
 import Relude
+import System.Directory (doesFileExist)
+import System.Environment (setEnv)
+import qualified System.IO as IO
 
 data EnvVars = EnvVars
-  { dryRun :: Bool
+  { dryRun :: Bool,
+    octoApiKey :: Text
   }
 
 parseEnvVars :: IO EnvVars
@@ -28,6 +35,7 @@ parseEnvVars =
   Env.parse (Env.header "envparse example")
     $ EnvVars
     <$> switch "DRY" (help "Dry run")
+    <*> var (str <=< nonempty) "OCTO_API_KEY" (help "OctoPrint API key")
 
 printStripesAlongX :: Square2D -> Count -> [Line2D]
 printStripesAlongX square count = do
@@ -239,9 +247,26 @@ parseUserInput str = do
   raw <- userInputParseRaw str
   userInputFromRaw raw
 
+-- Simple .env file loader
+loadDotenv :: IO ()
+loadDotenv = do
+  let envFile = ".env"
+  exists <- doesFileExist envFile
+  when exists $ do
+    content <- readFileText envFile
+    forM_ (lines content) $ \line -> do
+      let trimmed = T.strip line
+      unless (T.null trimmed || T.isPrefixOf "#" trimmed) $ do
+        case T.breakOn "=" trimmed of
+          (key, value) | not (T.null key) && not (T.null value) -> do
+            let key' = T.strip key
+                value' = T.strip $ T.drop 1 value -- Remove the "="
+            setEnv (toString key') (toString value')
+          _ -> pure ()
+
 mainGen :: IO ()
 mainGen = do
-  Dotenv.loadFile Dotenv.defaultConfig
+  loadDotenv
 
   let gCodeFile = "out/myprint.gcode"
   writeFileText gCodeFile ""
@@ -276,20 +301,73 @@ mainGen = do
       (gcodeStateInit gcodeEnvDefault)
   pure ()
 
--- sendGCode :: [Text] -> IO ()
--- sendGCode cmds = runReq defaultHttpConfig $ do
---   liftIO $ putStrLn $ "Sending G-code: " <> T.unpack (T.intercalate ", " cmds)
---   _ <-
---     req
---       POST
---       (host /: "printer" /: "command")
---       (ReqBodyJson $ object ["commands" .= cmds])
---       ignoreResponse
---       (headers <> octoPort)
---   pure ()
+-- octo-print:
+--     curl -H "X-Api-Key: ${OCTO_API_KEY}" \
+--          -F "select=true" \
+--          -F "print=true" \
+--          -F "file=@out/myprint.gcode" \
+--          "${OCTOPRINT_URL:-http://localhost:5000}/api/files/local"
 
-mainPlot :: IO ()
-mainPlot = do
+sendFile :: Text -> Text -> IO ()
+sendFile apiKey filePath = do
+  liftIO $ putStrLn $ "Sending file: " <> T.unpack filePath
+
+  -- Check if file exists first
+  exists <- doesFileExist (toString filePath)
+  if exists
+    then do
+      -- Read file content as ByteString for upload
+      fileContent <- readFileBS (toString filePath)
+      putStrLn $ "File exists, size: " <> show (BS.length fileContent) <> " bytes"
+
+      -- Upload file to OctoPrint using http-client for multipart support
+      liftIO $ putStrLn "Uploading file to OctoPrint..."
+
+      -- Create HTTP client manager
+      manager <- newManager defaultManagerSettings
+
+      -- Create the request
+      let url = "http://localhost:5000/api/files/local"
+      initialRequest <- parseRequest url
+      let request =
+            initialRequest
+              { method = "POST",
+                requestHeaders = [("X-Api-Key", encodeUtf8 apiKey)]
+              }
+
+      -- Create multipart form data
+      formData <-
+        formDataBody
+          [ partBS "select" "true",
+            partBS "print" "true",
+            partFileSource "file" (toString filePath)
+          ]
+          request
+
+      -- Send the request
+      response <- httpLbs formData manager
+
+      liftIO $ putStrLn $ "Upload response status: " <> show (statusCode $ responseStatus response)
+      liftIO $ putStrLn $ "Response body: " <> show (responseBody response)
+    else
+      putStrLn "File does not exist"
+
+sendGCode :: Text -> [Text] -> IO ()
+sendGCode apiKey cmds = Req.runReq Req.defaultHttpConfig $ do
+  liftIO $ putStrLn $ "Sending G-code: " <> T.unpack (T.intercalate ", " cmds)
+
+  -- For now, let's try without CSRF token first
+  -- OctoPrint might accept the request with just the API key
+  res :: Req.JsonResponse Text <-
+    Req.req
+      Req.POST
+      (Req.http "localhost" Req./: "api" Req./: "printer" Req./: "command")
+      (Req.ReqBodyJson $ object ["commands" .= cmds])
+      Req.jsonResponse
+      (Req.header "X-Api-Key" (encodeUtf8 apiKey) <> Req.port 5000)
+
+  liftIO $ print (Req.responseBody res)
+
   pure ()
 
 -- let out = toMm <$> getLayerHeights
@@ -299,7 +377,12 @@ mainPlot = do
 
 mainTry :: IO ()
 mainTry = do
+  -- Replace "YOUR_API_KEY_HERE" with your actual OctoPrint API key
+  -- You can find this in OctoPrint Settings -> API
+  loadDotenv
+  envVars <- parseEnvVars
+  sendFile envVars.octoApiKey "out/myprint.gcode"
   putStrLn "Hello, World!"
 
 main :: IO ()
-main = mainGen
+main = mainTry
