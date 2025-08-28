@@ -47,7 +47,6 @@ library
     Filamento.IO
     Filamento.Lib
     Filamento.Math
-    Filamento.Octo
     Filamento.TypeOps
     Filamento.Types
     Marlin.Comment
@@ -59,6 +58,7 @@ library
     aeson-pretty >=0.8.10 && <0.9,
     base >=4.17.2 && <4.18,
     convertible >=1.1.1 && <1.2,
+    lens-aeson >=1.2.3 && <1.3,
     linear >=1.23.2 && <1.24,
     mtl >=2.2.2 && <2.3,
     newtype >=0.2.2 && <0.3,
@@ -83,7 +83,7 @@ executable filamento-exe
     aeson >=2.2.3 && <2.3,
     base >=4.17.2 && <4.18,
     directory >=1.3.0 && <1.4,
-    envparse,
+    envparse >=0.2.0 && <0.7,
     filamento,
     gnuplot >=0.5.7 && <0.6,
     http-client >=0.7.0 && <0.8,
