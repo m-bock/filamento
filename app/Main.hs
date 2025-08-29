@@ -1,13 +1,6 @@
 module Main where
 
-import Control.Concurrent (threadDelay)
-import Control.Lens ((^?))
-import Data.Aeson
-import Data.Aeson.Lens (key, _String)
-import Data.ByteString (findIndex)
-import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
-import Data.Text (Text)
 import qualified Data.Text as T
 import Env
 import Filamento
@@ -15,35 +8,11 @@ import Filamento.Filament
 import Filamento.Math
 import qualified Filamento.Octo as Octo
 import GHC.Conc
-import Graphics.Gnuplot.Simple
 import Linear
 import Network.HTTP.Client
-import Network.HTTP.Client.MultipartFormData
-import qualified Network.HTTP.Req as Req
-import Network.HTTP.Types.Status
 import Network.URI (URI, parseURI)
 import Octo.API (OctoHttpCfg (..))
 import Relude
-import System.Directory (doesFileExist)
-import System.Environment (setEnv)
-import qualified System.IO as IO
-
-data EnvVars = EnvVars
-  { dryRun :: Bool,
-    octoApiKey :: Text,
-    octoUrl :: URI
-  }
-
-parseEnvVars :: IO EnvVars
-parseEnvVars =
-  Env.parse (Env.header "envparse example")
-    $ EnvVars
-    <$> switch "DRY" (help "Dry run")
-    <*> var (str <=< nonempty) "OCTO_API_KEY" (help "OctoPrint API key")
-    <*> var envReadUri "OCTO_URL" (help "OctoPrint URL")
-
-envReadUri :: (AsUnread e) => Env.Reader e URI
-envReadUri = Env.eitherReader \str -> maybe (Left "Invalid URI") Right $ parseURI str
 
 printStripesAlongX :: Square2D -> Count -> [Line2D]
 printStripesAlongX square count = do
@@ -197,97 +166,13 @@ printAll = do
 
   emitGCode "final"
 
-data UserInput = UserInput
-  { flowCorrection :: Maybe Double
-  }
-  deriving (Show)
-
--- e.g. "c.7", "c-9.15", "c-.15"
-
-data UserInputRaw = UserInputRaw
-  { cmds :: Map Char ArgVal
-  }
-  deriving (Show)
-
-data ArgVal = ArgValDouble Double
-  deriving (Show)
-
-userInputParseArgVal :: Text -> Either Text ArgVal
-userInputParseArgVal str = case parseDoubleWithShorthand str of
-  Just d -> Right $ ArgValDouble d
-  Nothing -> Left $ "Invalid double: " <> str
-
-userInputParseArg :: Text -> Either Text (Char, ArgVal)
-userInputParseArg str = case toString str of
-  'c' : rest -> do
-    argVal <- userInputParseArgVal (toText rest)
-    pure ('c', argVal)
-  _ -> Left $ "Invalid argument: " <> str
-
-userInputParseRaw :: Text -> Either Text UserInputRaw
-userInputParseRaw str = do
-  let parts = T.splitOn " " str & filter (not . T.null) :: [Text]
-  ret <- forM parts $ \part -> do
-    case userInputParseArg part of
-      Right (c, argVal) -> pure (c, argVal)
-      Left err -> Left err
-  pure $ UserInputRaw {cmds = Map.fromList ret}
-
-userInputFromRaw :: UserInputRaw -> Either Text UserInput
-userInputFromRaw (UserInputRaw {cmds}) = do
-  flowCorrection <- case Map.lookup 'c' cmds of
-    Nothing -> Right Nothing
-    Just (ArgValDouble d) -> Right (Just d)
-    _ -> Left "No flow correction"
-  pure $ UserInput {flowCorrection = flowCorrection}
-
--- Accepts ".23" -> 0.23 and "-.13" -> -0.13 as well.
-parseDoubleWithShorthand :: Text -> Maybe Double
-parseDoubleWithShorthand =
-  readMaybe . normalize . toString
-  where
-    normalize ('.' : xs) = '0' : '.' : xs
-    normalize ('-' : '.' : xs) = '-' : '0' : '.' : xs
-    normalize s = s
-
-parseUserInput :: Text -> Either Text UserInput
-parseUserInput str = do
-  raw <- userInputParseRaw str
-  userInputFromRaw raw
-
--- Simple .env file loader
-loadDotenv :: IO ()
-loadDotenv = do
-  let envFile = ".env"
-  exists <- doesFileExist envFile
-  when exists $ do
-    content <- readFileText envFile
-    forM_ (lines content) $ \line -> do
-      let trimmed = T.strip line
-      unless (T.null trimmed || T.isPrefixOf "#" trimmed) $ do
-        case T.breakOn "=" trimmed of
-          (key, value) | not (T.null key) && not (T.null value) -> do
-            let key' = T.strip key
-                value' = T.strip $ T.drop 1 value -- Remove the "="
-            setEnv (toString key') (toString value')
-          _ -> pure ()
-
 mainGen :: IO ()
 mainGen = do
-  loadDotenv
+  envVars <- parseEnvVars
 
   let gCodeFile = "out/myprint.gcode"
-  writeFileText gCodeFile ""
-
-  envVars <- parseEnvVars
-  refCounter <- newIORef 0
-
-  let emitGCode tag gLines = do
-        appendFileText gCodeFile $ toText gLines
-        unless envVars.dryRun do
-          userInput <- getLine
-          let res = parseUserInput userInput
-          putTextLn (show res)
+  fileAppender <- mkFileAppender gCodeFile
+  octo <- mkOcto envVars
 
   _ <-
     gcodeRun
@@ -301,7 +186,7 @@ mainGen = do
             colors = allColors,
             sketchSize = fromMm $ V3 100 100 10,
             parkingPosition = v3PosFromMm 0 0 20,
-            emitGCode
+            emitGCode = octo <> fileAppender
           }
       )
       (gcodeStateInit gcodeEnvDefault)
@@ -309,22 +194,7 @@ mainGen = do
 
 mainTry :: IO ()
 mainTry = do
-  -- Replace "YOUR_API_KEY_HERE" with your actual OctoPrint API key
-  -- You can find this in OctoPrint Settings -> API
-  loadDotenv
-  envVars <- parseEnvVars
-  manager <- newManager defaultManagerSettings
-  let httpConfig =
-        OctoHttpCfg
-          { manager,
-            apiKey = envVars.octoApiKey,
-            baseUrl = envVars.octoUrl
-          }
-  res <- Octo.getJobState httpConfig
-  res <- Octo.sendGCode httpConfig "G28"
-  putStrLn $ show res
-
-  putStrLn "Hello, World!"
+  pure ()
 
 main :: IO ()
-main = mainTry
+main = mainGen
