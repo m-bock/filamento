@@ -1,3 +1,7 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 module Filamento.Core
   ( gcodeFromCmd,
     GCode,
@@ -54,13 +58,15 @@ module Filamento.Core
     gcodeRun,
     FilamentSection (..),
     gcodeStateGet,
-    emitGCode,
     nextLayer,
     setTool,
     resetLayers,
     changeColor,
     incLayers,
     decLayers,
+    hook,
+    GCodePreHook (..),
+    GCodePostHook (..),
   )
 where
 
@@ -86,21 +92,26 @@ import System.Random
 --- GCode
 -------------------------------------------------------------------------------
 
-newtype GCode a = GCode (ExceptT Err (StateT GCodeState (ReaderT GCodeEnv IO)) a)
+newtype GCode a = GCode ((StateT GCodeState (ReaderT GCodeEnv IO)) a)
   deriving
     ( Functor,
       Applicative,
       Monad,
       MonadReader GCodeEnv,
-      MonadIO,
-      MonadError Err
+      MonadIO
     )
 
-gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> IO (Either Err a, GCodeState)
+instance (Semigroup a) => Semigroup (GCode a) where
+  GCode f <> GCode g = GCode (liftA2 (<>) f g)
+
+instance (Monoid a) => Monoid (GCode a) where
+  mempty = GCode (pure mempty)
+  mappend = (<>)
+
+gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> IO (a, GCodeState)
 gcodeRun (GCode act) env oldState = do
   val <-
     act
-      & runExceptT
       & (`runStateT` oldState)
       & (`runReaderT` env)
   pure val
@@ -135,15 +146,36 @@ data GCodeEnv = Env
     sectionPath :: [Text],
     bedSize :: V2 Delta,
     colors :: NonEmpty Text,
-    emitGCode :: Text -> [GCodeLine] -> IO ()
+    preHook :: GCodePreHook,
+    postHook :: GCodePostHook
   }
 
-emitGCode :: Text -> GCode ()
-emitGCode tag = do
-  st <- gcodeStateGet
+hook :: Text -> GCode a -> GCode a
+hook tag inner = do
   env <- ask
-  gcodeStateModify MsgDropGCodeLines
-  liftIO $ env.emitGCode tag $ reverse st.gCode
+
+  let GCodePreHook preEmit = env.preHook
+      GCodePostHook postEmit = env.postHook
+
+  do
+    preEmit tag
+
+  ret <- inner
+
+  do
+    st <- gcodeStateGet
+    gcodeStateModify MsgDropGCodeLines
+    postEmit tag $ reverse st.gCode
+
+  pure ret
+
+newtype GCodePreHook = GCodePreHook
+  {preEmit :: (Text -> GCode ())}
+  deriving (Semigroup, Monoid)
+
+newtype GCodePostHook = GCodePostHook
+  {postEmit :: (Text -> [GCodeLine] -> GCode ())}
+  deriving (Semigroup, Monoid)
 
 gcodeEnvDefault :: GCodeEnv
 gcodeEnvDefault =
@@ -168,7 +200,8 @@ gcodeEnvDefault =
       sectionPath = [],
       bedSize = fromMm $ V2 225 225,
       colors = "default" :| [],
-      emitGCode = \_ _ -> pure ()
+      preHook = mempty,
+      postHook = mempty
     }
 
 -------------------------------------------------------------------------------

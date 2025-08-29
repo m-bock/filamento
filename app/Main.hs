@@ -89,41 +89,42 @@ printSketch = withSketchTranspose do
   resetLayers
   printLayers_ do
     st <- gcodeStateGet
-    if st.currentLayer == 1
-      then do
-        setFanOff
-      else do
-        setFanSpeedFull
+    hook ("layer " <> show st.currentLayer) do
+      if st.currentLayer == 1
+        then do
+          setFanOff
+        else do
+          setFanSpeedFull
 
-    let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fromMm $ V2 50 30)
-        (p1, p2, p3, p4) = rect2GetPoints rect
-    withColors
-      \color -> do
-        color colors.red do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMm $ V2 12.5 30)) (fromInt 20)
+      let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fromMm $ V2 50 30)
+          (p1, p2, p3, p4) = rect2GetPoints rect
+      withColors
+        \color -> do
+          color colors.red do
+            printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMm $ V2 12.5 30)) (fromInt 20)
 
-        color colors.yellow do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fromMm $ V2 12.5 30)) (fromInt 20)
+          color colors.yellow do
+            printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fromMm $ V2 12.5 30)) (fromInt 20)
 
-        color colors.red do
-          withRetract $ withZHop $ moveTo p1
-          extrudeTo p2
+          color colors.red do
+            withRetract $ withZHop $ moveTo p1
+            extrudeTo p2
 
-        color colors.yellow do
-          withRetract $ withZHop $ moveTo p2
-          extrudeTo p3
+          color colors.yellow do
+            withRetract $ withZHop $ moveTo p2
+            extrudeTo p3
 
-        color colors.red do
-          withRetract $ withZHop $ moveTo p3
-          extrudeTo p4
+          color colors.red do
+            withRetract $ withZHop $ moveTo p3
+            extrudeTo p4
 
-        color colors.yellow do
-          withRetract $ withZHop $ moveTo p4
-          extrudeTo p1
+          color colors.yellow do
+            withRetract $ withZHop $ moveTo p4
+            extrudeTo p1
 
-    env <- ask
-    st <- gcodeStateGet
-    emitGCode $ "layer " <> show st.currentLayer
+      env <- ask
+      st <- gcodeStateGet
+      pure ()
 
 printAll :: GCode ()
 printAll = do
@@ -135,16 +136,15 @@ printAll = do
     -- moveToZ (fromMm 0.2)
     -- testCode
 
-    emitGCode "start"
-
-    env <- ask
-    st <- gcodeStateGet
-    ret <- liftIO $ getFilamentDef env st printSketch
+    ret <- hook "start" do
+      env <- ask
+      st <- gcodeStateGet
+      liftIO $ getFilamentDef env st printSketch
 
     -- filamentChange
 
-    resetLayers
-    dia <-
+    dia <- hook "printFilament" do
+      resetLayers
       printFilament
         (\cfg -> cfg {disableSpiral = False})
         ( case (viaNonEmpty head ret, viaNonEmpty last ret) of
@@ -157,22 +157,26 @@ printAll = do
             _ -> []
         )
 
-    emitGCode "printFilament"
-
     filamentChange
 
-    local (\env -> env {filamentDia = dia} :: GCodeEnv) do
-      printSketch
-
-  emitGCode "final"
+    hook "printSketch" do
+      local (\env -> env {filamentDia = dia} :: GCodeEnv) do
+        printSketch
 
 mainGen :: IO ()
 mainGen = do
   envVars <- parseEnvVars
 
-  let gCodeFile = "out/myprint.gcode"
-  fileAppender <- mkFileAppender gCodeFile
-  octo <- mkOcto envVars
+  preHook <-
+    fold
+      [ mkPreHookUserInput
+      ]
+
+  postHook <-
+    fold
+      [ mkPostHookFileAppender "out/myprint.gcode",
+        mkPostHookOcto envVars
+      ]
 
   _ <-
     gcodeRun
@@ -186,7 +190,8 @@ mainGen = do
             colors = allColors,
             sketchSize = fromMm $ V3 100 100 10,
             parkingPosition = v3PosFromMm 0 0 20,
-            emitGCode = octo <> fileAppender
+            preHook,
+            postHook
           }
       )
       (gcodeStateInit gcodeEnvDefault)

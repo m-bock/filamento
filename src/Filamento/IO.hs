@@ -1,9 +1,18 @@
-module Filamento.IO (parseEnvVars, mkOcto, mkFileAppender) where
+module Filamento.IO
+  ( parseEnvVars,
+    mkPostHookOcto,
+    mkPostHookFileAppender,
+    mkPreHookUserInput,
+    mkPostHookLogger,
+  )
+where
 
 import Data.Aeson
 import qualified Data.Map.Strict as Map
+import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Env
+import Filamento.Core (GCode, GCodePostHook (..), GCodePreHook (..))
 import qualified Filamento.Octo as Octo
 import Filamento.TypeOps
 import Marlin.Core (GCodeLine)
@@ -45,20 +54,26 @@ readPersistentState = do
 
   pure v
 
-mkFileAppender :: FilePath -> IO (Text -> [GCodeLine] -> IO ())
-mkFileAppender filePath = do
+mkPostHookFileAppender :: FilePath -> IO GCodePostHook
+mkPostHookFileAppender filePath = do
   writeFileText filePath ""
-  pure $ \tag gLines -> appendFileText filePath $ toText gLines
+  pure
+    $ GCodePostHook
+      \_ gLines -> do
+        putTextLn $ "[FileAppender] Appending " <> show (length gLines) <> " lines to " <> cs filePath
+        appendFileText filePath $ toText gLines
 
-mkUserInput :: IO (Text -> [GCodeLine] -> IO ())
-mkUserInput = do
-  pure $ \_ _ -> do
-    userInput <- getLine
-    let res = parseUserInput userInput
-    putTextLn (show res)
+mkPreHookUserInput :: IO GCodePreHook
+mkPreHookUserInput = do
+  pure $ GCodePreHook
+    \_ -> do
+      putTextLn "[UserInput] Waiting for input"
+      userInput <- getLine
+      let res = parseUserInput userInput
+      putTextLn (show res)
 
-mkOcto :: EnvVars -> IO (Text -> [GCodeLine] -> IO ())
-mkOcto envVars = do
+mkPostHookOcto :: EnvVars -> IO GCodePostHook
+mkPostHookOcto envVars = do
   manager <- newManager defaultManagerSettings
 
   let httpConfig =
@@ -68,9 +83,19 @@ mkOcto envVars = do
             baseUrl = envVars.octoUrl
           }
 
-  pure $ \tag gLines -> do
-    unless envVars.dryRun do
-      Octo.sendGCode httpConfig $ toText gLines
+  pure $ GCodePostHook
+    \_ gLines -> do
+      if envVars.dryRun
+        then putTextLn "[Octo] Dry run"
+        else do
+          putTextLn "[Octo] Sending GCode"
+          liftIO $ Octo.sendGCode httpConfig $ toText gLines
+
+mkPostHookLogger :: IO GCodePostHook
+mkPostHookLogger = do
+  pure $ GCodePostHook
+    \tag gLines -> do
+      putTextLn $ "[Logger] " <> cs tag
 
 ---------------------------------------------------------------------------------------------------
 
