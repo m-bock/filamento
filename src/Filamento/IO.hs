@@ -1,9 +1,10 @@
 module Filamento.IO
   ( parseEnvVars,
-    mkPostHookOcto,
-    mkPostHookFileAppender,
-    mkPreHookUserInput,
-    mkPostHookLogger,
+    mkHookFileAppender,
+    mkHookUserInput,
+    mkHookOcto,
+    mkHookLogger,
+    mkHookFiles,
   )
 where
 
@@ -12,15 +13,14 @@ import qualified Data.Map.Strict as Map
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Env
-import Filamento.Core (GCode, GCodePostHook (..), GCodePreHook (..))
+import Filamento.Core (GCodeHook (..))
 import qualified Filamento.Octo as Octo
 import Filamento.TypeOps
-import Marlin.Core (GCodeLine)
 import Network.HTTP.Client
 import Network.URI (URI, parseURI)
 import Octo.API (OctoHttpCfg (..))
 import Relude
-import System.Directory (doesFileExist)
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist, doesFileExist, removeDirectoryRecursive)
 import System.Environment (setEnv)
 
 data PrintReport = PrintReport
@@ -54,26 +54,55 @@ readPersistentState = do
 
   pure v
 
-mkPostHookFileAppender :: FilePath -> IO GCodePostHook
-mkPostHookFileAppender filePath = do
+mkHookFileAppender :: FilePath -> IO GCodeHook
+mkHookFileAppender filePath = do
   writeFileText filePath ""
   pure
-    $ GCodePostHook
+    $ GCodeHook
       \_ gLines -> do
         putTextLn $ "[FileAppender] Appending " <> show (length gLines) <> " lines to " <> cs filePath
         appendFileText filePath $ toText gLines
 
-mkPreHookUserInput :: IO GCodePreHook
-mkPreHookUserInput = do
-  pure $ GCodePreHook
-    \_ -> do
-      putTextLn "[UserInput] Waiting for input"
-      userInput <- getLine
-      let res = parseUserInput userInput
-      putTextLn (show res)
+mkHookFiles :: IO GCodeHook
+mkHookFiles = do
+  counterRef <- liftIO $ newIORef 0
 
-mkPostHookOcto :: EnvVars -> IO GCodePostHook
-mkPostHookOcto envVars = do
+  let dir = "out/current"
+  dirExists <- doesDirectoryExist dir
+  when dirExists $ removeDirectoryRecursive dir
+  createDirectoryIfMissing True dir
+
+  pure $ GCodeHook
+    \tag gLines -> do
+      counter <- liftIO $ readIORef counterRef
+      let filePath = dir <> "/print-" <> show counter <> ".gcode"
+      writeFileText filePath $ toText gLines
+
+      liftIO $ writeIORef counterRef (counter + 1)
+
+mkHookUserInput :: EnvVars -> IO GCodeHook
+mkHookUserInput envVars = do
+  pure $ GCodeHook
+    \tag _ -> do
+      if envVars.dryRun
+        then putTextLn ("[UserInput] " <> tag <> " Dry run")
+        else do
+          putTextLn ("[UserInput] " <> tag <> " Waiting for input")
+          let loop = do
+                putStr "> "
+                hFlush stdout
+                userInput <- getLine
+                let res = parseUserInput userInput
+                putTextLn (show res)
+                case res of
+                  Right _ -> pure ()
+                  Left err -> do
+                    loop
+
+          loop
+
+mkHookOcto :: EnvVars -> IO GCodeHook
+mkHookOcto envVars = do
   manager <- newManager defaultManagerSettings
 
   let httpConfig =
@@ -83,7 +112,7 @@ mkPostHookOcto envVars = do
             baseUrl = envVars.octoUrl
           }
 
-  pure $ GCodePostHook
+  pure $ GCodeHook
     \_ gLines -> do
       if envVars.dryRun
         then putTextLn "[Octo] Dry run"
@@ -91,9 +120,9 @@ mkPostHookOcto envVars = do
           putTextLn "[Octo] Sending GCode"
           liftIO $ Octo.sendGCode httpConfig $ toText gLines
 
-mkPostHookLogger :: IO GCodePostHook
-mkPostHookLogger = do
-  pure $ GCodePostHook
+mkHookLogger :: IO GCodeHook
+mkHookLogger = do
+  pure $ GCodeHook
     \tag gLines -> do
       putTextLn $ "[Logger] " <> cs tag
 

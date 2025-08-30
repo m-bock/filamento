@@ -65,14 +65,10 @@ module Filamento.Core
     incLayers,
     decLayers,
     hook,
-    GCodePreHook (..),
-    GCodePostHook (..),
+    GCodeHook (..),
   )
 where
 
--- import qualified Data.Map.Strict as Map
-
-import Control.Monad.Error (MonadError)
 import Control.Monad.Writer
 import Data.Aeson (ToJSON)
 import Data.Aeson.Types (FromJSON)
@@ -80,7 +76,6 @@ import Data.Convertible (convert)
 import Data.List (elemIndex)
 import qualified Data.Text as Text
 import Filamento.Classes
-import Filamento.Error
 import Filamento.TypeOps
 import Linear (V2 (..), V3 (..))
 import Marlin.Comment (gcodeToComment)
@@ -146,36 +141,21 @@ data GCodeEnv = Env
     sectionPath :: [Text],
     bedSize :: V2 Delta,
     colors :: NonEmpty Text,
-    preHook :: GCodePreHook,
-    postHook :: GCodePostHook
+    hook :: GCodeHook
   }
 
-hook :: Text -> GCode a -> GCode a
-hook tag inner = do
+newtype GCodeHook = GCodeHook {hook :: Text -> [GCodeLine] -> GCode ()}
+  deriving (Semigroup, Monoid)
+
+hook :: Text -> GCode ()
+hook tag = do
   env <- ask
+  let GCodeHook hookFn = env.hook
 
-  let GCodePreHook preEmit = env.preHook
-      GCodePostHook postEmit = env.postHook
+  st <- gcodeStateGet
+  gcodeStateModify MsgDropGCodeLines
 
-  do
-    preEmit tag
-
-  ret <- inner
-
-  do
-    st <- gcodeStateGet
-    gcodeStateModify MsgDropGCodeLines
-    postEmit tag $ reverse st.gCode
-
-  pure ret
-
-newtype GCodePreHook = GCodePreHook
-  {preEmit :: (Text -> GCode ())}
-  deriving (Semigroup, Monoid)
-
-newtype GCodePostHook = GCodePostHook
-  {postEmit :: (Text -> [GCodeLine] -> GCode ())}
-  deriving (Semigroup, Monoid)
+  hookFn tag $ reverse st.gCode
 
 gcodeEnvDefault :: GCodeEnv
 gcodeEnvDefault =
@@ -200,8 +180,7 @@ gcodeEnvDefault =
       sectionPath = [],
       bedSize = fromMm $ V2 225 225,
       colors = "default" :| [],
-      preHook = mempty,
-      postHook = mempty
+      hook = mempty
     }
 
 -------------------------------------------------------------------------------
