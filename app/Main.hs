@@ -85,11 +85,13 @@ prevColor c = case c of
   _ -> c
 
 printSketch :: GCode ()
-printSketch = withSketchTranspose do
+printSketch = section "sketch" $ withSketchTranspose do
   resetLayers
   printLayers_ do
     st <- gcodeStateGet
-    hook ("layer " <> show st.currentLayer)
+
+    hookUserInput ("prepare layer " <> show st.currentLayer)
+
     if st.currentLayer == 1
       then do
         setFanOff
@@ -116,6 +118,8 @@ printSketch = withSketchTranspose do
           withRetract $ withZHop $ moveTo p4
           extrudeTo p1
 
+    hookEmitGCode "layer"
+
 printAll :: GCode ()
 printAll = do
   env <- ask
@@ -128,7 +132,7 @@ printAll = do
 
     env <- ask
     st <- gcodeStateGet
-    ret <- liftIO $ getFilamentDef env st printSketch
+    ret <- liftIO $ getFilamentDef (env {hookEmitGCode = mempty, hookUserInput = mempty}) st printSketch
 
     -- filamentChange
 
@@ -148,6 +152,8 @@ printAll = do
 
     filamentChange
 
+    hookEmitGCode "a"
+
     do
       local (\env -> env {filamentDia = dia} :: GCodeEnv) do
         printSketch
@@ -156,13 +162,15 @@ mainGen :: IO ()
 mainGen = do
   envVars <- parseEnvVars
 
-  hook <-
+  hookEmitGCode <-
     fold
       [ mkHookOcto envVars,
         mkHookFiles,
         mkHookFileAppender "out/myprint.gcode",
-        mkHookUserInput envVars
+        mkHookFiles
       ]
+
+  hookUserInput <- mkHookUserInput envVars
 
   _ <-
     gcodeRun
@@ -176,7 +184,8 @@ mainGen = do
             colors = allColors,
             sketchSize = fromMm $ V3 100 100 10,
             parkingPosition = v3PosFromMm 0 0 20,
-            hook
+            hookEmitGCode,
+            hookUserInput
           }
       )
       (gcodeStateInit gcodeEnvDefault)

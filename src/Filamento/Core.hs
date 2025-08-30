@@ -64,8 +64,10 @@ module Filamento.Core
     changeColor,
     incLayers,
     decLayers,
-    hook,
-    GCodeHook (..),
+    hookUserInput,
+    HookEmitGCode (..),
+    HookUserInput (..),
+    hookEmitGCode,
   )
 where
 
@@ -77,6 +79,7 @@ import Data.List (elemIndex)
 import qualified Data.Text as Text
 import Filamento.Classes
 import Filamento.TypeOps
+import Fmt
 import Linear (V2 (..), V3 (..))
 import Marlin.Comment (gcodeToComment)
 import Marlin.Core
@@ -141,21 +144,32 @@ data GCodeEnv = Env
     sectionPath :: [Text],
     bedSize :: V2 Delta,
     colors :: NonEmpty Text,
-    hook :: GCodeHook
+    hookEmitGCode :: HookEmitGCode,
+    hookUserInput :: HookUserInput
   }
 
-newtype GCodeHook = GCodeHook {hook :: Text -> [GCodeLine] -> GCode ()}
+newtype HookEmitGCode = HookEmitGCode {hookEmitGCode :: Text -> [GCodeLine] -> GCode ()}
   deriving (Semigroup, Monoid)
 
-hook :: Text -> GCode ()
-hook tag = do
+newtype HookUserInput = HookUserInput {hookUserInput :: Text -> GCode ()}
+  deriving (Semigroup, Monoid)
+
+hookEmitGCode :: Text -> GCode ()
+hookEmitGCode tag = do
   env <- ask
-  let GCodeHook hookFn = env.hook
+  let HookEmitGCode hookFn = env.hookEmitGCode
 
   st <- gcodeStateGet
   gcodeStateModify MsgDropGCodeLines
 
   hookFn tag $ reverse st.gCode
+
+hookUserInput :: Text -> GCode ()
+hookUserInput tag = do
+  env <- ask
+  let HookUserInput hookFn = env.hookUserInput
+
+  hookFn tag
 
 gcodeEnvDefault :: GCodeEnv
 gcodeEnvDefault =
@@ -180,7 +194,8 @@ gcodeEnvDefault =
       sectionPath = [],
       bedSize = fromMm $ V2 225 225,
       colors = "default" :| [],
-      hook = mempty
+      hookEmitGCode = mempty,
+      hookUserInput = mempty
     }
 
 -------------------------------------------------------------------------------

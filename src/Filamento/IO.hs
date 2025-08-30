@@ -8,20 +8,23 @@ module Filamento.IO
   )
 where
 
+import Control.Exception (throw)
 import Data.Aeson
 import qualified Data.Map.Strict as Map
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Env
-import Filamento.Core (GCodeHook (..))
+import Filamento.Core (HookEmitGCode (..), HookUserInput (..), sectionPath)
 import qualified Filamento.Octo as Octo
 import Filamento.TypeOps
+import Fmt (Buildable (..), padLeftF, (+|), (|+))
 import Network.HTTP.Client
 import Network.URI (URI, parseURI)
-import Octo.API (OctoHttpCfg (..))
+import Octo.API (OctoHttpCfg (..), RequestPostApiFilesLocal (filePath))
 import Relude
 import System.Directory (createDirectoryIfMissing, doesDirectoryExist, doesFileExist, removeDirectoryRecursive)
 import System.Environment (setEnv)
+import System.IO.Error (userError)
 
 data PrintReport = PrintReport
   { gcodeFile :: FilePath,
@@ -54,36 +57,47 @@ readPersistentState = do
 
   pure v
 
-mkHookFileAppender :: FilePath -> IO GCodeHook
+mkHookFileAppender :: FilePath -> IO HookEmitGCode
 mkHookFileAppender filePath = do
   writeFileText filePath ""
   pure
-    $ GCodeHook
+    $ HookEmitGCode
       \_ gLines -> do
         putTextLn $ "[FileAppender] Appending " <> show (length gLines) <> " lines to " <> cs filePath
         appendFileText filePath $ toText gLines
 
-mkHookFiles :: IO GCodeHook
+mkHookFiles :: IO HookEmitGCode
 mkHookFiles = do
-  counterRef <- liftIO $ newIORef 0
+  let baseDir = "out/current" :: Text
+  dirExists <- doesDirectoryExist (cs baseDir)
+  when dirExists $ removeDirectoryRecursive (cs baseDir)
+  createDirectoryIfMissing True (cs baseDir)
 
-  let dir = "out/current"
-  dirExists <- doesDirectoryExist dir
-  when dirExists $ removeDirectoryRecursive dir
-  createDirectoryIfMissing True dir
+  getFilePath <- liftIO $ mkGetFilePath baseDir
 
-  pure $ GCodeHook
+  pure $ HookEmitGCode
     \tag gLines -> do
-      counter <- liftIO $ readIORef counterRef
-      let filePath = dir <> "/print-" <> show counter <> ".gcode"
-      writeFileText filePath $ toText gLines
+      env <- ask
 
-      liftIO $ writeIORef counterRef (counter + 1)
+      filePath <- liftIO $ getFilePath tag env.sectionPath
 
-mkHookUserInput :: EnvVars -> IO GCodeHook
+      writeFileText (cs filePath) $ toText gLines
+
+mkGetFilePath :: Text -> IO (Text -> [Text] -> IO Text)
+mkGetFilePath baseDir = do
+  refCounter <- newIORef 0 :: IO (IORef Int)
+  pure \tag sectionPath -> do
+    counter <- readIORef refCounter
+    writeIORef refCounter (counter + 1)
+
+    let pathPart = intercalate "-" (map toString sectionPath)
+
+    pure $ baseDir |+ "/" +| padLeftF 4 '0' counter |+ "-" +| pathPart |+ ".gcode"
+
+mkHookUserInput :: EnvVars -> IO HookUserInput
 mkHookUserInput envVars = do
-  pure $ GCodeHook
-    \tag _ -> do
+  pure $ HookUserInput
+    \tag -> do
       if envVars.dryRun
         then putTextLn ("[UserInput] " <> tag <> " Dry run")
         else do
@@ -101,7 +115,7 @@ mkHookUserInput envVars = do
 
           loop
 
-mkHookOcto :: EnvVars -> IO GCodeHook
+mkHookOcto :: EnvVars -> IO HookEmitGCode
 mkHookOcto envVars = do
   manager <- newManager defaultManagerSettings
 
@@ -112,7 +126,7 @@ mkHookOcto envVars = do
             baseUrl = envVars.octoUrl
           }
 
-  pure $ GCodeHook
+  pure $ HookEmitGCode
     \_ gLines -> do
       if envVars.dryRun
         then putTextLn "[Octo] Dry run"
@@ -120,9 +134,9 @@ mkHookOcto envVars = do
           putTextLn "[Octo] Sending GCode"
           liftIO $ Octo.sendGCode httpConfig $ toText gLines
 
-mkHookLogger :: IO GCodeHook
+mkHookLogger :: IO HookEmitGCode
 mkHookLogger = do
-  pure $ GCodeHook
+  pure $ HookEmitGCode
     \tag gLines -> do
       putTextLn $ "[Logger] " <> cs tag
 

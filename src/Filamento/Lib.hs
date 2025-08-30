@@ -103,11 +103,11 @@ getLayerProgress = do
   pure $ outOfFromCountTotal (fromInt st.currentLayer) layerTotal
 
 printLayers :: (OutOf -> GCode ()) -> GCode ()
-printLayers printLayer = do
+printLayers printLayer = section "layers" do
   env <- ask
   let V3 _ _ sketchHeight = toMm env.sketchSize
   let countLayers = round ((sketchHeight - toMm env.firstLayerHeight) / toMm env.layerHeight)
-  forM_ [0 .. countLayers - 1] $ \i -> section ("layer " <> show i) do
+  forM_ [0 .. countLayers - 1] $ \i -> section (show i) do
     let outOf = fromInt (i, countLayers)
     nextLayer
     printLayer outOf
@@ -214,11 +214,12 @@ cleaningOpportunity = section "Cleaning Opportunity" do
 
 initPrinter :: GCode a -> GCode a
 initPrinter inner = do
-  setUnits Millimeter
+  section "init" $ do
+    setUnits Millimeter
 
-  setExtruderRelative
+    setExtruderRelative
 
-  heatup homeOrResume
+    heatup homeOrResume
 
   -- cleaningOpportunity
 
@@ -226,7 +227,8 @@ initPrinter inner = do
 
   ret <- inner
 
-  finalPark
+  section "park" $ do
+    finalPark
 
   pure ret
 

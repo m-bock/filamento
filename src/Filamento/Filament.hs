@@ -64,15 +64,16 @@ printSolidRect innerPrintLine innerPrintRect frame = do
       spansY = getSpans env.lineWidth frameY1 frameY2
       spans = reverse $ zip spansX spansY
 
-  section ("w = " <> Text.pack (printf "%.3f" (toMm w))) $ do
-    forM_ spans $ \((startX, endX), (startY, endY)) -> do
-      let start = V2 startX startY
-          end = V2 endX endY
-      if (startX == endX) || (startY == endY)
-        then
-          innerPrintLine (line2FromPoints end start)
-        else
-          innerPrintRect (rect2FromCorners start end)
+  comment ("w = " <> Text.pack (printf "%.3f" (toMm w)))
+
+  forM_ spans $ \((startX, endX), (startY, endY)) -> do
+    let start = V2 startX startY
+        end = V2 endX endY
+    if (startX == endX) || (startY == endY)
+      then
+        innerPrintLine (line2FromPoints end start)
+      else
+        innerPrintRect (rect2FromCorners start end)
   where
     getSpans lineWidth start end =
       let ticks = linspaceByStep start end lineWidth deltaFloor
@@ -157,34 +158,35 @@ printFilamentSegment config printPlane profile = do
   moveToZ (posFromDelta layerHeight)
   incLayers
 
-  whileSketchZ_
-    -- ( do
-    --     st <- gcodeStateGet
-    --     pure (st.currentLayer == 0)
-    -- )
-    do
-      st <- gcodeStateGet
+  section "layers" do
+    whileSketchZ_
+      -- ( do
+      --     st <- gcodeStateGet
+      --     pure (st.currentLayer == 0)
+      -- )
+      do
+        st <- gcodeStateGet
 
-      if st.currentLayer == 1
-        then do
-          setFanOff
-        else do
-          setFanSpeedFull
+        section "layer" do
+          if st.currentLayer == 1
+            then do
+              setFanOff
+            else do
+              setFanSpeedFull
 
-      prop <- getZProgress
+          prop <- getZProgress
 
-      let rectWidth = max 0 $ getWidth config.filamentDia prop
-          rectLength = getLength config prop profile.profileType profile.depth
-          rectSize = V2 rectWidth rectLength
-          rect = rect2FromCenterSize rectCenter rectSize
+          let rectWidth = max 0 $ getWidth config.filamentDia prop
+              rectLength = getLength config prop profile.profileType profile.depth
+              rectSize = V2 rectWidth rectLength
+              rect = rect2FromCenterSize rectCenter rectSize
 
-      comment ("prop = " <> Text.pack (printf "%.3f" (toFraction prop)))
-      section (Text.pack $ printf "%.3f" (toFraction prop)) do
-        local (\env -> env {layerHeight = layerHeight}) do
-          printPlane rect
+          comment ("prop = " <> Text.pack (printf "%.3f" (toFraction prop)))
+          local (\env -> env {layerHeight = layerHeight}) do
+            printPlane rect
 
-      moveByZ layerHeight
-      incLayers
+          moveByZ layerHeight
+          incLayers
 
 ironFinish :: FilamentConfig -> [FilamentSection] -> GCode ()
 ironFinish config secs = section "ironFinish" do
@@ -264,17 +266,18 @@ printFilamentChain innerPrintSegment secs = do
     printTestStripes'
 
     section (show profileType) do
-      forM_ items $ \(i, sec) -> do
-        section (show i) do
-          let secPrev = secs !!? (i - 1)
-              pos = maybe 0 (\x -> x.endPosMm) secPrev
-              end = sec.endPosMm
-              depth = getDelta pos end
-              colorIndex = fromMaybe 0 (elemIndex sec.color colors)
-              segment = FilamentSegment profileType pos depth
-          setTool colorIndex
+      section "segments" do
+        forM_ items $ \(i, sec) -> do
+          section "segment" do
+            let secPrev = secs !!? (i - 1)
+                pos = maybe 0 (\x -> x.endPosMm) secPrev
+                end = sec.endPosMm
+                depth = getDelta pos end
+                colorIndex = fromMaybe 0 (elemIndex sec.color colors)
+                segment = FilamentSegment profileType pos depth
+            setTool colorIndex
 
-          innerPrintSegment segment
+            innerPrintSegment segment
 
 translateSpiral :: FilamentConfig -> V3 Position -> V3 Position
 translateSpiral config pos = v3PosFromMm x' y' z
