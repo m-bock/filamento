@@ -1,18 +1,23 @@
 module Filamento.Classes where
 
+import Linear
 import Relude
 
-class Millimeters lo hi | hi -> lo where
-  fromMm :: lo -> hi
-  toMm :: hi -> lo
+class FromToMillimeters a where
+  fromMm :: Double -> a
+  toMm :: a -> Double
 
-class Millimeters3 lo hi | hi -> lo where
-  fromMm3 :: lo -> lo -> lo -> hi
-  toMm3 :: hi -> (lo, lo, lo)
+fromMm3 :: (FromToMillimeters a) => V3 Double -> V3 a
+fromMm3 (V3 x y z) = V3 (fromMm x) (fromMm y) (fromMm z)
 
-class Millimeters2 lo hi | hi -> lo where
-  fromMm2 :: lo -> lo -> hi
-  toMm2 :: hi -> (lo, lo)
+fromMm2 :: (FromToMillimeters a) => V2 Double -> V2 a
+fromMm2 (V2 x y) = V2 (fromMm x) (fromMm y)
+
+toMm3 :: (FromToMillimeters a) => V3 a -> V3 Double
+toMm3 (V3 x y z) = V3 (toMm x) (toMm y) (toMm z)
+
+toMm2 :: (FromToMillimeters a) => V2 a -> V2 Double
+toMm2 (V2 x y) = V2 (toMm x) (toMm y)
 
 class Seconds lo hi | hi -> lo where
   fromSecs :: lo -> hi
@@ -76,7 +81,3 @@ class GetDelta abs rel | abs -> rel where
 
 class Distance lo hi | hi -> lo where
   getDistance :: hi -> hi -> lo
-
-class IsOld old new | old -> new where
-  fromOld :: old -> new
-  toOld :: new -> old
