@@ -272,7 +272,9 @@ filamentChange = do
 
     playTone_
 
-    raw "M0" "Pause for filament change"
+    -- raw "M0" "Pause for filament change"
+
+    hookUserInput "filamentChange a"
 
     setUnits Millimeter
     setExtruderRelative
@@ -282,7 +284,9 @@ filamentChange = do
 
     playTone_
 
-    raw "M0" "Pause for filament change"
+    hookUserInput "filamentChange b"
+
+    -- raw "M0" "Pause for filament change"
 
     setUnits Millimeter
     setExtruderRelative

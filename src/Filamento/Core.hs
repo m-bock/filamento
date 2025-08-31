@@ -14,6 +14,7 @@ module Filamento.Core
     comment,
     raw,
     rand,
+    setFlowCorrection,
     setUnits,
     Units (..),
     autoHome,
@@ -166,6 +167,7 @@ hookEmitGCode tag = do
 
 hookUserInput :: Text -> GCode ()
 hookUserInput tag = do
+  hookEmitGCode tag
   env <- ask
   let HookUserInput hookFn = env.hookUserInput
 
@@ -312,6 +314,9 @@ rand = GCode $ state $ \st ->
    in (value, st')
 
 -------------------------------------------------------------------------------
+
+setFlowCorrection :: Double -> GCode ()
+setFlowCorrection fc = gcodeStateModify $ MsgChangeFlowCorrection fc
 
 section :: Text -> GCode a -> GCode a
 section caption gc = do

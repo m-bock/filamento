@@ -14,10 +14,11 @@ import qualified Data.Map.Strict as Map
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Env
-import Filamento.Core (HookEmitGCode (..), HookUserInput (..), sectionPath)
+import Filamento.Core
+import Filamento.Core (GCodeState, HookEmitGCode (..), HookUserInput (..), sectionPath)
 import qualified Filamento.Octo as Octo
 import Filamento.TypeOps
-import Fmt (Buildable (..), padLeftF, (+|), (|+))
+import Fmt (Buildable (..), fixedF, padLeftF, (+|), (|+))
 import Network.HTTP.Client
 import Network.URI (URI, parseURI)
 import Octo.API (OctoHttpCfg (..), RequestPostApiFilesLocal (filePath))
@@ -98,22 +99,37 @@ mkHookUserInput :: EnvVars -> IO HookUserInput
 mkHookUserInput envVars = do
   pure $ HookUserInput
     \tag -> do
+      putTextLn ("[UserInput] " <> tag)
+      st <- gcodeStateGet
+      let userState = deriveUserState st
+      putTextLn (printUserState userState)
+
       if envVars.dryRun
-        then putTextLn ("[UserInput] " <> tag <> " Dry run")
+        then putTextLn ("Dry run")
         else do
-          putTextLn ("[UserInput] " <> tag <> " Waiting for input")
           let loop = do
                 putStr "> "
                 hFlush stdout
                 userInput <- getLine
                 let res = parseUserInput userInput
-                putTextLn (show res)
                 case res of
-                  Right _ -> pure ()
+                  Right ui -> applyUserInput ui
                   Left err -> do
+                    putTextLn err
                     loop
 
           loop
+
+data UserState = UserState
+  { flowCorrection :: Double
+  }
+  deriving (Show, Eq, Generic)
+
+deriveUserState :: GCodeState -> UserState
+deriveUserState st = UserState {flowCorrection = st.flowCorrection}
+
+printUserState :: UserState -> Text
+printUserState st = "flowCorrection: [c] " +| fixedF 2 st.flowCorrection |+ ""
 
 mkHookOcto :: EnvVars -> IO HookEmitGCode
 mkHookOcto envVars = do
@@ -228,6 +244,12 @@ parseUserInput :: Text -> Either Text UserInput
 parseUserInput str = do
   raw <- userInputParseRaw str
   userInputFromRaw raw
+
+applyUserInput :: UserInput -> GCode ()
+applyUserInput userInput = do
+  case userInput.flowCorrection of
+    Nothing -> pure ()
+    Just fc -> setFlowCorrection fc
 
 ---------------------------------------------------------------------------------------------------
 

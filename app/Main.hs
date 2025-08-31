@@ -57,9 +57,11 @@ printPurgeTower rect count = do
     let V2 x y = p2
         V3 _ _ z = st.currentPosition
 
-    withFixedRegister (V3 x y z) do
-      let y' = y + fromMm (st.flowCorrection * 5)
-      extrudeTo (V2 x y')
+    -- withFixedRegister (V3 x y z) do
+    --   let y' = y + fromMm (st.flowCorrection * 5)
+    --   extrudeTo (V2 x y')
+
+    extrudeTo (V2 x y)
 
 data Colors = Colors
   { red :: Text,
@@ -118,7 +120,7 @@ printSketch = section "sketch" $ withSketchTranspose do
           withRetract $ withZHop $ moveTo p4
           extrudeTo p1
 
-    hookEmitGCode "layer"
+  hookEmitGCode "finish"
 
 printAll :: GCode ()
 printAll = do
@@ -151,8 +153,6 @@ printAll = do
         )
 
     filamentChange
-
-    hookEmitGCode "a"
 
     do
       local (\env -> env {filamentDia = dia} :: GCodeEnv) do
