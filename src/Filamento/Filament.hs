@@ -282,8 +282,8 @@ printFilamentChain innerPrintSegment secs = do
 translateSpiral :: FilamentConfig -> V3 Position -> V3 Position
 translateSpiral config pos = v3PosFromMm x' y' z
   where
-    V3 centerX centerY _ = toMm3 config.spiralCenter
-    V3 x y z = toMm3 pos
+    V3 centerX centerY _ = toMmF config.spiralCenter
+    V3 x y z = toMmF pos
 
     arcLength = y
     spiralConstant = toMm config.spiralConstant
@@ -306,7 +306,7 @@ printFilament mkConfig secs = section "filament" do
   local
     ( \env ->
         env
-          { sketchSize = fromMm3 $ V3 10 10 (toMm config.filamentDia),
+          { sketchSize = fromMmF $ V3 10 10 (toMm config.filamentDia),
             lineWidth = fromMm 0.4,
             layerHeight = fromMm 0.18,
             firstLayerHeight = fromMm 0.18,

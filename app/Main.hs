@@ -99,14 +99,14 @@ printSketch = section "sketch" $ withSketchTranspose do
         setFanOff
       else do
         setFanSpeedFull
-    let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fromMm2 $ V2 50 30)
+    let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fromMmF $ V2 50 30)
         (p1, p2, p3, p4) = rect2GetPoints rect
     withColors
       \color -> do
         color colors.red do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMm2 $ V2 12.5 30)) (fromInt 20)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMmF $ V2 12.5 30)) (fromInt 20)
         color colors.yellow do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fromMm2 $ V2 12.5 30)) (fromInt 20)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fromMmF $ V2 12.5 30)) (fromInt 20)
         color colors.red do
           withRetract $ withZHop $ moveTo p1
           extrudeTo p2
@@ -182,7 +182,7 @@ mainGen = do
             bedTemperature = fromCelsius 65,
             retractLength = fromMm 1.5,
             colors = allColors,
-            sketchSize = fromMm3 $ V3 100 100 10,
+            sketchSize = fromMmF $ V3 100 100 10,
             parkingPosition = v3PosFromMm 0 0 20,
             hookEmitGCode,
             hookUserInput

@@ -1,43 +1,40 @@
 module Filamento.Classes where
 
-import Linear
 import Relude
 
 class FromToMillimeters a where
   fromMm :: Double -> a
   toMm :: a -> Double
 
-fromMm3 :: (FromToMillimeters a) => V3 Double -> V3 a
-fromMm3 (V3 x y z) = V3 (fromMm x) (fromMm y) (fromMm z)
+fromMmF :: (FromToMillimeters a, Functor f) => f Double -> f a
+fromMmF = fmap fromMm
 
-fromMm2 :: (FromToMillimeters a) => V2 Double -> V2 a
-fromMm2 (V2 x y) = V2 (fromMm x) (fromMm y)
+toMmF :: (FromToMillimeters a, Functor f) => f a -> f Double
+toMmF = fmap toMm
 
-toMm3 :: (FromToMillimeters a) => V3 a -> V3 Double
-toMm3 (V3 x y z) = V3 (toMm x) (toMm y) (toMm z)
+class FromToSeconds a where
+  fromSecs :: Double -> a
+  toSecs :: a -> Double
 
-toMm2 :: (FromToMillimeters a) => V2 a -> V2 Double
-toMm2 (V2 x y) = V2 (toMm x) (toMm y)
+class FromToCelsius a where
+  fromCelsius :: Double -> a
+  toCelsius :: a -> Double
 
-class Seconds lo hi | hi -> lo where
-  fromSecs :: lo -> hi
-  toSecs :: hi -> lo
+class FromToMillimetersPerSecond a where
+  fromMmPerSec :: Double -> a
+  toMmPerSec :: a -> Double
 
-class Celsius lo hi | hi -> lo where
-  fromCelsius :: lo -> hi
-  toCelsius :: hi -> lo
+class FromToMillimetersPerMinute a where
+  fromMmPerMin :: Double -> a
+  toMmPerMin :: a -> Double
 
-class MillimetersPerSecond lo hi | hi -> lo where
-  fromMmPerSec :: lo -> hi
-  toMmPerSec :: hi -> lo
+class FromToHertz a where
+  fromHz :: Double -> a
+  toHz :: a -> Double
 
-class MillimetersPerMinute lo hi | hi -> lo where
-  fromMmPerMin :: lo -> hi
-  toMmPerMin :: hi -> lo
-
-class Hertz lo hi | hi -> lo where
-  fromHz :: lo -> hi
-  toHz :: hi -> lo
+class FromToMilliseconds a where
+  fromMs :: Double -> a
+  toMs :: a -> Double
 
 class Scalable factor a where
   scale :: factor -> a -> a
@@ -54,10 +51,6 @@ class JustZ a where
 class DeltaApplication abs rel | abs -> rel where
   addDelta :: abs -> rel -> abs
   subDelta :: abs -> rel -> abs
-
-class Milliseconds lo hi | hi -> lo where
-  fromMs :: lo -> hi
-  toMs :: hi -> lo
 
 class FractionalValue a where
   fromFraction :: Double -> a

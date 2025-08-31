@@ -173,11 +173,11 @@ instance Scalable Double (V3 Position) where
 newtype Duration = Duration {ms :: Double}
   deriving (Show, Eq, Generic)
 
-instance Milliseconds Double Duration where
+instance FromToMilliseconds Duration where
   toMs (Duration d) = d
   fromMs d = Duration d
 
-instance Seconds Double Duration where
+instance FromToSeconds Duration where
   toSecs (Duration d) = d / factorSecs
   fromSecs s = Duration (s * factorSecs)
 
@@ -189,7 +189,7 @@ factorSecs = 1000
 newtype Frequency = Frequency {hz :: Double}
   deriving (Show, Eq, Generic)
 
-instance Hertz Double Frequency where
+instance FromToHertz Frequency where
   toHz (Frequency f) = f
   fromHz f = Frequency f
 
@@ -198,18 +198,18 @@ instance Hertz Double Frequency where
 newtype Speed = Speed {mmPerSec :: Double}
   deriving (Show, Eq, Ord)
 
-instance MillimetersPerSecond Double Speed where
+instance FromToMillimetersPerSecond Speed where
   toMmPerSec (Speed s) = s
   fromMmPerSec d = Speed d
 
-instance MillimetersPerMinute Double Speed where
+instance FromToMillimetersPerMinute Speed where
   toMmPerMin (Speed s) = s * 60
   fromMmPerMin d = Speed (d / 60)
 
 newtype Temperature = Temperature {degrees :: Double}
   deriving (Show, Eq, Num)
 
-instance Celsius Double Temperature where
+instance FromToCelsius Temperature where
   toCelsius (Temperature t) = t
   fromCelsius t = Temperature t
 
