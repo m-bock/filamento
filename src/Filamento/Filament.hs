@@ -200,7 +200,7 @@ ironFinish config secs = section "ironFinish" do
 
   let width = getWidth config.filamentDia prop |> "width"
       depth = case viaNonEmpty last secs of
-        Just val -> val.endPosMm |> "depth"
+        Just val -> val.endPos |> "depth"
         Nothing -> 0 |> "depth"
 
       startX = subDelta 0 $ scale @Double 0.5 width
@@ -270,8 +270,8 @@ printFilamentChain innerPrintSegment secs = do
         forM_ items $ \(i, sec) -> do
           section "segment" do
             let secPrev = secs !!? (i - 1)
-                pos = maybe 0 (\x -> x.endPosMm) secPrev
-                end = sec.endPosMm
+                pos = maybe 0 (\x -> x.endPos) secPrev
+                end = sec.endPos
                 depth = getDelta pos end
                 colorIndex = fromMaybe 0 (elemIndex sec.color colors)
                 segment = FilamentSegment profileType pos depth
@@ -334,9 +334,9 @@ printFilament mkConfig secs = section "filament" do
       st <- gcodeStateGet
       env <- ask
 
-      let actualLength = (head st.filament).endPosMm
+      let actualLength = (head st.filament).endPos
           requestedLength = case viaNonEmpty last secs of
-            Just l -> l.endPosMm
+            Just l -> l.endPos
             Nothing -> 0
 
           prop = fromFraction (toMm actualLength / toMm requestedLength) :: Proportion
@@ -357,6 +357,6 @@ printFilament_ = printFilament id
 
 getLayerHeight :: FilamentConfig -> Count -> Delta
 getLayerHeight config layerIndex =
-  if layerIndex == fromInt 0
+  if layerIndex == fromNat 0
     then 0.2
     else 0.2

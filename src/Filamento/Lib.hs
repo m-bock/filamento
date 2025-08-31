@@ -99,8 +99,8 @@ getLayerProgress = do
   st <- gcodeStateGet
   env <- ask
   let V3 _ _ sketchHeight = toMmF env.sketchSize
-  let layerTotal = fromInt (round (sketchHeight / toMm env.layerHeight)) :: Total
-  pure $ outOfFromCountTotal (fromInt st.currentLayer) layerTotal
+  let layerTotal = fromNat (round (sketchHeight / toMm env.layerHeight)) :: Total
+  pure $ outOfFromCountTotal (fromNat st.currentLayer) layerTotal
 
 printLayers :: (OutOf -> GCode ()) -> GCode ()
 printLayers printLayer = section "layers" do
@@ -108,7 +108,7 @@ printLayers printLayer = section "layers" do
   let V3 _ _ sketchHeight = toMmF env.sketchSize
   let countLayers = round ((sketchHeight - toMm env.firstLayerHeight) / toMm env.layerHeight)
   forM_ [0 .. countLayers - 1] $ \i -> section (show i) do
-    let outOf = fromInt (i, countLayers)
+    let outOf = outOfFromCountTotal (fromNat i) (fromNat countLayers)
     nextLayer
     printLayer outOf
 
@@ -304,7 +304,7 @@ filamentChange = do
 getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> IO [FilamentSection]
 getFilamentDef env state' gcode = do
   (_, finalState) <- gcodeRun gcode env state'
-  pure $ finalState.filament & NE.reverse & NE.filter (\x -> x.endPosMm /= 0)
+  pure $ finalState.filament & NE.reverse & NE.filter (\x -> x.endPos /= 0)
 
 -- printFilamentDef TODO: implement or remove
 

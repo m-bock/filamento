@@ -56,10 +56,10 @@ deltaFromMm :: Double -> Delta
 deltaFromMm = fromMm
 
 deltaFloor :: Delta -> Count
-deltaFloor = fromInt . floor . toMm
+deltaFloor = fromNat . floor . toMm
 
 deltaRound :: Delta -> Count
-deltaRound = fromInt . round . toMm
+deltaRound = fromNat . round . toMm
 
 deltaFromPos :: Position -> Delta
 deltaFromPos pos = getDelta (posFromMm 0) pos

@@ -19,8 +19,8 @@ deltaLinspaceByStep d1 d2 idealStep f = map deltaFromPos $ linspaceByStep (posFr
 
 -- count >= 2
 linspace :: Position -> Position -> Count -> [Position]
-linspace _ _ n | (n < fromInt 2) = []
-linspace (toMm -> start) (toMm -> end) (toInt -> n) =
+linspace _ _ n | (n < fromNat 2) = []
+linspace (toMm -> start) (toMm -> end) (toNat -> n) =
   let step = (end - start) / fromIntegral (n - 1)
    in [fromMm (start + fromIntegral i * step) | i <- [0 .. n - 1]]
 

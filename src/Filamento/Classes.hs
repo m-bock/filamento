@@ -57,20 +57,25 @@ class FractionalValue a where
   toFraction :: a -> Double
   clampFraction :: Double -> a
 
-class FromToNatural lo hi | hi -> lo where
-  fromNat :: lo -> hi
-  toNat :: hi -> lo
+class FromToNatural a where
+  fromNat :: Natural -> a
+  toNat :: a -> Natural
 
-class FromToInt lo hi | hi -> lo where
-  fromInt :: lo -> hi
-  toInt :: hi -> lo
+class FromToInt a where
+  fromInt :: Int -> a
+  toInt :: a -> Int
 
-class FromToDouble lo hi | hi -> lo where
-  fromDouble :: lo -> hi
-  toDouble :: hi -> lo
+class FromDouble a where
+  fromDouble :: Double -> a
+
+class ToDouble a where
+  toDouble :: a -> Double
 
 class GetDelta abs rel | abs -> rel where
   getDelta :: abs -> abs -> rel
 
 class Distance lo hi | hi -> lo where
   getDistance :: hi -> hi -> lo
+
+instance ToDouble Nat where
+  toDouble = fromIntegral

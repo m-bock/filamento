@@ -104,9 +104,9 @@ printSketch = section "sketch" $ withSketchTranspose do
     withColors
       \color -> do
         color colors.red do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMmF $ V2 12.5 30)) (fromInt 20)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fromMmF $ V2 12.5 30)) (fromNat 20)
         color colors.yellow do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fromMmF $ V2 12.5 30)) (fromInt 20)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fromMmF $ V2 12.5 30)) (fromNat 20)
         color colors.red do
           withRetract $ withZHop $ moveTo p1
           extrudeTo p2
@@ -146,9 +146,9 @@ printAll = do
             (Just fi, Just la) ->
               [FilamentSection (prevColor fi.color) (fromMm (70))]
                 ++ map
-                  (\v -> v {endPosMm = 70 + (v.endPosMm * 1.00)})
+                  (\v -> v {endPos = 70 + (v.endPos * 1.00)})
                   ret
-                ++ [FilamentSection (nextColor la.color) (fromMm (70 + 150) + la.endPosMm)]
+                ++ [FilamentSection (nextColor la.color) (fromMm (70 + 150) + la.endPos)]
             _ -> []
         )
 

@@ -206,7 +206,7 @@ gcodeEnvDefault =
 
 data FilamentSection = FilamentSection
   { color :: Text,
-    endPosMm :: Position
+    endPos :: Position
   }
   deriving (Show, Eq, Generic)
 
@@ -219,7 +219,7 @@ instance ToJSON FilamentSection
 -------------------------------------------------------------------------------
 
 data GCodeState = GCodeState
-  { currentLayer :: Int,
+  { currentLayer :: Nat,
     currentPosition :: V3 Position,
     stdgen :: StdGen,
     filament :: NonEmpty FilamentSection,
@@ -231,7 +231,7 @@ data GCodeState = GCodeState
 data Msg
   = MsgChangeCurrentPosition (V3 Position)
   | MsgTrackExtrusion Delta
-  | MsgChangeCurrentLayer Int
+  | MsgChangeCurrentLayer Nat
   | MsgChangeColor Text
   | MsgAddGCodeLine GCodeLine
   | MsgDropGCodeLines
@@ -245,12 +245,12 @@ gcodeStateUpdate msg st = case msg of
   MsgChangeColor color -> case st.filament of
     h :| t ->
       st
-        { filament = FilamentSection {color, endPosMm = h.endPosMm} :| h : t
+        { filament = FilamentSection {color, endPos = h.endPos} :| h : t
         }
   MsgTrackExtrusion extr -> case st.filament of
     h :| t ->
       st
-        { filament = h {endPosMm = addDelta h.endPosMm extr} :| t
+        { filament = h {endPos = addDelta h.endPos extr} :| t
         }
   MsgAddGCodeLine line -> st {gCode = line : st.gCode}
   MsgDropGCodeLines -> st {gCode = []}
@@ -270,7 +270,7 @@ gcodeStateInit env =
     { currentPosition = fromMmF $ V3 0 0 0,
       stdgen = mkStdGen 0,
       currentLayer = 0,
-      filament = FilamentSection {color = head env.colors, endPosMm = 0} :| [],
+      filament = FilamentSection {color = head env.colors, endPos = 0} :| [],
       gCode = [],
       flowCorrection = 0
     }
@@ -355,7 +355,7 @@ nextLayer = section "nextLayer" do
   env <- ask
   st <- gcodeStateGet
 
-  let z = fromMm (toMm env.firstLayerHeight + convert st.currentLayer * toMm env.layerHeight)
+  let z = fromMm (toMm env.firstLayerHeight + toDouble st.currentLayer * toMm env.layerHeight)
 
   gcodeStateModify $ MsgChangeCurrentLayer (st.currentLayer + 1)
 

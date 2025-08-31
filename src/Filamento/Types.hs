@@ -38,7 +38,8 @@ module Filamento.Types
   )
 where
 
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON, defaultOptions, genericParseJSON, genericToJSON)
+import Data.Aeson.Types (FromJSON (parseJSON), ToJSON (toJSON))
 import Filamento.Classes
 import GHC.Generics
 import Linear (V2 (..), V3 (..), distance)
@@ -108,7 +109,12 @@ angleToRad (Angle a) = a
 newtype Position = Position {mm :: Double}
   deriving (Show, Eq, Num, Fractional, Ord, Real, Enum, Floating, Generic)
   deriving (Semigroup, Monoid) via (Sum Double)
-  deriving (ToJSON, FromJSON) via Double
+
+instance ToJSON Position where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON Position where
+  parseJSON = genericParseJSON defaultOptions
 
 instance FromToMillimeters Position where
   toMm (Position v) = v
@@ -263,16 +269,11 @@ square2GetSize (Square2D rect) = rect2GetSize rect
 newtype Total = Total Natural
   deriving (Show, Eq)
 
-instance FromToNatural Natural Total where
+instance FromToNatural Total where
   fromNat x = Total x
   toNat (Total x) = x
 
-instance FromToInt Int Total where
-  fromInt x = Total (max 0 $ fromIntegral x)
-  toInt (Total x) = fromIntegral x
-
-instance FromToDouble Double Total where
-  fromDouble x = Total (max 0 $ floor x)
+instance ToDouble Total where
   toDouble (Total x) = fromIntegral x
 
 -------------------------------------------------------------------------------
@@ -289,30 +290,17 @@ outOfGetCount (OutOf {count}) = count
 outOfGetTotal :: OutOf -> Total
 outOfGetTotal (OutOf {total}) = total
 
-instance FromToInt (Int, Int) OutOf where
-  fromInt (x, y) = OutOf (fromInt x) (fromInt y)
-  toInt (OutOf count total) = (toInt count, toInt total)
-
-instance FromToNatural (Natural, Natural) OutOf where
-  fromNat (x, y) = OutOf (fromNat x) (fromNat y)
-  toNat (OutOf count total) = (toNat count, toNat total)
-
 -------------------------------------------------------------------------------
 
 newtype Count = Count Natural
   deriving (Show, Eq, Ord)
   deriving (Semigroup, Monoid) via (Sum Natural)
 
-instance FromToNatural Natural Count where
+instance FromToNatural Count where
   fromNat x = Count x
   toNat (Count x) = x
 
-instance FromToInt Int Count where
-  fromInt x = Count (max 0 $ fromIntegral x)
-  toInt (Count x) = fromIntegral x
-
-instance FromToDouble Double Count where
-  fromDouble x = Count (max 0 $ floor x)
+instance ToDouble Count where
   toDouble (Count x) = fromIntegral x
 
 countInc :: Count -> Count
