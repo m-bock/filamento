@@ -14,6 +14,7 @@ common extensions
   default-extensions:
     AllowAmbiguousTypes
     BlockArguments
+    DeriveAnyClass
     DeriveGeneric
     DerivingStrategies
     DerivingVia
@@ -51,6 +52,8 @@ library
     Filamento.Octo
     Filamento.TypeOps
     Filamento.Types
+    Filamento.Types.Continous.Factor
+    Filamento.Types.Continous.NonNegativeFactor
     Filamento.Types.Quantities.Length
     Marlin.Comment
     Marlin.Core

@@ -98,8 +98,10 @@ instance Scalable Double (V3 Delta) where
 instance GetDelta Delta Delta where
   getDelta (Delta x) (Delta y) = Delta (y - x)
 
-instance DeltaApplication Delta Delta where
+instance AddDelta Delta Delta where
   addDelta (Delta x) (Delta y) = Delta (x + y)
+
+instance SubDelta Delta Delta where
   subDelta (Delta x) (Delta y) = Delta (x - y)
 
 -------------------------------------------------------------------------------
@@ -141,16 +143,22 @@ instance JustY (V2 Position) where
 instance JustZ (V3 Position) where
   justZ (V3 _ _ z) = V3 0 0 z
 
-instance DeltaApplication Position Delta where
+instance AddDelta Position Delta where
   addDelta (Position p) d = Position (p + toMm d)
+
+instance SubDelta Position Delta where
   subDelta (Position p) d = Position (p - toMm d)
 
-instance DeltaApplication (V2 Position) (V2 Delta) where
+instance AddDelta (V2 Position) (V2 Delta) where
   addDelta (V2 x y) (V2 x' y') = V2 (addDelta x x') (addDelta y y')
+
+instance SubDelta (V2 Position) (V2 Delta) where
   subDelta (V2 x y) (V2 x' y') = V2 (subDelta x x') (subDelta y y')
 
-instance DeltaApplication (V3 Position) (V3 Delta) where
+instance AddDelta (V3 Position) (V3 Delta) where
   addDelta (V3 x y z) (V3 x' y' z') = V3 (addDelta x x') (addDelta y y') (addDelta z z')
+
+instance SubDelta (V3 Position) (V3 Delta) where
   subDelta (V3 x y z) (V3 x' y' z') = V3 (subDelta x x') (subDelta y y') (subDelta z z')
 
 instance GetDelta Position Delta where

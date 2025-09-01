@@ -16,12 +16,19 @@ class FromDouble a where
 class ToDouble a where
   toDouble :: a -> Double
 
+viaDouble :: (ToDouble a, FromDouble b) => a -> b
+viaDouble = fromDouble . toDouble
+
 instance ToDouble Nat where
   toDouble = fromIntegral
 
 class FromToMillimeters a where
   fromMm :: Double -> a
   toMm :: a -> Double
+
+class FromToCentimeters a where
+  fromCm :: Double -> a
+  toCm :: a -> Double
 
 class FromToSquareMillimeters a where
   fromSqMm :: Double -> a
@@ -73,11 +80,13 @@ class JustY a where
 class JustZ a where
   justZ :: a -> a
 
-class Scalable factor a where
+class Scalable factor a | a -> factor where
   scale :: factor -> a -> a
 
-class DeltaApplication abs rel | abs -> rel where
+class AddDelta abs rel | abs -> rel where
   addDelta :: abs -> rel -> abs
+
+class SubDelta abs rel | abs -> rel where
   subDelta :: abs -> rel -> abs
 
 class GetDelta abs rel | abs -> rel where
