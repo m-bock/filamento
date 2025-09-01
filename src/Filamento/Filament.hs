@@ -134,22 +134,22 @@ getLength config prop profile len =
         Valley -> toDouble prop
 
       ov = config.overlap
-      ramp = scale (frac + frac) ov
+      ramp = scale (fromDouble @Factor $ frac + frac) ov
    in ramp + (-ov) + len + (-ov) + ramp
 
 getWidth :: Delta -> Proportion -> Delta
 getWidth filamentDia propY =
   let y = toDouble propY
-      w = sqrt (1 - 4 * (y - 0.5) ^ 2)
+      w = fromDouble @Factor $ sqrt (1 - 4 * (y - 0.5) ^ 2)
    in scale w filamentDia
 
 printFilamentSegment :: FilamentConfig -> (Rect2D -> GCode ()) -> FilamentSegment -> GCode ()
 printFilamentSegment config printPlane profile = do
-  let rectCenter = V2 0 (add profile.pos (scale @Double 0.5 profile.depth))
+  let rectCenter = V2 0 (add profile.pos (scale @Factor 0.5 profile.depth))
 
   resetLayers
 
-  local (\env -> env {zHop = scale @Double 1.2 config.filamentDia}) do
+  local (\env -> env {zHop = scale @Factor 1.2 config.filamentDia}) do
     withRetract $ withZHop $ moveTo (V2 0 profile.pos)
 
   env <- ask
@@ -203,8 +203,8 @@ ironFinish config secs = section "ironFinish" do
         Just val -> val.endPos |> "depth"
         Nothing -> 0 |> "depth"
 
-      startX = sub 0 $ scale @Double 0.5 width
-      endX = add 0 $ scale @Double 0.5 width
+      startX = sub 0 $ scale @Factor 0.5 width
+      endX = add 0 $ scale @Factor 0.5 width
       step = env.lineWidth
 
       xs = linspaceByStep startX endX step deltaRound
@@ -340,7 +340,7 @@ printFilament mkConfig secs = section "filament" do
             Nothing -> 0
 
           prop = fromMaybe propMax $ propFromDouble (toMm actualLength / toMm requestedLength)
-          dia = deltaFromMm (toMm env.filamentDia * sqrt (toDouble prop))
+          dia = fromMm (toMm env.filamentDia * sqrt (toDouble prop))
 
       -- Force evaluation and log the values
       _ <- Relude.trace ("actualLength: " ++ show actualLength) (pure ())

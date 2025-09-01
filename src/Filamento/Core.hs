@@ -293,8 +293,8 @@ withFixedRegister pos inner = do
 -------------------------------------------------------------------------------
 transposeCenterSketch :: V3 Delta -> V2 Delta -> V3 Position -> V3 Position
 transposeCenterSketch sketchSize bedSize pos =
-  let halfSketch = scale @Double 0.5 (v3DeltaDropZ sketchSize)
-      halfBed = scale @Double 0.5 bedSize
+  let halfSketch = scale @Factor 0.5 (v3DeltaDropZ sketchSize)
+      halfBed = scale @Factor 0.5 bedSize
       diff = v3DeltaFromV2 (halfBed - halfSketch) 0
    in add pos diff
 

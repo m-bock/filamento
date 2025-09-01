@@ -2,7 +2,6 @@ module Filamento.Types
   ( Angle,
     angleFromRad,
     angleToRad,
-    Delta,
     Position,
     Duration,
     Frequency,
@@ -52,57 +51,13 @@ where
 import Data.Aeson (FromJSON, ToJSON, defaultOptions, genericParseJSON, genericToJSON)
 import Data.Aeson.Types (FromJSON (parseJSON), ToJSON (toJSON))
 import Filamento.Classes
+import Filamento.Types.Continous.Factor as Export
+import Filamento.Types.Continous.NonNegativeFactor as Export
+import Filamento.Types.Quantities.Delta as Export
 import Filamento.Types.Quantities.Length as Export
 import GHC.Generics
 import Linear (V2 (..), V3 (..), distance)
 import Relude
-
--------------------------------------------------------------------------------
-
-newtype Delta = Delta Double
-  deriving (Show, Eq, Generic, Num, Ord, Fractional, RealFrac, Real)
-  deriving (Semigroup, Monoid) via (Sum Double)
-
-instance ToJSON Delta
-
-instance FromJSON Delta
-
-instance Scalable Double Delta where
-  scale factor (Delta v) = Delta (v * factor)
-
-instance FromToMillimeters Delta where
-  toMm (Delta v) = v
-  fromMm v = Delta v
-
-instance JustX (V2 Delta) where
-  justX (V2 x _) = V2 x 0
-
-instance JustX (V3 Delta) where
-  justX (V3 x _ _) = V3 x 0 0
-
-instance JustY (V2 Delta) where
-  justY (V2 _ y) = V2 0 y
-
-instance JustY (V3 Delta) where
-  justY (V3 _ y _) = V3 0 y 0
-
-instance JustZ (V3 Delta) where
-  justZ (V3 _ _ z) = V3 0 0 z
-
-instance Scalable Double (V2 Delta) where
-  scale factor (V2 x y) = V2 (scale factor x) (scale factor y)
-
-instance Scalable Double (V3 Delta) where
-  scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)
-
-instance GetDelta Delta Delta where
-  getDelta (Delta x) (Delta y) = Delta (y - x)
-
-instance Add Delta Delta where
-  add (Delta x) (Delta y) = Delta (x + y)
-
-instance Sub Delta Delta where
-  sub (Delta x) (Delta y) = Delta (x - y)
 
 -------------------------------------------------------------------------------
 

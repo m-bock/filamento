@@ -4,8 +4,6 @@ module Filamento.TypeOps
     angleFromProportion,
     angleSin,
     deltaFloor,
-    deltaFromMm,
-    deltaMiddle,
     deltaFromPos,
     deltaRound,
     freqBeepHigh,
@@ -51,9 +49,6 @@ import Filamento.Types as Export
 import Linear
 import Relude
 
-deltaFromMm :: Double -> Delta
-deltaFromMm = fromMm
-
 deltaFloor :: Delta -> Count
 deltaFloor = fromNat . floor . toMm
 
@@ -62,9 +57,6 @@ deltaRound = fromNat . round . toMm
 
 deltaFromPos :: Position -> Delta
 deltaFromPos pos = getDelta (posFromMm 0) pos
-
-deltaMiddle :: Delta -> Delta -> Delta
-deltaMiddle d1 d2 = add d1 (scale @Double 0.5 (getDelta d1 d2))
 
 -------------------------------------------------------------------------------
 
@@ -78,7 +70,7 @@ posFromMm :: Double -> Position
 posFromMm = fromMm
 
 posMiddle :: Position -> Position -> Position
-posMiddle p1 p2 = add p1 (scale @Double 0.5 (getDelta p1 p2))
+posMiddle p1 p2 = add p1 (scale @Factor 0.5 (getDelta p1 p2))
 
 -------------------------------------------------------------------------------
 
@@ -145,7 +137,7 @@ rect2FromCenterSize center size =
   rect2FromMinSize (sub center size') size
   where
     size' :: V2 Delta
-    size' = scale @Double 0.5 size
+    size' = scale @Factor 0.5 size
 
 rect2ToCenterSize :: Rect2D -> (V2 Position, V2 Delta)
 rect2ToCenterSize rect = (rect2GetCenter rect, rect2GetSize rect)
@@ -157,7 +149,7 @@ rect2GetMaxCorner :: Rect2D -> V2 Position
 rect2GetMaxCorner (rect2ToMinSize -> (minCorner, size)) = add minCorner size
 
 rect2GetCenter :: Rect2D -> V2 Position
-rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = add minCorner (scale @Double 0.5 size)
+rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = add minCorner (scale @Factor 0.5 size)
 
 rect2GetPoints :: Rect2D -> (V2 Position, V2 Position, V2 Position, V2 Position)
 rect2GetPoints rect = (p1, p2, p3, p4)
@@ -171,13 +163,13 @@ rect2GetPoints rect = (p1, p2, p3, p4)
 -------------------------------------------------------------------------------
 
 square2FromCenterSize :: V2 Position -> Delta -> Square2D
-square2FromCenterSize center size = square2FromMinSize (add center (pure @V2 $ scale @Double 0.5 size)) size
+square2FromCenterSize center size = square2FromMinSize (add center (pure @V2 $ scale @Factor 0.5 size)) size
 
 square2ToCenterSize :: Square2D -> (V2 Position, V2 Delta)
 square2ToCenterSize square = (square2GetCenter square, square2GetSize square)
 
 square2GetCenter :: Square2D -> V2 Position
-square2GetCenter square = add (square2GetMinCorner square) (scale @Double 0.5 (square2GetSize square))
+square2GetCenter square = add (square2GetMinCorner square) (scale @Factor 0.5 (square2GetSize square))
 
 square2GetMaxCorner :: Square2D -> V2 Position
 square2GetMaxCorner square = add (square2GetMinCorner square) (square2GetSize square)

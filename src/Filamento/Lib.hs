@@ -119,7 +119,7 @@ printSketchFrame :: GCode ()
 printSketchFrame = section "sketchFrame" do
   env <- ask
   let size2d = v3DeltaDropZ env.sketchSize
-  let centerBed = add mempty (scale @Double 0.5 env.bedSize - scale @Double 0.5 size2d)
+  let centerBed = add mempty (scale @Factor 0.5 env.bedSize - scale @Factor 0.5 size2d)
   printRect2d centerBed size2d
 
 withRetract :: GCode a -> GCode a
