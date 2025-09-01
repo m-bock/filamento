@@ -55,6 +55,7 @@ library
     Filamento.Types.Continous.Factor
     Filamento.Types.Continous.NonNegativeFactor
     Filamento.Types.Quantities.Length
+    Filamento.Types.Quantities.Delta
     Marlin.Comment
     Marlin.Core
     Marlin.Syntax

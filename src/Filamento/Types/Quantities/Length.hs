@@ -23,5 +23,8 @@ instance FromToCentimeters Length where
 instance Scalable NonNegativeFactor Length where
   scale factor (Length l) = Length (l * toDouble factor)
 
+instance Add Length Length where
+  add (Length l1) (Length l2) = Length (l1 + l2)
+
 lengthPretty :: Length -> Text
 lengthPretty (Length l) = fixedF 2 l |+ "mm"

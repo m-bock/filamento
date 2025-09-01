@@ -254,7 +254,7 @@ printPolygon n v s'
       let angle = 2 * pi / fromIntegral n
           s = toMm s'
           points =
-            [ add
+            [ add @(V3 Position) @(V3 Delta)
                 v
                 (fromMmF $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
               | i <- [0 .. n - 1]

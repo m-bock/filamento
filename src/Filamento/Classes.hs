@@ -80,14 +80,17 @@ class JustY a where
 class JustZ a where
   justZ :: a -> a
 
-class Scalable factor a | a -> factor where
+class Scalable factor a where
   scale :: factor -> a -> a
 
-class Add abs rel | abs -> rel where
+class Add abs rel where
   add :: abs -> rel -> abs
 
 class Sub abs rel | abs -> rel where
   sub :: abs -> rel -> abs
+
+neg :: (Sub a a) => a -> a
+neg val = sub val $ sub val val
 
 class GetDelta abs rel | abs -> rel where
   getDelta :: abs -> abs -> rel

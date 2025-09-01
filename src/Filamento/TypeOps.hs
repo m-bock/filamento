@@ -171,7 +171,7 @@ rect2GetPoints rect = (p1, p2, p3, p4)
 -------------------------------------------------------------------------------
 
 square2FromCenterSize :: V2 Position -> Delta -> Square2D
-square2FromCenterSize center size = square2FromMinSize (add center (pure $ scale @Double 0.5 size)) size
+square2FromCenterSize center size = square2FromMinSize (add center (pure @V2 $ scale @Double 0.5 size)) size
 
 square2ToCenterSize :: Square2D -> (V2 Position, V2 Delta)
 square2ToCenterSize square = (square2GetCenter square, square2GetSize square)
