@@ -608,7 +608,7 @@ playTone freq dur =
       }
 
 playTone_ :: GCode ()
-playTone_ = playTone (fromHz 880) (fromMs 500)
+playTone_ = playTone (fromHz 880) (unsafeFromMs 500)
 
 setBedTemperature :: Temperature -> GCode ()
 setBedTemperature degrees = do

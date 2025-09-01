@@ -3,7 +3,6 @@ module Filamento.Types
     angleFromRad,
     angleToRad,
     Position,
-    Duration,
     Frequency,
     Rect2D,
     rect2FromMinSize,
@@ -54,6 +53,7 @@ import Filamento.Classes
 import Filamento.Types.Continous.Factor as Export
 import Filamento.Types.Continous.NonNegativeFactor as Export
 import Filamento.Types.Quantities.Delta as Export
+import Filamento.Types.Quantities.Duration as Export
 import Filamento.Types.Quantities.Length as Export
 import GHC.Generics
 import Linear (V2 (..), V3 (..), distance)
@@ -85,8 +85,10 @@ instance ToJSON Position where
 instance FromJSON Position where
   parseJSON = genericParseJSON defaultOptions
 
-instance FromToMillimeters Position where
+instance ToMillimeters Position where
   toMm (Position v) = v
+
+instance FromMillimeters Position where
   fromMm v = Position v
 
 instance JustX (V2 Position) where
@@ -151,27 +153,13 @@ instance Scalable Double (V3 Position) where
 
 -------------------------------------------------------------------------------
 
-newtype Duration = Duration {ms :: Double}
-  deriving (Show, Eq, Generic)
-
-instance FromToMilliseconds Duration where
-  toMs (Duration d) = d
-  fromMs d = Duration d
-
-instance FromToSeconds Duration where
-  toSecs (Duration d) = d / factorSecs
-  fromSecs s = Duration (s * factorSecs)
-
-factorSecs :: Double
-factorSecs = 1000
-
--------------------------------------------------------------------------------
-
 newtype Frequency = Frequency {hz :: Double}
   deriving (Show, Eq, Generic)
 
-instance FromToHertz Frequency where
+instance ToHertz Frequency where
   toHz (Frequency f) = f
+
+instance FromHertz Frequency where
   fromHz f = Frequency f
 
 -------------------------------------------------------------------------------
@@ -179,19 +167,25 @@ instance FromToHertz Frequency where
 newtype Speed = Speed {mmPerSec :: Double}
   deriving (Show, Eq, Ord)
 
-instance FromToMillimetersPerSecond Speed where
+instance ToMillimetersPerSecond Speed where
   toMmPerSec (Speed s) = s
+
+instance FromMillimetersPerSecond Speed where
   fromMmPerSec d = Speed d
 
-instance FromToMillimetersPerMinute Speed where
+instance ToMillimetersPerMinute Speed where
   toMmPerMin (Speed s) = s * 60
+
+instance FromMillimetersPerMinute Speed where
   fromMmPerMin d = Speed (d / 60)
 
 newtype Temperature = Temperature {degrees :: Double}
   deriving (Show, Eq, Num)
 
-instance FromToCelsius Temperature where
+instance ToCelsius Temperature where
   toCelsius (Temperature t) = t
+
+instance FromCelsius Temperature where
   fromCelsius t = Temperature t
 
 -------------------------------------------------------------------------------
@@ -244,8 +238,10 @@ square2GetSize (Square2D rect) = rect2GetSize rect
 newtype Total = Total Natural
   deriving (Show, Eq)
 
-instance FromToNatural Total where
+instance FromNatural Total where
   fromNat x = Total x
+
+instance ToNatural Total where
   toNat (Total x) = x
 
 instance ToDouble Total where
@@ -271,8 +267,10 @@ newtype Count = Count Natural
   deriving (Show, Eq, Ord)
   deriving (Semigroup, Monoid) via (Sum Natural)
 
-instance FromToNatural Count where
+instance FromNatural Count where
   fromNat x = Count x
+
+instance ToNatural Count where
   toNat (Count x) = x
 
 instance ToDouble Count where
@@ -331,8 +329,10 @@ newtype Area = Area {sqMm :: Double}
 areaFromVec2 :: V2 Length -> Area
 areaFromVec2 (V2 x y) = Area (toMm x * toMm y)
 
-instance FromToSquareMillimeters Area where
+instance FromSquareMillimeters Area where
   fromSqMm x = Area x
+
+instance ToSquareMillimeters Area where
   toSqMm (Area x) = x
 
 -------------------------------------------------------------------------------
@@ -342,8 +342,10 @@ newtype Volume = Volume {cuMm :: Double}
 volumeFromVec3 :: V3 Length -> Volume
 volumeFromVec3 (V3 x y z) = Volume (toMm x * toMm y * toMm z)
 
-instance FromToCubicMillimeters Volume where
+instance FromCubicMillimeters Volume where
   fromCuMm x = Volume x
+
+instance ToCubicMillimeters Volume where
   toCuMm (Volume x) = x
 
 volumeFromArea :: Area -> Length -> Volume

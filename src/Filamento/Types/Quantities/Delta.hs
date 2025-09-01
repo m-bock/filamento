@@ -10,18 +10,22 @@ import Linear (V2 (V2))
 import Linear.V3 (V3 (..))
 import Relude
 
-newtype Delta = Delta {mm :: Double}
+newtype Delta = Delta {mm :: Double} -- may be negative
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (Fractional, RealFrac, Real, Num)
   deriving (Semigroup, Monoid) via (Sum Double)
   deriving anyclass (ToJSON, FromJSON)
 
-instance FromToMillimeters Delta where
+instance ToMillimeters Delta where
   toMm (Delta v) = v
+
+instance FromMillimeters Delta where
   fromMm v = Delta v
 
-instance FromToCentimeters Delta where
+instance ToCentimeters Delta where
   toCm (Delta v) = v
+
+instance FromCentimeters Delta where
   fromCm v = Delta v
 
 instance Scalable Factor Delta where

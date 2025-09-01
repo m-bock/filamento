@@ -4,7 +4,6 @@ module Filamento.TypeOps
     angleFromProportion,
     angleSin,
     deltaFloor,
-    deltaFromPos,
     deltaRound,
     freqBeepHigh,
     freqBeepLow,
@@ -54,9 +53,6 @@ deltaFloor = fromNat . floor . toMm
 
 deltaRound :: Delta -> Count
 deltaRound = fromNat . round . toMm
-
-deltaFromPos :: Position -> Delta
-deltaFromPos pos = getDelta (posFromMm 0) pos
 
 -------------------------------------------------------------------------------
 

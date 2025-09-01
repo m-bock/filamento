@@ -2,13 +2,33 @@ module Filamento.Classes where
 
 import Relude
 
-class FromToNatural a where
+class MaybeFromNatural a where
+  maybeFromNat :: Natural -> Maybe a
+  unsafeFromNat :: Natural -> a
+
+class FromNatural a where
   fromNat :: Natural -> a
+
+class ToNatural a where
   toNat :: a -> Natural
 
-class FromToInt a where
+--------------------------------------------------------------------------------
+
+class MaybeFromInt a where
+  maybeFromInt :: Int -> Maybe a
+  unsafeFromInt :: Int -> a
+
+class FromInt a where
   fromInt :: Int -> a
+
+class ToInt a where
   toInt :: a -> Int
+
+--------------------------------------------------------------------------------
+
+class MaybeFromDouble a where
+  maybeFromDouble :: Double -> Maybe a
+  unsafeFromDouble :: Double -> a
 
 class FromDouble a where
   fromDouble :: Double -> a
@@ -22,54 +42,136 @@ viaDouble = fromDouble . toDouble
 instance ToDouble Nat where
   toDouble = fromIntegral
 
-class FromToMillimeters a where
+--------------------------------------------------------------------------------
+
+class MaybeFromMillimeters a where
+  maybeFromMm :: Double -> Maybe a
+  unsafeFromMm :: Double -> a
+
+class FromMillimeters a where
   fromMm :: Double -> a
+
+class ToMillimeters a where
   toMm :: a -> Double
 
-class FromToCentimeters a where
-  fromCm :: Double -> a
-  toCm :: a -> Double
-
-class FromToSquareMillimeters a where
-  fromSqMm :: Double -> a
-  toSqMm :: a -> Double
-
-class FromToCubicMillimeters a where
-  fromCuMm :: Double -> a
-  toCuMm :: a -> Double
-
-fromMmF :: (FromToMillimeters a, Functor f) => f Double -> f a
+fromMmF :: (FromMillimeters a, Functor f) => f Double -> f a
 fromMmF = fmap fromMm
 
-toMmF :: (FromToMillimeters a, Functor f) => f a -> f Double
+toMmF :: (ToMillimeters a, Functor f) => f a -> f Double
 toMmF = fmap toMm
 
-viaMm :: (FromToMillimeters a, FromToMillimeters b) => a -> b
+viaMm :: (ToMillimeters a, FromMillimeters b) => a -> b
 viaMm = fromMm . toMm
 
-class FromToSeconds a where
+--------------------------------------------------------------------------------
+
+class MaybeFromCentimeters a where
+  maybeFromCm :: Double -> Maybe a
+  unsafeFromCm :: Double -> a
+
+class FromCentimeters a where
+  fromCm :: Double -> a
+
+class ToCentimeters a where
+  toCm :: a -> Double
+
+--------------------------------------------------------------------------------
+
+class MaybeFromSquareMillimeters a where
+  maybeFromSqMm :: Double -> Maybe a
+  unsafeFromSqMm :: Double -> a
+
+class FromSquareMillimeters a where
+  fromSqMm :: Double -> a
+
+class ToSquareMillimeters a where
+  toSqMm :: a -> Double
+
+--------------------------------------------------------------------------------
+
+class MaybeFromCubicMillimeters a where
+  maybeFromCuMm :: Double -> Maybe a
+  unsafeFromCuMm :: Double -> a
+
+class FromCubicMillimeters a where
+  fromCuMm :: Double -> a
+
+class ToCubicMillimeters a where
+  toCuMm :: a -> Double
+
+--------------------------------------------------------------------------------
+
+class MaybeFromSeconds a where
+  maybeFromSecs :: Double -> Maybe a
+  unsafeFromSecs :: Double -> a
+
+class FromSeconds a where
   fromSecs :: Double -> a
+
+class ToSeconds a where
   toSecs :: a -> Double
 
-class FromToCelsius a where
+--------------------------------------------------------------------------------
+
+class MaybeFromCelsius a where
+  maybeFromCelsius :: Double -> Maybe a
+  unsafeFromCelsius :: Double -> a
+
+class FromCelsius a where
   fromCelsius :: Double -> a
+
+class ToCelsius a where
   toCelsius :: a -> Double
 
-class FromToMillimetersPerSecond a where
+--------------------------------------------------------------------------------
+
+class MaybeFromMillimetersPerSecond a where
+  maybeFromMmPerSec :: Double -> Maybe a
+  unsafeFromMmPerSec :: Double -> a
+
+class FromMillimetersPerSecond a where
   fromMmPerSec :: Double -> a
+
+class ToMillimetersPerSecond a where
   toMmPerSec :: a -> Double
 
-class FromToMillimetersPerMinute a where
+--------------------------------------------------------------------------------
+
+class MaybeFromMillimetersPerMinute a where
+  maybeFromMmPerMin :: Double -> Maybe a
+  unsafeFromMmPerMin :: Double -> a
+
+class FromMillimetersPerMinute a where
   fromMmPerMin :: Double -> a
+
+class ToMillimetersPerMinute a where
   toMmPerMin :: a -> Double
 
-class FromToHertz a where
+--------------------------------------------------------------------------------
+
+class MaybeFromHertz a where
+  maybeFromHz :: Double -> Maybe a
+  unsafeFromHz :: Double -> a
+
+class FromHertz a where
   fromHz :: Double -> a
+
+class ToHertz a where
   toHz :: a -> Double
 
-class FromToMilliseconds a where
+--------------------------------------------------------------------------------
+
+class MaybeFromMilliseconds a where
+  maybeFromMs :: Double -> Maybe a
+  unsafeFromMs :: Double -> a
+
+class FromMilliseconds a where
   fromMs :: Double -> a
+
+class ToMilliseconds a where
   toMs :: a -> Double
+
+--------------------------------------------------------------------------------
 
 class JustX a where
   justX :: a -> a

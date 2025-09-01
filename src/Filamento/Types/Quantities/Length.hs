@@ -7,18 +7,26 @@ import Fmt
 import GHC.Generics
 import Relude
 
-newtype Length = Length {mm :: Double}
+newtype Length = Length {mm :: Double} -- non-negative
   deriving stock (Show, Eq, Generic, Ord)
   deriving (Semigroup, Monoid) via (Sum Double)
   deriving anyclass (ToJSON, FromJSON)
 
-instance FromToMillimeters Length where
-  toMm (Length l) = l
-  fromMm l = Length l
+instance MaybeFromMillimeters Length where
+  maybeFromMm v = if isLengthValid v then Just (Length v) else Nothing
+  unsafeFromMm v = if isLengthValid v then Length v else error "Length must be non-negative"
 
-instance FromToCentimeters Length where
-  toCm (Length l) = l / 10
-  fromCm l = Length (l * 10)
+isLengthValid :: Double -> Bool
+isLengthValid l = l >= 0
+
+instance FromMillimeters Length where
+  fromMm v = Length v
+
+instance ToMillimeters Length where
+  toMm (Length l) = l
+
+instance ToCentimeters Length where
+  toCm (Length l) = l
 
 instance Scalable NonNegativeFactor Length where
   scale factor (Length l) = Length (l * toDouble factor)

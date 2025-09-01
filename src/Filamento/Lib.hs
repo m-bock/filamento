@@ -210,7 +210,7 @@ cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
   moveTo (v3PosFromMm 0 0 2)
   playTone_
-  pause (fromSecs 10)
+  pause (unsafeFromSecs 10)
 
 initPrinter :: GCode a -> GCode a
 initPrinter inner = do
