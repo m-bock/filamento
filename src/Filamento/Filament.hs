@@ -145,7 +145,7 @@ getWidth filamentDia propY =
 
 printFilamentSegment :: FilamentConfig -> (Rect2D -> GCode ()) -> FilamentSegment -> GCode ()
 printFilamentSegment config printPlane profile = do
-  let rectCenter = V2 0 (addDelta profile.pos (scale @Double 0.5 profile.depth))
+  let rectCenter = V2 0 (add profile.pos (scale @Double 0.5 profile.depth))
 
   resetLayers
 
@@ -203,8 +203,8 @@ ironFinish config secs = section "ironFinish" do
         Just val -> val.endPos |> "depth"
         Nothing -> 0 |> "depth"
 
-      startX = subDelta 0 $ scale @Double 0.5 width
-      endX = addDelta 0 $ scale @Double 0.5 width
+      startX = sub 0 $ scale @Double 0.5 width
+      endX = add 0 $ scale @Double 0.5 width
       step = env.lineWidth
 
       xs = linspaceByStep startX endX step deltaRound

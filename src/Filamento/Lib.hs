@@ -119,7 +119,7 @@ printSketchFrame :: GCode ()
 printSketchFrame = section "sketchFrame" do
   env <- ask
   let size2d = v3DeltaDropZ env.sketchSize
-  let centerBed = addDelta mempty (scale @Double 0.5 env.bedSize - scale @Double 0.5 size2d)
+  let centerBed = add mempty (scale @Double 0.5 env.bedSize - scale @Double 0.5 size2d)
   printRect2d centerBed size2d
 
 withRetract :: GCode a -> GCode a
@@ -139,7 +139,7 @@ withZHop inner = section "zHop" do
   st <- gcodeStateGet
   env <- ask
   let V3 _ _ z = toMmF st.currentPosition
-  moveToZ (addDelta (fromMm z) env.zHop)
+  moveToZ (add (fromMm z) env.zHop)
   ret <- inner
   moveToZ (fromMm z)
   pure ret
@@ -164,10 +164,10 @@ printRect2d (toMmF -> V2 x y) delta = do
 printRect :: V3 Position -> V2 Delta -> GCode ()
 printRect v1 (toMmF -> V2 dx dy) = section "printRect" do
   let dlt3 = fromMmF $ V3 dx dy 0
-  let v2 = addDelta v1 (justX dlt3)
-  let v3 = addDelta v2 (justY dlt3)
-  let v4 = subDelta v3 (justX dlt3)
-  let v5 = subDelta v4 (justY dlt3)
+  let v2 = add v1 (justX dlt3)
+  let v3 = add v2 (justY dlt3)
+  let v4 = sub v3 (justX dlt3)
+  let v5 = sub v4 (justY dlt3)
 
   printPolyLine [v1, v2, v3, v4, v5]
 
@@ -254,7 +254,7 @@ printPolygon n v s'
       let angle = 2 * pi / fromIntegral n
           s = toMm s'
           points =
-            [ addDelta
+            [ add
                 v
                 (fromMmF $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
               | i <- [0 .. n - 1]

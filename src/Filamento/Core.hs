@@ -250,7 +250,7 @@ gcodeStateUpdate msg st = case msg of
   MsgTrackExtrusion extr -> case st.filament of
     h :| t ->
       st
-        { filament = h {endPos = addDelta h.endPos extr} :| t
+        { filament = h {endPos = add h.endPos extr} :| t
         }
   MsgAddGCodeLine line -> st {gCode = line : st.gCode}
   MsgDropGCodeLines -> st {gCode = []}
@@ -296,7 +296,7 @@ transposeCenterSketch sketchSize bedSize pos =
   let halfSketch = scale @Double 0.5 (v3DeltaDropZ sketchSize)
       halfBed = scale @Double 0.5 bedSize
       diff = v3DeltaFromV2 (halfBed - halfSketch) 0
-   in addDelta pos diff
+   in add pos diff
 
 withSketchTranspose :: GCode a -> GCode a
 withSketchTranspose inner = do

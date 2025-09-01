@@ -64,12 +64,12 @@ deltaFromPos :: Position -> Delta
 deltaFromPos pos = getDelta (posFromMm 0) pos
 
 deltaMiddle :: Delta -> Delta -> Delta
-deltaMiddle d1 d2 = addDelta d1 (scale @Double 0.5 (getDelta d1 d2))
+deltaMiddle d1 d2 = add d1 (scale @Double 0.5 (getDelta d1 d2))
 
 -------------------------------------------------------------------------------
 
 posFromDelta :: Delta -> Position
-posFromDelta d = addDelta (posFromMm 0) d
+posFromDelta d = add (posFromMm 0) d
 
 posToMm :: Position -> Double
 posToMm = toMm
@@ -78,7 +78,7 @@ posFromMm :: Double -> Position
 posFromMm = fromMm
 
 posMiddle :: Position -> Position -> Position
-posMiddle p1 p2 = addDelta p1 (scale @Double 0.5 (getDelta p1 p2))
+posMiddle p1 p2 = add p1 (scale @Double 0.5 (getDelta p1 p2))
 
 -------------------------------------------------------------------------------
 
@@ -142,7 +142,7 @@ rect2ToCorners rect = (rect2GetMinCorner rect, rect2GetMaxCorner rect)
 
 rect2FromCenterSize :: V2 Position -> V2 Delta -> Rect2D
 rect2FromCenterSize center size =
-  rect2FromMinSize (subDelta center size') size
+  rect2FromMinSize (sub center size') size
   where
     size' :: V2 Delta
     size' = scale @Double 0.5 size
@@ -154,33 +154,33 @@ rect2ToMinSize :: Rect2D -> (V2 Position, V2 Delta)
 rect2ToMinSize rect = (rect2GetMinCorner rect, rect2GetSize rect)
 
 rect2GetMaxCorner :: Rect2D -> V2 Position
-rect2GetMaxCorner (rect2ToMinSize -> (minCorner, size)) = addDelta minCorner size
+rect2GetMaxCorner (rect2ToMinSize -> (minCorner, size)) = add minCorner size
 
 rect2GetCenter :: Rect2D -> V2 Position
-rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = addDelta minCorner (scale @Double 0.5 size)
+rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = add minCorner (scale @Double 0.5 size)
 
 rect2GetPoints :: Rect2D -> (V2 Position, V2 Position, V2 Position, V2 Position)
 rect2GetPoints rect = (p1, p2, p3, p4)
   where
     (minCorner, size) = rect2ToMinSize rect
     p1 = minCorner
-    p2 = addDelta p1 (justX size)
-    p3 = addDelta p2 (justY size)
-    p4 = subDelta p3 (justX size)
+    p2 = add p1 (justX size)
+    p3 = add p2 (justY size)
+    p4 = sub p3 (justX size)
 
 -------------------------------------------------------------------------------
 
 square2FromCenterSize :: V2 Position -> Delta -> Square2D
-square2FromCenterSize center size = square2FromMinSize (addDelta center (pure $ scale @Double 0.5 size)) size
+square2FromCenterSize center size = square2FromMinSize (add center (pure $ scale @Double 0.5 size)) size
 
 square2ToCenterSize :: Square2D -> (V2 Position, V2 Delta)
 square2ToCenterSize square = (square2GetCenter square, square2GetSize square)
 
 square2GetCenter :: Square2D -> V2 Position
-square2GetCenter square = addDelta (square2GetMinCorner square) (scale @Double 0.5 (square2GetSize square))
+square2GetCenter square = add (square2GetMinCorner square) (scale @Double 0.5 (square2GetSize square))
 
 square2GetMaxCorner :: Square2D -> V2 Position
-square2GetMaxCorner square = addDelta (square2GetMinCorner square) (square2GetSize square)
+square2GetMaxCorner square = add (square2GetMinCorner square) (square2GetSize square)
 
 square2ToRect2 :: Square2D -> Rect2D
 square2ToRect2 (square2ToCenterSize -> (center, size)) = rect2FromCenterSize center size

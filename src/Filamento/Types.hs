@@ -98,11 +98,11 @@ instance Scalable Double (V3 Delta) where
 instance GetDelta Delta Delta where
   getDelta (Delta x) (Delta y) = Delta (y - x)
 
-instance AddDelta Delta Delta where
-  addDelta (Delta x) (Delta y) = Delta (x + y)
+instance Add Delta Delta where
+  add (Delta x) (Delta y) = Delta (x + y)
 
-instance SubDelta Delta Delta where
-  subDelta (Delta x) (Delta y) = Delta (x - y)
+instance Sub Delta Delta where
+  sub (Delta x) (Delta y) = Delta (x - y)
 
 -------------------------------------------------------------------------------
 
@@ -143,23 +143,23 @@ instance JustY (V2 Position) where
 instance JustZ (V3 Position) where
   justZ (V3 _ _ z) = V3 0 0 z
 
-instance AddDelta Position Delta where
-  addDelta (Position p) d = Position (p + toMm d)
+instance Add Position Delta where
+  add (Position p) d = Position (p + toMm d)
 
-instance SubDelta Position Delta where
-  subDelta (Position p) d = Position (p - toMm d)
+instance Sub Position Delta where
+  sub (Position p) d = Position (p - toMm d)
 
-instance AddDelta (V2 Position) (V2 Delta) where
-  addDelta (V2 x y) (V2 x' y') = V2 (addDelta x x') (addDelta y y')
+instance Add (V2 Position) (V2 Delta) where
+  add (V2 x y) (V2 x' y') = V2 (add x x') (add y y')
 
-instance SubDelta (V2 Position) (V2 Delta) where
-  subDelta (V2 x y) (V2 x' y') = V2 (subDelta x x') (subDelta y y')
+instance Sub (V2 Position) (V2 Delta) where
+  sub (V2 x y) (V2 x' y') = V2 (sub x x') (sub y y')
 
-instance AddDelta (V3 Position) (V3 Delta) where
-  addDelta (V3 x y z) (V3 x' y' z') = V3 (addDelta x x') (addDelta y y') (addDelta z z')
+instance Add (V3 Position) (V3 Delta) where
+  add (V3 x y z) (V3 x' y' z') = V3 (add x x') (add y y') (add z z')
 
-instance SubDelta (V3 Position) (V3 Delta) where
-  subDelta (V3 x y z) (V3 x' y' z') = V3 (subDelta x x') (subDelta y y') (subDelta z z')
+instance Sub (V3 Position) (V3 Delta) where
+  sub (V3 x y z) (V3 x' y' z') = V3 (sub x x') (sub y y') (sub z z')
 
 instance GetDelta Position Delta where
   getDelta (Position x) (Position y) = fromMm (y - x)

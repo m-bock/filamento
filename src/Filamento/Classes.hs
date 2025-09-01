@@ -83,11 +83,11 @@ class JustZ a where
 class Scalable factor a | a -> factor where
   scale :: factor -> a -> a
 
-class AddDelta abs rel | abs -> rel where
-  addDelta :: abs -> rel -> abs
+class Add abs rel | abs -> rel where
+  add :: abs -> rel -> abs
 
-class SubDelta abs rel | abs -> rel where
-  subDelta :: abs -> rel -> abs
+class Sub abs rel | abs -> rel where
+  sub :: abs -> rel -> abs
 
 class GetDelta abs rel | abs -> rel where
   getDelta :: abs -> abs -> rel
