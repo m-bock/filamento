@@ -137,7 +137,7 @@ data GCodeEnv = Env
     layerHeight :: Delta,
     firstLayerHeight :: Delta,
     lineWidth :: Delta,
-    filamentDia :: Delta,
+    filamentDia :: Length,
     transpose :: V3 Position -> V3 Position,
     retractLength :: Delta,
     retractSpeed :: Speed,
@@ -419,14 +419,27 @@ setFanSpeed :: Proportion -> GCode ()
 setFanSpeed prop =
   gcodeFromCmd
     $ MSetFanSpeed
-      { speed = Just (round $ toFraction prop * 255)
+      { speed = Just (round $ toDouble prop * 255)
       }
 
 setFanSpeedOff :: GCode ()
-setFanSpeedOff = setFanSpeed (clampFraction 0)
+setFanSpeedOff = setFanSpeed propMin
 
 setFanSpeedFull :: GCode ()
-setFanSpeedFull = setFanSpeed (clampFraction 1)
+setFanSpeedFull = setFanSpeed propMax
+
+getVolumeUsed :: GCode Volume
+getVolumeUsed = do
+  filamentDia <- asks \x -> x.filamentDia
+  used <- getFilamentUsed
+  let circle = circle2FromCenterRadius mempty filamentDia
+      area = circle2GetArea circle
+  pure $ volumeFromArea area used
+
+getFilamentUsed :: GCode Length
+getFilamentUsed = do
+  st <- gcodeStateGet
+  pure $ fromMm @Length $ toMm (head st.filament).endPos
 
 --------------------------------------------------------------------------------
 

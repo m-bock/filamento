@@ -155,7 +155,7 @@ printAll = do
     filamentChange
 
     do
-      local (\env -> env {filamentDia = dia} :: GCodeEnv) do
+      local (\env -> env {filamentDia = viaMm dia} :: GCodeEnv) do
         printSketch
 
 mainGen :: IO ()

@@ -2,15 +2,43 @@ module Filamento.Classes where
 
 import Relude
 
+class FromToNatural a where
+  fromNat :: Natural -> a
+  toNat :: a -> Natural
+
+class FromToInt a where
+  fromInt :: Int -> a
+  toInt :: a -> Int
+
+class FromDouble a where
+  fromDouble :: Double -> a
+
+class ToDouble a where
+  toDouble :: a -> Double
+
+instance ToDouble Nat where
+  toDouble = fromIntegral
+
 class FromToMillimeters a where
   fromMm :: Double -> a
   toMm :: a -> Double
+
+class FromToSquareMillimeters a where
+  fromSqMm :: Double -> a
+  toSqMm :: a -> Double
+
+class FromToCubicMillimeters a where
+  fromCuMm :: Double -> a
+  toCuMm :: a -> Double
 
 fromMmF :: (FromToMillimeters a, Functor f) => f Double -> f a
 fromMmF = fmap fromMm
 
 toMmF :: (FromToMillimeters a, Functor f) => f a -> f Double
 toMmF = fmap toMm
+
+viaMm :: (FromToMillimeters a, FromToMillimeters b) => a -> b
+viaMm = fromMm . toMm
 
 class FromToSeconds a where
   fromSecs :: Double -> a
@@ -36,9 +64,6 @@ class FromToMilliseconds a where
   fromMs :: Double -> a
   toMs :: a -> Double
 
-class Scalable factor a where
-  scale :: factor -> a -> a
-
 class JustX a where
   justX :: a -> a
 
@@ -48,34 +73,15 @@ class JustY a where
 class JustZ a where
   justZ :: a -> a
 
+class Scalable factor a where
+  scale :: factor -> a -> a
+
 class DeltaApplication abs rel | abs -> rel where
   addDelta :: abs -> rel -> abs
   subDelta :: abs -> rel -> abs
-
-class FractionalValue a where
-  fromFraction :: Double -> a
-  toFraction :: a -> Double
-  clampFraction :: Double -> a
-
-class FromToNatural a where
-  fromNat :: Natural -> a
-  toNat :: a -> Natural
-
-class FromToInt a where
-  fromInt :: Int -> a
-  toInt :: a -> Int
-
-class FromDouble a where
-  fromDouble :: Double -> a
-
-class ToDouble a where
-  toDouble :: a -> Double
 
 class GetDelta abs rel | abs -> rel where
   getDelta :: abs -> abs -> rel
 
 class Distance lo hi | hi -> lo where
   getDistance :: hi -> hi -> lo
-
-instance ToDouble Nat where
-  toDouble = fromIntegral

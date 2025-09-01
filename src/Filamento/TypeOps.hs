@@ -12,7 +12,6 @@ module Filamento.TypeOps
     freqBeepLow,
     freqBeepMid,
     outOfToCountTotal,
-    outOfToFraction,
     outOfToProportion,
     posFromDelta,
     posFromMm,
@@ -130,10 +129,7 @@ outOfToCountTotal :: OutOf -> (Count, Total)
 outOfToCountTotal outOf = (outOfGetCount outOf, outOfGetTotal outOf)
 
 outOfToProportion :: OutOf -> Proportion
-outOfToProportion (outOfToCountTotal -> (count, total)) = fromFraction (toDouble count / toDouble total)
-
-outOfToFraction :: OutOf -> Double
-outOfToFraction (outOfToCountTotal -> (count, total)) = toDouble count / toDouble total
+outOfToProportion outOf = propFromOutOf outOf
 
 -------------------------------------------------------------------------------
 
@@ -210,4 +206,4 @@ angleCircle :: Angle -> V2 Position
 angleCircle ang = V2 (angleCos ang) (angleSin ang)
 
 angleFromProportion :: Proportion -> Angle
-angleFromProportion (toFraction -> f) = angleFromRad (f * 2 * pi)
+angleFromProportion (toDouble -> f) = angleFromRad (f * 2 * pi)

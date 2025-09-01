@@ -70,7 +70,7 @@ whileSketchZ prop inner = do
   env <- ask
   let V3 _ _ sketchHeight = toMmF env.sketchSize
   let V3 _ _ z = toMmF st.currentPosition
-  if z < (toFraction prop) * sketchHeight
+  if z < (toDouble prop) * sketchHeight
     then do
       inner
       whileSketchZ prop inner
@@ -91,7 +91,7 @@ getZProgress = do
   env <- ask
   let V3 _ _ sketchHeight = toMmF env.sketchSize
   let V3 _ _ z = toMmF st.currentPosition
-  pure (fromFraction (z / sketchHeight))
+  pure (fromMaybe propMax $ propFromDouble (z / sketchHeight))
 
 -- TODO: This works only if firstLayerHeight equals layerHeight
 getLayerProgress :: GCode OutOf

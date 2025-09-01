@@ -130,8 +130,8 @@ getLines config line = do
 getLength :: FilamentConfig -> Proportion -> ProfileType -> Delta -> Delta
 getLength config prop profile len =
   let frac = case profile of
-        Hill -> 1 - (toFraction prop)
-        Valley -> toFraction prop
+        Hill -> 1 - (toDouble prop)
+        Valley -> toDouble prop
 
       ov = config.overlap
       ramp = scale (frac + frac) ov
@@ -139,7 +139,7 @@ getLength config prop profile len =
 
 getWidth :: Delta -> Proportion -> Delta
 getWidth filamentDia propY =
-  let y = toFraction propY
+  let y = toDouble propY
       w = sqrt (1 - 4 * (y - 0.5) ^ 2)
    in scale w filamentDia
 
@@ -181,7 +181,7 @@ printFilamentSegment config printPlane profile = do
               rectSize = V2 rectWidth rectLength
               rect = rect2FromCenterSize rectCenter rectSize
 
-          comment ("prop = " <> Text.pack (printf "%.3f" (toFraction prop)))
+          comment ("prop = " <> Text.pack (printf "%.3f" (toDouble prop)))
           local (\env -> env {layerHeight = layerHeight}) do
             printPlane rect
 
@@ -339,8 +339,8 @@ printFilament mkConfig secs = section "filament" do
             Just l -> l.endPos
             Nothing -> 0
 
-          prop = fromFraction (toMm actualLength / toMm requestedLength) :: Proportion
-          dia = deltaFromMm (toMm env.filamentDia * sqrt (toFraction prop))
+          prop = fromMaybe propMax $ propFromDouble (toMm actualLength / toMm requestedLength)
+          dia = deltaFromMm (toMm env.filamentDia * sqrt (toDouble prop))
 
       -- Force evaluation and log the values
       _ <- Relude.trace ("actualLength: " ++ show actualLength) (pure ())

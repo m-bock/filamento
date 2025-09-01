@@ -16,8 +16,10 @@ module Filamento.Types
     line2GetEnd,
     Square2D,
     square2FromMinSize,
+    volumeFromArea,
     square2GetMinCorner,
     square2GetSize,
+    propFromDouble,
     OutOf,
     Count,
     countInc,
@@ -29,18 +31,28 @@ module Filamento.Types
     propMax,
     outOfGetCount,
     outOfGetTotal,
+    circle2FromCenterRadius,
+    circle2GetArea,
     outOfFromCountTotal,
     Range,
     rangeFromPos,
+    propFromOutOf,
     rangeToDelta,
     rangeGetFrom,
     rangeGetTo,
+    Area,
+    areaFromVec2,
+    Volume,
+    volumeFromVec3,
+    Circle2D,
+    module Export,
   )
 where
 
 import Data.Aeson (FromJSON, ToJSON, defaultOptions, genericParseJSON, genericToJSON)
 import Data.Aeson.Types (FromJSON (parseJSON), ToJSON (toJSON))
 import Filamento.Classes
+import Filamento.Types.Quantities.Length as Export
 import GHC.Generics
 import Linear (V2 (..), V3 (..), distance)
 import Relude
@@ -311,13 +323,20 @@ countInc (Count x) = Count (x + 1)
 newtype Proportion = Proportion Double
   deriving (Show, Eq, Ord)
 
-instance FractionalValue Proportion where
-  fromFraction f = Proportion f
-  toFraction (Proportion f) = f
-  clampFraction f = Proportion (clamp 0 1 f)
+instance ToDouble Proportion where
+  toDouble (Proportion f) = f
 
 clamp :: Double -> Double -> Double -> Double
 clamp minVal maxVal x = max minVal (min maxVal x)
+
+propFromDouble :: Double -> Maybe Proportion
+propFromDouble f = if f >= 0 && f <= 1 then Just (Proportion f) else Nothing
+
+propFromOutOf :: OutOf -> Proportion
+propFromOutOf outOF = Proportion (toDouble count / toDouble total)
+  where
+    count = outOfGetCount outOF
+    total = outOfGetTotal outOF
 
 propMin :: Proportion
 propMin = Proportion 0
@@ -341,3 +360,38 @@ rangeGetFrom (Range {from}) = from
 
 rangeGetTo :: Range -> Position
 rangeGetTo (Range {to}) = to
+
+-------------------------------------------------------------------------------
+
+newtype Area = Area {sqMm :: Double}
+
+areaFromVec2 :: V2 Length -> Area
+areaFromVec2 (V2 x y) = Area (toMm x * toMm y)
+
+instance FromToSquareMillimeters Area where
+  fromSqMm x = Area x
+  toSqMm (Area x) = x
+
+-------------------------------------------------------------------------------
+
+newtype Volume = Volume {cuMm :: Double}
+
+volumeFromVec3 :: V3 Length -> Volume
+volumeFromVec3 (V3 x y z) = Volume (toMm x * toMm y * toMm z)
+
+instance FromToCubicMillimeters Volume where
+  fromCuMm x = Volume x
+  toCuMm (Volume x) = x
+
+volumeFromArea :: Area -> Length -> Volume
+volumeFromArea (Area a) d = Volume (a * toMm d)
+
+-------------------------------------------------------------------------------
+
+data Circle2D = Circle2D {center :: V2 Position, radius :: Length}
+
+circle2GetArea :: Circle2D -> Area
+circle2GetArea (Circle2D {radius}) = fromSqMm $ pi * (toMm radius ^ 2)
+
+circle2FromCenterRadius :: V2 Position -> Length -> Circle2D
+circle2FromCenterRadius center radius = Circle2D {center, radius}
