@@ -2,6 +2,7 @@ module Filamento.Types.Quantities.Position (Position, positionPretty) where
 
 import Data.Aeson.Types
 import Filamento.Classes
+import Filamento.Classes.Distance
 import Filamento.Types.Continous.Factor (Factor)
 import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
 import Filamento.Types.Quantities.Delta (Delta)
@@ -48,33 +49,5 @@ instance Sub Position Delta where
 instance GetDelta Position Delta where
   getDelta (Position x) (Position y) = fromMm (y - x)
 
-instance Distance Length Position where
+instance Distance Position where
   getDistance (Position x) (Position y) = unsafeFromMm $ abs (y - x)
-
--- Vector instances
-
-instance Scalable Factor (V2 Position) where
-  scale factor (V2 x y) = V2 (scale factor x) (scale factor y)
-
-instance Scalable NonNegativeFactor (V2 Position) where
-  scale factor (V2 x y) = V2 (scale factor x) (scale factor y)
-
-instance Scalable Factor (V3 Position) where
-  scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)
-
-instance Scalable NonNegativeFactor (V3 Position) where
-  scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)
-
-instance Distance Delta (V2 Position) where
-  getDistance (V2 x1 y1) (V2 x2 y2) =
-    fromMm $
-      L.distance
-        (V2 (toMm x1) (toMm y1))
-        (V2 (toMm x2) (toMm y2))
-
-instance Distance Delta (V3 Position) where
-  getDistance (V3 x1 y1 z1) (V3 x2 y2 z2) =
-    fromMm $
-      L.distance
-        (V3 (toMm x1) (toMm y1) (toMm z1))
-        (V3 (toMm x2) (toMm y2) (toMm z2))

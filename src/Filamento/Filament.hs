@@ -9,6 +9,7 @@ import Data.List (elemIndex, nub)
 import qualified Data.List as L
 import qualified Data.Text as Text
 import Filamento
+import Filamento.Classes.Distance (Distance (..))
 import Filamento.Debug
 import Filamento.Math (itemsWithNext, linspace2ByStep, linspaceByStep)
 import GHC.IO (unsafePerformIO)
@@ -100,7 +101,7 @@ printLineFilament config line = do
         arrivalLine = line2FromPoints (V2 curX curY) start
         arrivalLines = getLines config arrivalLine
 
-        isFar = getDistance start (V2 curX curY) > 10
+        isFar = getDistance start (V2 curX curY) > unsafeFromMm 10
 
     if isFar
       then withRetract $ withZHop $ do
@@ -282,8 +283,8 @@ printFilamentChain innerPrintSegment secs = do
 translateSpiral :: FilamentConfig -> V3 Position -> V3 Position
 translateSpiral config pos = v3PosFromMm x' y' z
   where
-    V3 centerX centerY _ = toMmF config.spiralCenter
-    V3 x y z = toMmF pos
+    V3 centerX centerY _ = fmap toMm config.spiralCenter
+    V3 x y z = fmap toMm pos
 
     arcLength = y
     spiralConstant = toMm config.spiralConstant
@@ -306,7 +307,7 @@ printFilament mkConfig secs = section "filament" do
   local
     ( \env ->
         env
-          { sketchSize = fromMmF $ V3 10 10 (toMm config.filamentDia),
+          { sketchSize = fmap fromMm $ V3 10 10 (toMm config.filamentDia),
             lineWidth = fromMm 0.4,
             layerHeight = fromMm 0.18,
             firstLayerHeight = fromMm 0.18,

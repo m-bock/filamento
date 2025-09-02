@@ -12,7 +12,7 @@ data Dir = Vert | Horz
   deriving (Show, Eq)
 
 purgeTower :: V2 Position -> Delta -> Int -> GCode ()
-purgeTower (toMmF -> V2 x y) (toMm -> size) purgeIndex = do
+purgeTower (fmap toMm -> V2 x y) (toMm -> size) purgeIndex = do
   st <- gcodeStateGet
   let dir = if odd st.currentLayer then Vert else Horz
 
@@ -41,7 +41,7 @@ purgeTower (toMmF -> V2 x y) (toMm -> size) purgeIndex = do
 printSketch :: GCode ()
 printSketch = do
   initPrinter do
-    let pos = fromMmF $ V2 100 100
+    let pos = fmap fromMm $ V2 100 100
         delta = fromMm 20
 
     forM_ [0 .. (199 :: Int)] \i -> do

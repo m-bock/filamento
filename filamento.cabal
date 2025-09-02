@@ -44,6 +44,7 @@ library
   exposed-modules:
     Filamento
     Filamento.Classes
+    Filamento.Classes.Distance
     Filamento.Core
     Filamento.Debug
     Filamento.Error

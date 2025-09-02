@@ -1,6 +1,7 @@
 module Filamento.Math where
 
 import Filamento.Classes
+import Filamento.Classes.Distance (Distance (..))
 import Filamento.TypeOps
 import GHC.IO.FD (mkFD)
 import Linear.V2
@@ -59,7 +60,7 @@ linspace2 pos1 pos2 count =
 linspace2ByStep :: V2 Position -> V2 Position -> Delta -> (Delta -> Count) -> [V2 Position]
 linspace2ByStep _ _ d _ | d <= 0 = []
 linspace2ByStep pos1 pos2 idealStep f =
-  let n = f (getDistance pos1 pos2 / idealStep)
+  let n = f $ fromMm ((toMm $ getDistance pos1 pos2) / toMm idealStep)
    in linspace2 pos1 pos2 (countInc n)
 
 itemsWithNext :: [a] -> [(a, a)]

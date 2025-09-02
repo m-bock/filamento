@@ -79,6 +79,7 @@ import Data.Convertible (convert)
 import Data.List (elemIndex)
 import qualified Data.Text as Text
 import Filamento.Classes
+import Filamento.Classes.Distance (Distance (..))
 import Filamento.TypeOps
 import Fmt
 import Linear (V2 (..), V3 (..))
@@ -182,19 +183,19 @@ gcodeEnvDefault =
       extrudeSpeedFirstLayer = fromMmPerSec 13,
       bedTemperature = fromCelsius 60,
       hotendTemperature = fromCelsius 210,
-      parkingPosition = fromMmF $ V3 0 225 120,
-      autoHomePosition = fromMmF $ V3 145.50 94.00 1.56,
+      parkingPosition = fmap fromMm $ V3 0 225 120,
+      autoHomePosition = fmap fromMm $ V3 145.50 94.00 1.56,
       layerHeight = fromMm 0.2,
       firstLayerHeight = fromMm 0.2,
       lineWidth = fromMm 0.4,
       filamentDia = unsafeFromMm 1.75,
-      sketchSize = fromMmF $ V3 100 100 100,
+      sketchSize = fmap fromMm $ V3 100 100 100,
       transpose = id,
       retractLength = fromMm 1,
       retractSpeed = fromMmPerSec 30,
       zHop = fromMm 0.4,
       sectionPath = [],
-      bedSize = fromMmF $ V2 225 225,
+      bedSize = fmap fromMm $ V2 225 225,
       colors = "default" :| [],
       hookEmitGCode = mempty,
       hookUserInput = mempty
@@ -267,7 +268,7 @@ gcodeStateGet = GCode $ get
 gcodeStateInit :: GCodeEnv -> GCodeState
 gcodeStateInit env =
   GCodeState
-    { currentPosition = fromMmF $ V3 0 0 0,
+    { currentPosition = fmap fromMm $ V3 0 0 0,
       stdgen = mkStdGen 0,
       currentLayer = 0,
       filament = FilamentSection {color = head env.colors, endPos = 0} :| [],
@@ -451,7 +452,7 @@ operateTool v_ speed extr = do
   gcodeStateModify $ MsgChangeCurrentPosition v_
   gcodeStateModify $ MsgTrackExtrusion extr
 
-  let V3 mx my mz = toMmF $ env.transpose v_
+  let V3 mx my mz = fmap toMm $ env.transpose v_
 
   gcodeFromCmd
     $ GLinearMove
@@ -468,7 +469,7 @@ moveToImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 moveToImpl mx my mz = do
   speed <- getSpeed
   cur <- getCurrentPosition
-  let V3 x y z = toMmF cur
+  let V3 x y z = fmap toMm cur
       newX = fromMaybe x mx
       newY = fromMaybe y my
       newZ = fromMaybe z mz
@@ -492,7 +493,7 @@ moveByImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 moveByImpl mx my mz = do
   speed <- getSpeed
   cur <- getCurrentPosition
-  let v = fromMmF (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
+  let v = fmap fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
   operateTool (v + cur) speed 0
 
 moveByX :: Delta -> GCode ()
@@ -512,8 +513,8 @@ moveByZ (toMm -> z) =
 extrudeToImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 extrudeToImpl mx my mz = do
   speed <- getExtrudeSpeed
-  (toMmF -> V3 curX curY curZ) <- getCurrentPosition
-  let v = fromMmF (V3 (fromMaybe curX mx) (fromMaybe curY my) (fromMaybe curZ mz))
+  (fmap toMm -> V3 curX curY curZ) <- getCurrentPosition
+  let v = fmap fromMm (V3 (fromMaybe curX mx) (fromMaybe curY my) (fromMaybe curZ mz))
   extr <- getExtrudeLength v
   operateTool v speed extr
 
@@ -535,7 +536,7 @@ extrudeByImpl :: Maybe Double -> Maybe Double -> Maybe Double -> GCode ()
 extrudeByImpl mx my mz = do
   speed <- getExtrudeSpeed
   cur <- getCurrentPosition
-  let v = fromMmF (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
+  let v = fmap fromMm (V3 (fromMaybe 0 mx) (fromMaybe 0 my) (fromMaybe 0 mz))
   let v' = v + cur
   extr <- getExtrudeLength v'
   operateTool v' speed extr
@@ -588,7 +589,7 @@ isFirstLayers :: GCode Bool
 isFirstLayers = do
   st <- gcodeStateGet
   env <- ask
-  let (V3 _ _ z) = toMmF st.currentPosition
+  let (V3 _ _ z) = fmap toMm st.currentPosition
   pure (z <= toMm env.firstLayerHeight)
 
 getExtrudeSpeed :: GCode Speed
@@ -640,7 +641,7 @@ waitForHotendTemperature temp = do
       }
 
 setPositionXYZ :: V3 Position -> GCode ()
-setPositionXYZ (toMmF -> V3 x y z) = do
+setPositionXYZ (fmap toMm -> V3 x y z) = do
   gcodeFromCmd
     $ GSetPosition
       { x = Just x,
@@ -650,7 +651,7 @@ setPositionXYZ (toMmF -> V3 x y z) = do
       }
 
 setPositionXY :: V2 Position -> GCode ()
-setPositionXY (toMmF -> V2 x y) = do
+setPositionXY (fmap toMm -> V2 x y) = do
   gcodeFromCmd
     $ GSetPosition
       { x = Just x,
@@ -680,7 +681,7 @@ class MoveBy a where
   moveBy :: a -> GCode ()
 
 instance MoveBy (V2 Delta) where
-  moveBy (toMmF -> V2 x y) = moveByImpl (Just x) (Just y) Nothing
+  moveBy (fmap toMm -> V2 x y) = moveByImpl (Just x) (Just y) Nothing
 
 class ExtrudeTo a where
   extrudeTo :: a -> GCode ()

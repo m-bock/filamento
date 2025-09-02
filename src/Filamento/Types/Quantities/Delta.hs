@@ -42,17 +42,3 @@ instance Sub Delta Delta where
 
 deltaPretty :: Delta -> Text
 deltaPretty (Delta d) = fixedF 2 d |+ "mm"
-
--- Vector instances
-
-instance Scalable Factor (V2 Delta) where
-  scale factor (V2 x y) = V2 (scale factor x) (scale factor y)
-
-instance Scalable NonNegativeFactor (V2 Delta) where
-  scale factor (V2 x y) = V2 (scale factor x) (scale factor y)
-
-instance Scalable Factor (V3 Delta) where
-  scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)
-
-instance Scalable NonNegativeFactor (V3 Delta) where
-  scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)

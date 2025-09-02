@@ -33,10 +33,19 @@ class FromInt a where
 class ToInt a where
   toInt :: a -> Int
 
+viaInt :: (ToInt a, FromInt b) => a -> b
+viaInt = fromInt . toInt
+
+maybeViaInt :: (ToInt a, MaybeFromInt b) => a -> Maybe b
+maybeViaInt = maybeFromInt . toInt
+
 --------------------------------------------------------------------------------
 
 class MaybeFromDouble a where
   maybeFromDouble :: Double -> Maybe a
+
+unsafeFromDouble :: (HasCallStack, MaybeFromDouble a) => Double -> a
+unsafeFromDouble = fromJust . maybeFromDouble
 
 class FromDouble a where
   fromDouble :: Double -> a
@@ -44,11 +53,11 @@ class FromDouble a where
 class ToDouble a where
   toDouble :: a -> Double
 
-viaDouble :: (ToDouble a, FromDouble b) => a -> b
-viaDouble = fromDouble . toDouble
-
 instance ToDouble Nat where
   toDouble = fromIntegral
+
+viaDouble :: (ToDouble a, FromDouble b) => a -> b
+viaDouble = fromDouble . toDouble
 
 --------------------------------------------------------------------------------
 
@@ -58,26 +67,11 @@ class MaybeFromMillimeters a where
 unsafeFromMm :: (HasCallStack, MaybeFromMillimeters a) => Double -> a
 unsafeFromMm = fromJust . maybeFromMm
 
-absFromMm :: (FromMillimeters a) => Double -> a
-absFromMm = fromMm . abs
-
 class FromMillimeters a where
   fromMm :: Double -> a
 
 class ToMillimeters a where
   toMm :: a -> Double
-
-fromMmF :: (FromMillimeters a, Functor f) => f Double -> f a
-fromMmF = fmap fromMm
-
-toMmF :: (ToMillimeters a, Functor f) => f a -> f Double
-toMmF = fmap toMm
-
-maybeFromMmF :: (MaybeFromMillimeters a, Functor f) => f Double -> f (Maybe a)
-maybeFromMmF = fmap maybeFromMm
-
-unsafeFromMmF :: (MaybeFromMillimeters a, Functor f) => f Double -> f a
-unsafeFromMmF = fmap unsafeFromMm
 
 viaMm :: (ToMillimeters a, FromMillimeters b) => a -> b
 viaMm = fromMm . toMm
@@ -251,6 +245,18 @@ instance (Add abs rel) => Add (V2 abs) (V2 rel) where
 instance (Add abs rel) => Add (V3 abs) (V3 rel) where
   add a b = add <$> a <*> b
 
+instance (Scalable fac a) => Scalable fac (V2 a) where
+  scale factor (V2 x y) = V2 (scale factor x) (scale factor y)
+
+instance (Scalable fac a) => Scalable fac (V3 a) where
+  scale factor (V3 x y z) = V3 (scale factor x) (scale factor y) (scale factor z)
+
+instance (Scalable fac a) => Scalable (V2 fac) (V2 a) where
+  scale (V2 factorX factorY) (V2 x y) = V2 (scale factorX x) (scale factorY y)
+
+instance (Scalable fac a) => Scalable (V3 fac) (V3 a) where
+  scale (V3 factorX factorY factorZ) (V3 x y z) = V3 (scale factorX x) (scale factorY y) (scale factorZ z)
+
 --------------------------------------------------------------------------------
 
 class Sub abs rel | abs -> rel where
@@ -278,5 +284,5 @@ instance (GetDelta abs rel) => GetDelta (V3 abs) (V3 rel) where
 
 --------------------------------------------------------------------------------
 
-class Distance lo hi | hi -> lo where
-  getDistance :: hi -> hi -> lo
+class ToFactor fac a | a -> fac where
+  toFactor :: a -> fac

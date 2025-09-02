@@ -68,8 +68,8 @@ whileSketchZ :: Proportion -> GCode () -> GCode ()
 whileSketchZ prop inner = do
   st <- gcodeStateGet
   env <- ask
-  let V3 _ _ sketchHeight = toMmF env.sketchSize
-  let V3 _ _ z = toMmF st.currentPosition
+  let V3 _ _ sketchHeight = fmap toMm env.sketchSize
+  let V3 _ _ z = fmap toMm st.currentPosition
   if z < (toDouble prop) * sketchHeight
     then do
       inner
@@ -89,8 +89,8 @@ getZProgress :: GCode Proportion
 getZProgress = do
   st <- gcodeStateGet
   env <- ask
-  let V3 _ _ sketchHeight = toMmF env.sketchSize
-  let V3 _ _ z = toMmF st.currentPosition
+  let V3 _ _ sketchHeight = fmap toMm env.sketchSize
+  let V3 _ _ z = fmap toMm st.currentPosition
   pure (fromMaybe propMax $ propFromDouble (z / sketchHeight))
 
 -- TODO: This works only if firstLayerHeight equals layerHeight
@@ -98,14 +98,14 @@ getLayerProgress :: GCode OutOf
 getLayerProgress = do
   st <- gcodeStateGet
   env <- ask
-  let V3 _ _ sketchHeight = toMmF env.sketchSize
+  let V3 _ _ sketchHeight = fmap toMm env.sketchSize
   let layerTotal = fromNat (round (sketchHeight / toMm env.layerHeight)) :: Total
   pure $ outOfFromCountTotal (fromNat st.currentLayer) layerTotal
 
 printLayers :: (OutOf -> GCode ()) -> GCode ()
 printLayers printLayer = section "layers" do
   env <- ask
-  let V3 _ _ sketchHeight = toMmF env.sketchSize
+  let V3 _ _ sketchHeight = fmap toMm env.sketchSize
   let countLayers = round ((sketchHeight - toMm env.firstLayerHeight) / toMm env.layerHeight)
   forM_ [0 .. countLayers - 1] $ \i -> section (show i) do
     let outOf = outOfFromCountTotal (fromNat i) (fromNat countLayers)
@@ -138,7 +138,7 @@ withZHop :: GCode a -> GCode a
 withZHop inner = section "zHop" do
   st <- gcodeStateGet
   env <- ask
-  let V3 _ _ z = toMmF st.currentPosition
+  let V3 _ _ z = fmap toMm st.currentPosition
   moveToZ (add (fromMm z) env.zHop)
   ret <- inner
   moveToZ (fromMm z)
@@ -156,14 +156,14 @@ extrudePoints vs = do
     extrudeTo v
 
 printRect2d :: V2 Position -> V2 Delta -> GCode ()
-printRect2d (toMmF -> V2 x y) delta = do
-  (toMmF -> V3 _ _ z) <- getCurrentPosition
-  let pos = fromMmF $ V3 x y z
+printRect2d (fmap toMm -> V2 x y) delta = do
+  (fmap toMm -> V3 _ _ z) <- getCurrentPosition
+  let pos = fmap fromMm $ V3 x y z
   printRect pos delta
 
 printRect :: V3 Position -> V2 Delta -> GCode ()
-printRect v1 (toMmF -> V2 dx dy) = section "printRect" do
-  let dlt3 = fromMmF $ V3 dx dy 0
+printRect v1 (fmap toMm -> V2 dx dy) = section "printRect" do
+  let dlt3 = fmap fromMm $ V3 dx dy 0
   let v2 = add v1 (justX dlt3)
   let v3 = add v2 (justY dlt3)
   let v4 = sub v3 (justX dlt3)
@@ -256,7 +256,7 @@ printPolygon n v s'
           points =
             [ add @(V3 Position) @(V3 Delta)
                 v
-                (fromMmF $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
+                (fmap fromMm $ V3 (cos (angle * fromIntegral i) * s) (sin (angle * fromIntegral i) * s) 0)
               | i <- [0 .. n - 1]
             ]
       case viaNonEmpty head points of
@@ -312,7 +312,7 @@ data Dir = Vert | Horz
   deriving (Show, Eq)
 
 purgeTower :: V2 Position -> Delta -> Int -> GCode ()
-purgeTower (toMmF -> V2 x y) (toMm -> size) purgeIndex = section "purgeTower" do
+purgeTower (fmap toMm -> V2 x y) (toMm -> size) purgeIndex = section "purgeTower" do
   st <- gcodeStateGet
   let dir = if odd st.currentLayer then Vert else Horz
 
