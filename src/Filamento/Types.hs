@@ -5,7 +5,6 @@ module Filamento.Types
     Position,
     Frequency,
     Rect2D,
-    rect2FromMinSize,
     rect2GetMinCorner,
     rect2GetSize,
     Line2D,

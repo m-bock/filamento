@@ -1,5 +1,6 @@
 module Filamento.Types.Geometry.Square2D (Square2D, square2FromMinSize, square2GetMinCorner, square2GetSize) where
 
+import Filamento.Classes
 import Filamento.Types.Geometry.Rect2D
 import Filamento.Types.Quantities.Delta
 import Filamento.Types.Quantities.Position
@@ -12,7 +13,7 @@ data Square2D = Square2D (Rect2D)
   deriving (Show, Eq)
 
 square2FromMinSize :: V2 Position -> Delta -> Square2D
-square2FromMinSize minCorner size = Square2D (rect2FromMinSize minCorner size')
+square2FromMinSize minCorner size = Square2D $ from (MinCorner minCorner, Size size')
   where
     size' :: V2 Delta
     size' = V2 size size

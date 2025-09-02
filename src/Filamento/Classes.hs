@@ -287,3 +287,9 @@ instance (GetDelta abs rel) => GetDelta (V3 abs) (V3 rel) where
 
 class ToFactor fac a | a -> fac where
   toFactor :: a -> fac
+
+--------------------------------------------------------------------------------
+
+class FromTo b a | b -> a where
+  to :: a -> b
+  from :: b -> a

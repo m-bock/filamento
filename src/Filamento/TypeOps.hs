@@ -123,14 +123,14 @@ outOfToProportion outOf = propFromOutOf outOf
 
 rect2FromCorners :: V2 Position -> V2 Position -> Rect2D
 rect2FromCorners minCorner maxCorner =
-  rect2FromMinSize minCorner (getDelta minCorner maxCorner)
+  from (MinCorner minCorner, Size (getDelta minCorner maxCorner))
 
 rect2ToCorners :: Rect2D -> (V2 Position, V2 Position)
 rect2ToCorners rect = (rect2GetMinCorner rect, rect2GetMaxCorner rect)
 
 rect2FromCenterSize :: V2 Position -> V2 Delta -> Rect2D
 rect2FromCenterSize center size =
-  rect2FromMinSize (sub center size') size
+  from (MinCorner (sub center size'), Size size)
   where
     size' :: V2 Delta
     size' = scale @Factor 0.5 size

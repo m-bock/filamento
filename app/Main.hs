@@ -107,6 +107,7 @@ printSketch = section "sketch" $ withSketchTranspose do
           printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fmap fromMm $ V2 12.5 30)) (fromNat 20)
         color colors.yellow do
           printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fmap fromMm $ V2 12.5 30)) (fromNat 20)
+
         color colors.red do
           withRetract $ withZHop $ moveTo p1
           extrudeTo p2
