@@ -6,8 +6,6 @@ import Filamento.Types.Continous.Factor (Factor)
 import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
 import Fmt
 import GHC.Generics
-import Linear (V2 (V2))
-import Linear.V3 (V3 (..))
 import Relude
 
 newtype Delta = Delta {mm :: Double} -- may be negative

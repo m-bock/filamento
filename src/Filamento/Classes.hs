@@ -181,7 +181,6 @@ class ToMillimetersPerMinute a where
 
 class MaybeFromHertz a where
   maybeFromHz :: Double -> Maybe a
-  unsafeFromHz :: Double -> a
 
 class FromHertz a where
   fromHz :: Double -> a
@@ -193,13 +192,15 @@ class ToHertz a where
 
 class MaybeFromMilliseconds a where
   maybeFromMs :: Double -> Maybe a
-  unsafeFromMs :: Double -> a
 
 class FromMilliseconds a where
   fromMs :: Double -> a
 
 class ToMilliseconds a where
   toMs :: a -> Double
+
+unsafeFromMs :: (HasCallStack, MaybeFromMilliseconds a) => Double -> a
+unsafeFromMs = fromJust . maybeFromMs
 
 --------------------------------------------------------------------------------
 
