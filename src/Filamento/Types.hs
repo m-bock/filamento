@@ -47,8 +47,6 @@ module Filamento.Types
   )
 where
 
-import Data.Aeson (FromJSON, ToJSON, defaultOptions, genericParseJSON, genericToJSON)
-import Data.Aeson.Types (FromJSON (parseJSON), ToJSON (toJSON))
 import Filamento.Classes
 import Filamento.Types.Continous.Factor as Export
 import Filamento.Types.Continous.NonNegativeFactor as Export
@@ -57,7 +55,7 @@ import Filamento.Types.Quantities.Duration as Export
 import Filamento.Types.Quantities.Length as Export
 import Filamento.Types.Quantities.Position as Export
 import GHC.Generics
-import Linear (V2 (..), V3 (..), distance)
+import Linear (V2 (..), V3 (..))
 import Relude
 
 -------------------------------------------------------------------------------

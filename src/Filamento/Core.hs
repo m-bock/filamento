@@ -93,7 +93,7 @@ import System.Random
 -------------------------------------------------------------------------------
 
 newtype GCode a = GCode ((StateT GCodeState (ReaderT GCodeEnv IO)) a)
-  deriving
+  deriving newtype
     ( Functor,
       Applicative,
       Monad,
@@ -151,10 +151,10 @@ data GCodeEnv = Env
   }
 
 newtype HookEmitGCode = HookEmitGCode {hookEmitGCode :: Text -> [GCodeLine] -> GCode ()}
-  deriving (Semigroup, Monoid)
+  deriving newtype (Semigroup, Monoid)
 
 newtype HookUserInput = HookUserInput {hookUserInput :: Text -> GCode ()}
-  deriving (Semigroup, Monoid)
+  deriving newtype (Semigroup, Monoid)
 
 hookEmitGCode :: Text -> GCode ()
 hookEmitGCode tag = do

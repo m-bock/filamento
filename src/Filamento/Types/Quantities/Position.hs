@@ -6,11 +6,8 @@ import Filamento.Classes.Distance
 import Filamento.Types.Continous.Factor (Factor)
 import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
 import Filamento.Types.Quantities.Delta (Delta)
-import Filamento.Types.Quantities.Length (Length)
 import Fmt
 import GHC.Generics
-import Linear (V2 (V2), V3 (V3))
-import qualified Linear.Metric as L
 import Relude
 
 newtype Position = Position {mm :: Double} -- may be negative
