@@ -164,7 +164,7 @@ mainGen = do
 
   hookEmitGCode <-
     fold
-      [ mkHookOcto envVars,
+      [ -- mkHookOcto envVars,
         mkHookFiles,
         mkHookFileAppender "out/myprint.gcode",
         mkHookFiles

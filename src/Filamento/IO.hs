@@ -8,24 +8,21 @@ module Filamento.IO
   )
 where
 
-import Control.Exception (throw)
 import Data.Aeson
 import qualified Data.Map.Strict as Map
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Env
 import Filamento.Core
-import Filamento.Core (GCodeState, HookEmitGCode (..), HookUserInput (..), sectionPath)
 import qualified Filamento.Octo as Octo
 import Filamento.TypeOps
-import Fmt (Buildable (..), fixedF, padLeftF, (+|), (|+))
+import Fmt (fixedF, padLeftF, (+|), (|+))
 import Network.HTTP.Client
 import Network.URI (URI, parseURI)
-import Octo.API (OctoHttpCfg (..), RequestPostApiFilesLocal (filePath))
+import Octo.API (OctoHttpCfg (..))
 import Relude
 import System.Directory (createDirectoryIfMissing, doesDirectoryExist, doesFileExist, removeDirectoryRecursive)
 import System.Environment (setEnv)
-import System.IO.Error (userError)
 
 data PrintReport = PrintReport
   { gcodeFile :: FilePath,
@@ -113,7 +110,11 @@ mkHookUserInput envVars = do
                 userInput <- getLine
                 let res = parseUserInput userInput
                 case res of
-                  Right ui -> applyUserInput ui
+                  Right ui -> do
+                    applyUserInput ui
+                    st' <- gcodeStateGet
+                    let us = deriveUserState st'
+                    comment ("User input: " <> printUserState us)
                   Left err -> do
                     putTextLn err
                     loop

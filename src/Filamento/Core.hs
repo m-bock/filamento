@@ -273,7 +273,7 @@ gcodeStateInit env =
       currentLayer = 0,
       filament = FilamentSection {color = head env.colors, endPos = 0} :| [],
       gCode = [],
-      flowCorrection = 0
+      flowCorrection = 1
     }
 
 -------------------------------------------------------------------------------
@@ -454,13 +454,16 @@ operateTool v_ speed extr = do
 
   let V3 mx my mz = fmap toMm $ env.transpose v_
 
+  st <- gcodeStateGet
+  let extr' = toMm extr * st.flowCorrection
+
   gcodeFromCmd
     $ GLinearMove
       { x = Just mx,
         y = Just my,
         z = Just mz,
         feedrate = Just $ round $ toMmPerMin speed,
-        extrude = Just $ coerce $ toMm extr
+        extrude = Just $ coerce extr'
       }
 
 --------------------------------------------------------------------------------
