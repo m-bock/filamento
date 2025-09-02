@@ -55,6 +55,7 @@ library
     Filamento.Octo
     Filamento.TypeOps
     Filamento.Types
+    Filamento.Types.Trivial
     Filamento.Types.Continous.Factor
     Filamento.Types.Continous.NonNegativeFactor
     Filamento.Types.Geometry

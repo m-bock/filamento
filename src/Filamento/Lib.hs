@@ -39,6 +39,7 @@ import Filamento.Classes
 import Filamento.Core
 import Filamento.Math (linspaceByStep)
 import Filamento.TypeOps
+import Filamento.Types
 import Linear (V2 (..), V3 (..))
 import Relude
 

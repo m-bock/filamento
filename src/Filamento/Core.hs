@@ -81,6 +81,7 @@ import qualified Data.Text as Text
 import Filamento.Classes
 import Filamento.Classes.Distance (Distance (..))
 import Filamento.TypeOps
+import Filamento.Types
 import Fmt
 import Linear (V2 (..), V3 (..))
 import Marlin.Comment (gcodeToComment)

@@ -16,6 +16,7 @@ import Env
 import Filamento.Core
 import qualified Filamento.Octo as Octo
 import Filamento.TypeOps
+import Filamento.Types
 import Fmt (fixedF, padLeftF, (+|), (|+))
 import Network.HTTP.Client
 import Network.URI (URI, parseURI)

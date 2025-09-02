@@ -3,6 +3,7 @@ module Filamento.Math where
 import Filamento.Classes
 import Filamento.Classes.Distance (Distance (..))
 import Filamento.TypeOps
+import Filamento.Types
 import GHC.IO.FD (mkFD)
 import Linear.V2
 import Relude

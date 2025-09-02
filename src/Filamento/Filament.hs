@@ -12,6 +12,7 @@ import Filamento
 import Filamento.Classes.Distance (Distance (..))
 import Filamento.Debug
 import Filamento.Math (itemsWithNext, linspace2ByStep, linspaceByStep)
+import Filamento.Types
 import GHC.IO (unsafePerformIO)
 import GHC.List ((!!))
 import Linear

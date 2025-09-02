@@ -39,12 +39,17 @@ module Filamento.TypeOps
     v3DeltaFromMm,
     v3DeltaFromV2,
     v3PosFromMm,
-    module Export,
   )
 where
 
 import Filamento.Classes
-import Filamento.Types as Export
+import Filamento.Types.Continous.Factor
+import Filamento.Types.Geometry.Line2D
+import Filamento.Types.Geometry.Rect2D
+import Filamento.Types.Geometry.Square2D
+import Filamento.Types.Quantities.Delta
+import Filamento.Types.Quantities.Position
+import Filamento.Types.Trivial
 import Linear
 import Relude
 
