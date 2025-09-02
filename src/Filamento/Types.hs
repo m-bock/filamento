@@ -14,7 +14,6 @@ module Filamento.Types
     line2GetEnd,
     Square2D,
     square2FromMinSize,
-    volumeFromArea,
     square2GetMinCorner,
     square2GetSize,
     propFromDouble,
@@ -29,8 +28,6 @@ module Filamento.Types
     propMax,
     outOfGetCount,
     outOfGetTotal,
-    circle2FromCenterRadius,
-    circle2GetArea,
     outOfFromCountTotal,
     Range,
     rangeFromPos,
@@ -40,9 +37,6 @@ module Filamento.Types
     rangeGetTo,
     Area,
     areaFromVec2,
-    Volume,
-    volumeFromVec3,
-    Circle2D,
     module Export,
   )
 where
@@ -50,10 +44,8 @@ where
 import Filamento.Classes
 import Filamento.Types.Continous.Factor as Export
 import Filamento.Types.Continous.NonNegativeFactor as Export
-import Filamento.Types.Quantities.Delta as Export
-import Filamento.Types.Quantities.Duration as Export
-import Filamento.Types.Quantities.Length as Export
-import Filamento.Types.Quantities.Position as Export
+import Filamento.Types.Geometry as Export
+import Filamento.Types.Quantities as Export
 import GHC.Generics
 import Linear (V2 (..), V3 (..))
 import Relude
@@ -108,51 +100,6 @@ instance ToCelsius Temperature where
 
 instance FromCelsius Temperature where
   fromCelsius t = Temperature t
-
--------------------------------------------------------------------------------
-
-data Rect2D = Rect2D {minCorner :: V2 Position, size :: V2 Delta}
-  deriving (Show, Eq)
-
-rect2FromMinSize :: V2 Position -> V2 Delta -> Rect2D
-rect2FromMinSize minCorner size = Rect2D {minCorner, size}
-
-rect2GetMinCorner :: Rect2D -> V2 Position
-rect2GetMinCorner (Rect2D {minCorner}) = minCorner
-
-rect2GetSize :: Rect2D -> V2 Delta
-rect2GetSize (Rect2D {size}) = size
-
--------------------------------------------------------------------------------
-
-data Line2D = Line2D {start :: V2 Position, end :: V2 Position}
-  deriving (Show, Eq)
-
-line2FromPoints :: V2 Position -> V2 Position -> Line2D
-line2FromPoints p1 p2 = Line2D {start = p1, end = p2}
-
-line2GetStart :: Line2D -> V2 Position
-line2GetStart (Line2D {start}) = start
-
-line2GetEnd :: Line2D -> V2 Position
-line2GetEnd (Line2D {end}) = end
-
--------------------------------------------------------------------------------
-
-data Square2D = Square2D (Rect2D)
-  deriving (Show, Eq)
-
-square2FromMinSize :: V2 Position -> Delta -> Square2D
-square2FromMinSize minCorner size = Square2D (rect2FromMinSize minCorner size')
-  where
-    size' :: V2 Delta
-    size' = V2 size size
-
-square2GetMinCorner :: Square2D -> V2 Position
-square2GetMinCorner (Square2D rect) = rect2GetMinCorner rect
-
-square2GetSize :: Square2D -> V2 Delta
-square2GetSize (Square2D rect) = rect2GetSize rect
 
 -------------------------------------------------------------------------------
 
@@ -242,42 +189,3 @@ rangeGetFrom (Range {from}) = from
 
 rangeGetTo :: Range -> Position
 rangeGetTo (Range {to}) = to
-
--------------------------------------------------------------------------------
-
-newtype Area = Area {sqMm :: Double}
-
-areaFromVec2 :: V2 Length -> Area
-areaFromVec2 (V2 x y) = Area (toMm x * toMm y)
-
-instance FromSquareMillimeters Area where
-  fromSqMm x = Area x
-
-instance ToSquareMillimeters Area where
-  toSqMm (Area x) = x
-
--------------------------------------------------------------------------------
-
-newtype Volume = Volume {cuMm :: Double}
-
-volumeFromVec3 :: V3 Length -> Volume
-volumeFromVec3 (V3 x y z) = Volume (toMm x * toMm y * toMm z)
-
-instance FromCubicMillimeters Volume where
-  fromCuMm x = Volume x
-
-instance ToCubicMillimeters Volume where
-  toCuMm (Volume x) = x
-
-volumeFromArea :: Area -> Length -> Volume
-volumeFromArea (Area a) d = Volume (a * toMm d)
-
--------------------------------------------------------------------------------
-
-data Circle2D = Circle2D {center :: V2 Position, radius :: Length}
-
-circle2GetArea :: Circle2D -> Area
-circle2GetArea (Circle2D {radius}) = fromSqMm $ pi * (toMm radius ^ 2)
-
-circle2FromCenterRadius :: V2 Position -> Length -> Circle2D
-circle2FromCenterRadius center radius = Circle2D {center, radius}

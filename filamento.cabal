@@ -57,6 +57,14 @@ library
     Filamento.Types
     Filamento.Types.Continous.Factor
     Filamento.Types.Continous.NonNegativeFactor
+    Filamento.Types.Geometry
+    Filamento.Types.Geometry.Area
+    Filamento.Types.Geometry.Circle2D
+    Filamento.Types.Geometry.Line2D
+    Filamento.Types.Geometry.Rect2D
+    Filamento.Types.Geometry.Square2D
+    Filamento.Types.Geometry.Volume
+    Filamento.Types.Quantities
     Filamento.Types.Quantities.Delta
     Filamento.Types.Quantities.Duration
     Filamento.Types.Quantities.Length
