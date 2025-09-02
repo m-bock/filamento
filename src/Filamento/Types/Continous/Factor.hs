@@ -9,7 +9,7 @@ import Filamento.Classes (FromDouble (..), ToDouble (..))
 import GHC.Generics
 import Relude
 
-newtype Factor = Factor Double
+newtype Factor = Factor Double -- may be negative
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (Num, Fractional, RealFrac, Real)
   deriving anyclass (ToJSON, FromJSON)

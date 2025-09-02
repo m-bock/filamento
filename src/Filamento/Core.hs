@@ -187,7 +187,7 @@ gcodeEnvDefault =
       layerHeight = fromMm 0.2,
       firstLayerHeight = fromMm 0.2,
       lineWidth = fromMm 0.4,
-      filamentDia = fromMm 1.75,
+      filamentDia = unsafeFromMm 1.75,
       sketchSize = fromMmF $ V3 100 100 100,
       transpose = id,
       retractLength = fromMm 1,
@@ -439,7 +439,8 @@ getVolumeUsed = do
 getFilamentUsed :: GCode Length
 getFilamentUsed = do
   st <- gcodeStateGet
-  pure $ fromMm @Length $ toMm (head st.filament).endPos
+  let endPos = (head st.filament).endPos
+  pure $ fromMaybe mempty $ maybeViaMm endPos
 
 --------------------------------------------------------------------------------
 

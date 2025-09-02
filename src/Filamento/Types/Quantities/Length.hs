@@ -13,14 +13,7 @@ newtype Length = Length {mm :: Double} -- non-negative
   deriving anyclass (ToJSON, FromJSON)
 
 instance MaybeFromMillimeters Length where
-  maybeFromMm v = if isLengthValid v then Just (Length v) else Nothing
-  unsafeFromMm v = if isLengthValid v then Length v else error "Length must be non-negative"
-
-isLengthValid :: Double -> Bool
-isLengthValid l = l >= 0
-
-instance FromMillimeters Length where
-  fromMm v = Length v
+  maybeFromMm v = if v >= 0 then Just (Length v) else Nothing
 
 instance ToMillimeters Length where
   toMm (Length l) = l

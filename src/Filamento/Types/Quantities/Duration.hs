@@ -12,16 +12,11 @@ newtype Duration = Duration {ms :: Double} -- non-negative
   deriving (Semigroup, Monoid) via (Sum Double)
   deriving anyclass (ToJSON, FromJSON)
 
-isValidDuration :: Double -> Bool
-isValidDuration d = d >= 0
-
 instance MaybeFromMilliseconds Duration where
-  maybeFromMs v = if isValidDuration v then Just (Duration v) else Nothing
-  unsafeFromMs v = if isValidDuration v then Duration v else error "Duration must be non-negative"
+  maybeFromMs v = if v >= 0 then Just (Duration v) else Nothing
 
 instance MaybeFromSeconds Duration where
-  maybeFromSecs v = if isValidDuration v then Just (Duration (v * 1000)) else Nothing
-  unsafeFromSecs v = if isValidDuration v then Duration (v * 1000) else error "Duration must be non-negative"
+  maybeFromSecs v = if v >= 0 then Just (Duration (v * 1000)) else Nothing
 
 instance ToMilliseconds Duration where
   toMs (Duration d) = d

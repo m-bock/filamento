@@ -8,7 +8,9 @@ build-type: Simple
 extra-doc-files: CHANGELOG.md
 
 common flags
-  ghc-options: -Wall -Werror=overflowed-literals
+  ghc-options:
+    -Wall
+    -Werror=overflowed-literals
 
 common extensions
   default-extensions:
@@ -57,6 +59,7 @@ library
     Filamento.Types.Quantities.Delta
     Filamento.Types.Quantities.Duration
     Filamento.Types.Quantities.Length
+    Filamento.Types.Quantities.Position
     Marlin.Comment
     Marlin.Core
     Marlin.Syntax

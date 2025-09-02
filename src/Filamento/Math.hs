@@ -2,6 +2,7 @@ module Filamento.Math where
 
 import Filamento.Classes
 import Filamento.TypeOps
+import GHC.IO.FD (mkFD)
 import Linear.V2
 import Relude
 
@@ -72,5 +73,5 @@ project rangeIn rangeOut val =
   let inDelta = rangeToDelta rangeIn
       outDelta = rangeToDelta rangeOut
       inVal = val - rangeGetFrom rangeIn
-      outVal = scale (toMm outDelta / toMm inDelta) inVal
+      outVal = scale (mkFactor (toMm outDelta / toMm inDelta)) inVal
    in outVal + rangeGetFrom rangeOut
