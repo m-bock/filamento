@@ -4,6 +4,7 @@ module Filamento
 where
 
 import Filamento.Classes as Export
+import Filamento.Classes.Abs as Export
 import Filamento.Core as Export
 import Filamento.IO as Export
 import Filamento.Lib as Export

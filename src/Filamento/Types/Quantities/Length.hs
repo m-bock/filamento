@@ -1,8 +1,16 @@
-module Filamento.Types.Quantities.Length (Length, lengthPretty) where
+module Filamento.Types.Quantities.Length
+  ( Length,
+    lengthPretty,
+    LengthFromTo (..),
+    LengthBy (..),
+  )
+where
 
 import Data.Aeson.Types
 import Filamento.Classes
+import Filamento.Classes.Abs (Abs, FromToAbs (..))
 import Filamento.Types.Continous.AbsFactor (AbsFactor)
+import Filamento.Types.MeasureUnits
 import Fmt
 import GHC.Generics
 import Relude
@@ -29,3 +37,19 @@ instance Add Length Length where
 
 lengthPretty :: Length -> Text
 lengthPretty (Length l) = fixedF 2 l |+ "mm"
+
+class LengthFromTo a where
+  lengthFrom :: a -> Length
+  lengthTo :: Length -> a
+
+instance LengthFromTo (Abs Millimeter) where
+  lengthFrom val = Length ms
+    where
+      Mm ms = fromAbs val
+  lengthTo (Length l) = toAbs (Mm l)
+
+class LengthBy a where
+  lengthBy :: a -> Length
+
+instance LengthBy Millimeter where
+  lengthBy (Mm val) = Length $ abs val

@@ -6,7 +6,8 @@ module Filamento.Types.Continous.AbsFactor
 where
 
 import Data.Aeson.Types
-import Filamento.Classes (Abs, FromAbs (..), MaybeFromDouble (..), ToDouble (..))
+import Filamento.Classes (MaybeFromDouble (..), ToDouble (..))
+import Filamento.Classes.Abs (Abs, FromToAbs (..))
 import Fmt
 import GHC.Generics
 import Relude
@@ -31,6 +32,6 @@ class FromToAbsFactor a where
   toAbsFactor :: a -> AbsFactor
   fromAbsFactor :: AbsFactor -> a
 
-instance FromToAbsFactor Double where
-  toAbsFactor x = AbsFactor (abs x)
-  fromAbsFactor (AbsFactor x) = x
+instance FromToAbsFactor (Abs Double) where
+  toAbsFactor x = AbsFactor (fromAbs x)
+  fromAbsFactor (AbsFactor x) = toAbs x

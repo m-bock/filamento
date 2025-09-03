@@ -104,7 +104,13 @@ printSketch = section "sketch" $ withSketchTranspose do
     withColors
       \color -> do
         color colors.red do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fmap unsafeFromMm $ V2 12.5 30)) (fromNat 20)
+          let rect =
+                rect2From
+                  ( centerFrom $ V2 @Millimeter (-20) (-55),
+                    sizeBy $ V2 @Millimeter 12.5 30
+                  )
+
+          printPurgeTower rect (fromNat 20)
         color colors.yellow do
           printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fmap unsafeFromMm $ V2 12.5 30)) (fromNat 20)
 

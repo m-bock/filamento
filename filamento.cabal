@@ -46,6 +46,7 @@ library
     Filamento.Classes
     Filamento.Classes.Distance
     Filamento.Classes.Move
+    Filamento.Classes.Abs
     Filamento.Core
     Filamento.Debug
     Filamento.Error

@@ -2,6 +2,7 @@ module Filamento.Types.Quantities.Position
   ( Position,
     positionPretty,
     PositionFromTo (..),
+    PositionBy (..),
   )
 where
 
@@ -39,6 +40,12 @@ instance PositionFromTo Millimeter where
 instance PositionFromTo Centimeter where
   posFrom (Cm cm) = Position (cm * 10)
   posTo (Position mm) = Cm (mm / 10)
+
+class PositionBy a where
+  posBy :: a -> Position
+
+instance PositionBy Millimeter where
+  posBy (Mm val) = Position val
 
 ---
 
