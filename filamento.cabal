@@ -57,8 +57,8 @@ library
     Filamento.TypeOps
     Filamento.Types
     Filamento.Types.Contexts
+    Filamento.Types.Continous.AbsFactor
     Filamento.Types.Continous.Factor
-    Filamento.Types.Continous.NonNegativeFactor
     Filamento.Types.Geometry
     Filamento.Types.Geometry.Area
     Filamento.Types.Geometry.Circle2D
@@ -66,13 +66,13 @@ library
     Filamento.Types.Geometry.Rect2D
     Filamento.Types.Geometry.Square2D
     Filamento.Types.Geometry.Volume
+    Filamento.Types.MeasureUnits
     Filamento.Types.Quantities
     Filamento.Types.Quantities.Delta
     Filamento.Types.Quantities.Duration
     Filamento.Types.Quantities.Length
     Filamento.Types.Quantities.Position
     Filamento.Types.Trivial
-    Filamento.Types.MeasureUnits
     Marlin.Comment
     Marlin.Core
     Marlin.Syntax

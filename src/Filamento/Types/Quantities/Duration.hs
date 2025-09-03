@@ -2,7 +2,7 @@ module Filamento.Types.Quantities.Duration (Duration, durationPretty) where
 
 import Data.Aeson.Types
 import Filamento.Classes
-import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
+import Filamento.Types.Continous.AbsFactor (AbsFactor)
 import Fmt
 import GHC.Generics
 import Relude
@@ -24,7 +24,7 @@ instance ToMilliseconds Duration where
 instance ToSeconds Duration where
   toSecs (Duration d) = d / 1000
 
-instance Scalable NonNegativeFactor Duration where
+instance Scalable AbsFactor Duration where
   scale factor (Duration d) = Duration (d * toDouble factor)
 
 instance Add Duration Duration where

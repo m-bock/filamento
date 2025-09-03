@@ -10,7 +10,7 @@ import Data.Maybe (fromJust)
 import Filamento.Classes
 import Filamento.Classes.Move
 import Filamento.Types.Contexts
-import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
+import Filamento.Types.Continous.AbsFactor (AbsFactor)
 import Filamento.Types.Quantities.Delta
 import Filamento.Types.Quantities.Length
 import Filamento.Types.Quantities.Position
@@ -95,7 +95,7 @@ instance Rect2FromTo (Center, Size) where
       )
     where
       (Size (V2 width depth)) = size
-      halfWidth = scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) width
+      halfWidth = scale (fromJust $ maybeFromDouble @AbsFactor 0.5) width
   rect2To (Rect2D (FrontLeft frontLeft, size)) =
     ( Center (frontLeft & moveRight width & moveBack depth),
       size

@@ -8,8 +8,8 @@ where
 import Data.Aeson.Types
 import Filamento.Classes
 import Filamento.Classes.Distance
+import Filamento.Types.Continous.AbsFactor (AbsFactor)
 import Filamento.Types.Continous.Factor (Factor)
-import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
 import Filamento.Types.MeasureUnits
 import Filamento.Types.Quantities.Delta (Delta)
 import Filamento.Types.Quantities.Length (Length)
@@ -59,7 +59,7 @@ instance FromCentimeters Position where
 instance Scalable Factor Position where
   scale factor (Position v) = Position (v * toDouble factor)
 
-instance Scalable NonNegativeFactor Position where
+instance Scalable AbsFactor Position where
   scale factor (Position v) = Position (v * toDouble factor)
 
 instance Add Position Delta where

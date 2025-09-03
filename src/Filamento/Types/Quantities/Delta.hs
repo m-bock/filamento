@@ -2,8 +2,8 @@ module Filamento.Types.Quantities.Delta (Delta, deltaPretty) where
 
 import Data.Aeson.Types
 import Filamento.Classes
+import Filamento.Types.Continous.AbsFactor (AbsFactor)
 import Filamento.Types.Continous.Factor (Factor)
-import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
 import Filamento.Types.Quantities.Length (Length)
 import Fmt
 import GHC.Generics
@@ -30,7 +30,7 @@ instance FromCentimeters Delta where
 instance Scalable Factor Delta where
   scale factor (Delta v) = Delta (v * toDouble factor)
 
-instance Scalable NonNegativeFactor Delta where
+instance Scalable AbsFactor Delta where
   scale factor (Delta v) = Delta (v * toDouble factor)
 
 instance Add Delta Delta where

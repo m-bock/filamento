@@ -44,8 +44,8 @@ where
 
 import Filamento.Classes
 import Filamento.Types.Contexts
+import Filamento.Types.Continous.AbsFactor (AbsFactor)
 import Filamento.Types.Continous.Factor
-import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
 import Filamento.Types.Geometry.Line2D
 import Filamento.Types.Geometry.Rect2D
 import Filamento.Types.Geometry.Square2D
@@ -142,7 +142,7 @@ rect2FromCenterSize center size =
   rect2From (FrontLeft (sub center size'), Size size)
   where
     size' :: V2 Length
-    size' = scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) size
+    size' = scale (fromJust $ maybeFromDouble @AbsFactor 0.5) size
 
 rect2ToCenterSize :: Rect2D -> (V2 Position, V2 Length)
 rect2ToCenterSize rect = (rect2GetCenter rect, rect2GetSize rect)
@@ -154,7 +154,7 @@ rect2GetMaxCorner :: Rect2D -> V2 Position
 rect2GetMaxCorner (rect2ToMinSize -> (minCorner, size)) = add minCorner size
 
 rect2GetCenter :: Rect2D -> V2 Position
-rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = add minCorner (scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) size)
+rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = add minCorner (scale (fromJust $ maybeFromDouble @AbsFactor 0.5) size)
 
 rect2GetPoints :: Rect2D -> (V2 Position, V2 Position, V2 Position, V2 Position)
 rect2GetPoints rect = (p1, p2, p3, p4)
@@ -168,13 +168,13 @@ rect2GetPoints rect = (p1, p2, p3, p4)
 -------------------------------------------------------------------------------
 
 square2FromCenterSize :: V2 Position -> Length -> Square2D
-square2FromCenterSize center size = square2FromMinSize (add center (pure @V2 $ scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) size)) size
+square2FromCenterSize center size = square2FromMinSize (add center (pure @V2 $ scale (fromJust $ maybeFromDouble @AbsFactor 0.5) size)) size
 
 square2ToCenterSize :: Square2D -> (V2 Position, V2 Length)
 square2ToCenterSize square = (square2GetCenter square, square2GetSize square)
 
 square2GetCenter :: Square2D -> V2 Position
-square2GetCenter square = add (square2GetMinCorner square) (scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) (square2GetSize square))
+square2GetCenter square = add (square2GetMinCorner square) (scale (fromJust $ maybeFromDouble @AbsFactor 0.5) (square2GetSize square))
 
 square2GetMaxCorner :: Square2D -> V2 Position
 square2GetMaxCorner square = add (square2GetMinCorner square) (square2GetSize square)

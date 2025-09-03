@@ -2,7 +2,7 @@ module Filamento.Types.Quantities.Length (Length, lengthPretty) where
 
 import Data.Aeson.Types
 import Filamento.Classes
-import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
+import Filamento.Types.Continous.AbsFactor (AbsFactor)
 import Fmt
 import GHC.Generics
 import Relude
@@ -21,7 +21,7 @@ instance ToMillimeters Length where
 instance ToCentimeters Length where
   toCm (Length l) = l
 
-instance Scalable NonNegativeFactor Length where
+instance Scalable AbsFactor Length where
   scale factor (Length l) = Length (l * toDouble factor)
 
 instance Add Length Length where
