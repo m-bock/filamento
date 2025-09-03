@@ -17,6 +17,7 @@ import GHC.IO (unsafePerformIO)
 import GHC.List ((!!))
 import Linear
 import Relude
+import Relude.Unsafe (fromJust)
 import Text.Printf (printf)
 
 data ProfileType = Hill | Valley deriving (Show)
@@ -178,9 +179,10 @@ printFilamentSegment config printPlane profile = do
 
           prop <- getZProgress
 
-          let rectWidth = max 0 $ getWidth config.filamentDia prop
-              rectLength = getLength config prop profile.profileType profile.depth
-              rectSize = V2 rectWidth rectLength
+          let rectWidth = fromJust $ maybeViaMm $ max 0 $ getWidth config.filamentDia prop :: Length
+              rectLength = fromJust $ maybeViaMm $ getLength config prop profile.profileType profile.depth :: Length
+
+              rectSize = V2 rectWidth rectLength :: V2 Length
               rect = rect2FromCenterSize rectCenter rectSize
 
           comment ("prop = " <> Text.pack (printf "%.3f" (toDouble prop)))

@@ -23,6 +23,7 @@ module Filamento.Types.Trivial
     rangeToDelta,
     rangeGetFrom,
     rangeGetTo,
+    Radius (..),
   )
 where
 
@@ -32,6 +33,10 @@ import Filamento.Types.Quantities.Position
 import GHC.Generics
 import Linear (V2 (..), V3 (..))
 import Relude
+
+newtype Radius a = Radius a
+
+newtype Diameter a = Diameter a
 
 -------------------------------------------------------------------------------
 

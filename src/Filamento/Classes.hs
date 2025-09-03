@@ -260,7 +260,7 @@ instance (Scalable fac a) => Scalable (V3 fac) (V3 a) where
 
 --------------------------------------------------------------------------------
 
-class Sub abs rel | abs -> rel where
+class Sub abs rel where
   sub :: abs -> rel -> abs
 
 instance (Sub abs rel) => Sub (V2 abs) (V2 rel) where

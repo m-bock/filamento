@@ -164,7 +164,7 @@ printRect2d (fmap toMm -> V2 x y) delta = do
 
 printRect :: V3 Position -> V2 Delta -> GCode ()
 printRect v1 (fmap toMm -> V2 dx dy) = section "printRect" do
-  let dlt3 = fmap fromMm $ V3 dx dy 0
+  let dlt3 = fmap fromMm $ V3 dx dy 0 :: V3 Delta
   let v2 = add v1 (justX dlt3)
   let v3 = add v2 (justY dlt3)
   let v4 = sub v3 (justX dlt3)

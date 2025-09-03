@@ -43,15 +43,19 @@ module Filamento.TypeOps
 where
 
 import Filamento.Classes
+import Filamento.Types.Contexts
 import Filamento.Types.Continous.Factor
+import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
 import Filamento.Types.Geometry.Line2D
 import Filamento.Types.Geometry.Rect2D
 import Filamento.Types.Geometry.Square2D
 import Filamento.Types.Quantities.Delta
+import Filamento.Types.Quantities.Length
 import Filamento.Types.Quantities.Position
 import Filamento.Types.Trivial
 import Linear
 import Relude
+import Relude.Unsafe (fromJust)
 
 deltaFloor :: Delta -> Count
 deltaFloor = fromNat . floor . toMm
@@ -128,29 +132,29 @@ outOfToProportion outOf = propFromOutOf outOf
 
 rect2FromCorners :: V2 Position -> V2 Position -> Rect2D
 rect2FromCorners minCorner maxCorner =
-  from (MinCorner minCorner, Size (getDelta minCorner maxCorner))
+  from (FrontLeft minCorner, Size (fmap (fromJust . maybeViaMm) $ getDelta minCorner maxCorner))
 
 rect2ToCorners :: Rect2D -> (V2 Position, V2 Position)
 rect2ToCorners rect = (rect2GetMinCorner rect, rect2GetMaxCorner rect)
 
-rect2FromCenterSize :: V2 Position -> V2 Delta -> Rect2D
+rect2FromCenterSize :: V2 Position -> V2 Length -> Rect2D
 rect2FromCenterSize center size =
-  from (MinCorner (sub center size'), Size size)
+  from (FrontLeft (sub center size'), Size size)
   where
-    size' :: V2 Delta
-    size' = scale @Factor 0.5 size
+    size' :: V2 Length
+    size' = scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) size
 
-rect2ToCenterSize :: Rect2D -> (V2 Position, V2 Delta)
+rect2ToCenterSize :: Rect2D -> (V2 Position, V2 Length)
 rect2ToCenterSize rect = (rect2GetCenter rect, rect2GetSize rect)
 
-rect2ToMinSize :: Rect2D -> (V2 Position, V2 Delta)
+rect2ToMinSize :: Rect2D -> (V2 Position, V2 Length)
 rect2ToMinSize rect = (rect2GetMinCorner rect, rect2GetSize rect)
 
 rect2GetMaxCorner :: Rect2D -> V2 Position
 rect2GetMaxCorner (rect2ToMinSize -> (minCorner, size)) = add minCorner size
 
 rect2GetCenter :: Rect2D -> V2 Position
-rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = add minCorner (scale @Factor 0.5 size)
+rect2GetCenter (rect2ToMinSize -> (minCorner, size)) = add minCorner (scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) size)
 
 rect2GetPoints :: Rect2D -> (V2 Position, V2 Position, V2 Position, V2 Position)
 rect2GetPoints rect = (p1, p2, p3, p4)
@@ -163,14 +167,14 @@ rect2GetPoints rect = (p1, p2, p3, p4)
 
 -------------------------------------------------------------------------------
 
-square2FromCenterSize :: V2 Position -> Delta -> Square2D
-square2FromCenterSize center size = square2FromMinSize (add center (pure @V2 $ scale @Factor 0.5 size)) size
+square2FromCenterSize :: V2 Position -> Length -> Square2D
+square2FromCenterSize center size = square2FromMinSize (add center (pure @V2 $ scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) size)) size
 
-square2ToCenterSize :: Square2D -> (V2 Position, V2 Delta)
+square2ToCenterSize :: Square2D -> (V2 Position, V2 Length)
 square2ToCenterSize square = (square2GetCenter square, square2GetSize square)
 
 square2GetCenter :: Square2D -> V2 Position
-square2GetCenter square = add (square2GetMinCorner square) (scale @Factor 0.5 (square2GetSize square))
+square2GetCenter square = add (square2GetMinCorner square) (scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) (square2GetSize square))
 
 square2GetMaxCorner :: Square2D -> V2 Position
 square2GetMaxCorner square = add (square2GetMinCorner square) (square2GetSize square)

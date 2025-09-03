@@ -99,14 +99,14 @@ printSketch = section "sketch" $ withSketchTranspose do
         setFanOff
       else do
         setFanSpeedFull
-    let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fmap fromMm $ V2 50 30)
+    let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fmap unsafeFromMm $ V2 50 30)
         (p1, p2, p3, p4) = rect2GetPoints rect
     withColors
       \color -> do
         color colors.red do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fmap fromMm $ V2 12.5 30)) (fromNat 20)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-20) (-55)) (fmap unsafeFromMm $ V2 12.5 30)) (fromNat 20)
         color colors.yellow do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fmap fromMm $ V2 12.5 30)) (fromNat 20)
+          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fmap unsafeFromMm $ V2 12.5 30)) (fromNat 20)
 
         color colors.red do
           withRetract $ withZHop $ moveTo p1

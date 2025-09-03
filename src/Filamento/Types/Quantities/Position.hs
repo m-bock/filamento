@@ -6,6 +6,7 @@ import Filamento.Classes.Distance
 import Filamento.Types.Continous.Factor (Factor)
 import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
 import Filamento.Types.Quantities.Delta (Delta)
+import Filamento.Types.Quantities.Length (Length)
 import Fmt
 import GHC.Generics
 import Relude
@@ -39,6 +40,12 @@ instance Scalable NonNegativeFactor Position where
 
 instance Add Position Delta where
   add pos del = fromMm (toMm pos + toMm del)
+
+instance Add Position Length where
+  add pos len = fromMm (toMm pos + toMm len)
+
+instance Sub Position Length where
+  sub pos len = fromMm (toMm pos - toMm len)
 
 instance Sub Position Delta where
   sub pos del = fromMm (toMm pos - toMm del)

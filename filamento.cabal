@@ -55,7 +55,7 @@ library
     Filamento.Octo
     Filamento.TypeOps
     Filamento.Types
-    Filamento.Types.Trivial
+    Filamento.Types.Contexts
     Filamento.Types.Continous.Factor
     Filamento.Types.Continous.NonNegativeFactor
     Filamento.Types.Geometry
@@ -70,6 +70,7 @@ library
     Filamento.Types.Quantities.Duration
     Filamento.Types.Quantities.Length
     Filamento.Types.Quantities.Position
+    Filamento.Types.Trivial
     Marlin.Comment
     Marlin.Core
     Marlin.Syntax
