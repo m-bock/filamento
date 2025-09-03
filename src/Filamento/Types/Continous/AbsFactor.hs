@@ -1,6 +1,7 @@
 module Filamento.Types.Continous.AbsFactor
   ( AbsFactor,
     prettyAbsFactor,
+    FromToAbsFactor (..),
   )
 where
 
@@ -30,6 +31,6 @@ class FromToAbsFactor a where
   toAbsFactor :: a -> AbsFactor
   fromAbsFactor :: AbsFactor -> a
 
-instance FromToAbsFactor (Abs Double) where
-  toAbsFactor x = AbsFactor (fromAbs x)
-  fromAbsFactor (AbsFactor x) = toAbs x
+instance FromToAbsFactor Double where
+  toAbsFactor x = AbsFactor (abs x)
+  fromAbsFactor (AbsFactor x) = x

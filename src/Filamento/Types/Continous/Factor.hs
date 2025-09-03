@@ -23,3 +23,11 @@ instance ToDouble Factor where
 
 mkFactor :: Double -> Factor
 mkFactor x = Factor x
+
+class FromToFactor a where
+  toFactor :: a -> Factor
+  fromFactor :: Factor -> a
+
+instance FromToFactor Double where
+  toFactor x = Factor x
+  fromFactor (Factor x) = x

@@ -10,7 +10,7 @@ import Data.Maybe (fromJust)
 import Filamento.Classes
 import Filamento.Classes.Move
 import Filamento.Types.Contexts
-import Filamento.Types.Continous.AbsFactor (AbsFactor)
+import Filamento.Types.Continous.AbsFactor (AbsFactor, FromToAbsFactor (..))
 import Filamento.Types.Quantities.Delta
 import Filamento.Types.Quantities.Length
 import Filamento.Types.Quantities.Position
@@ -90,18 +90,21 @@ instance Rect2FromTo (BackLeft, Size) where
 instance Rect2FromTo (Center, Size) where
   rect2From (Center center, size) =
     Rect2D
-      ( FrontLeft (center & moveLeft width & moveFront depth),
+      ( FrontLeft (center & moveLeft halfWidth & moveFront halfDepth),
         size
       )
     where
       (Size (V2 width depth)) = size
-      halfWidth = scale (fromJust $ maybeFromDouble @AbsFactor 0.5) width
+      halfWidth = scale (toAbsFactor @Double 0.5) width
+      halfDepth = scale (toAbsFactor @Double 0.5) depth
   rect2To (Rect2D (FrontLeft frontLeft, size)) =
-    ( Center (frontLeft & moveRight width & moveBack depth),
+    ( Center (frontLeft & moveRight halfWidth & moveBack halfDepth),
       size
     )
     where
       (Size (V2 width depth)) = size
+      halfWidth = scale (toAbsFactor @Double 0.5) width
+      halfDepth = scale (toAbsFactor @Double 0.5) depth
 
 instance Rect2FromTo (Position, Position) where
   rect2From = undefined
