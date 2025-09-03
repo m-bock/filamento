@@ -293,3 +293,19 @@ class ToFactor fac a | a -> fac where
 class FromTo b a | b -> a where
   to :: a -> b
   from :: b -> a
+
+--------------------------------------------------------------------------------
+
+newtype Abs a = Abs a
+
+class FromAbs a where
+  toAbs :: a -> Abs a
+  fromAbs :: Abs a -> a
+
+instance FromAbs Double where
+  toAbs n = Abs (abs n)
+  fromAbs (Abs n) = abs n
+
+instance FromAbs Int where
+  toAbs n = Abs (abs n)
+  fromAbs (Abs n) = abs n

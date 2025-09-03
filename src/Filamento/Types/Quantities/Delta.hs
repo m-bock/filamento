@@ -4,6 +4,7 @@ import Data.Aeson.Types
 import Filamento.Classes
 import Filamento.Types.Continous.Factor (Factor)
 import Filamento.Types.Continous.NonNegativeFactor (NonNegativeFactor)
+import Filamento.Types.Quantities.Length (Length)
 import Fmt
 import GHC.Generics
 import Relude
@@ -33,10 +34,16 @@ instance Scalable NonNegativeFactor Delta where
   scale factor (Delta v) = Delta (v * toDouble factor)
 
 instance Add Delta Delta where
-  add (Delta x) (Delta y) = Delta (x + y)
+  add d1 d2 = fromMm (toMm d1 + toMm d2)
+
+instance Add Delta Length where
+  add d l = fromMm (toMm d + toMm l)
 
 instance Sub Delta Delta where
-  sub (Delta x) (Delta y) = Delta (x - y)
+  sub d l = fromMm (toMm d - toMm l)
+
+instance Sub Delta Length where
+  sub d l = fromMm (toMm d + toMm l)
 
 deltaPretty :: Delta -> Text
 deltaPretty (Delta d) = fixedF 2 d |+ "mm"

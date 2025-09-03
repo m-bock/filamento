@@ -5,7 +5,7 @@ module Filamento.Types.Continous.NonNegativeFactor
 where
 
 import Data.Aeson.Types
-import Filamento.Classes (MaybeFromDouble (..), ToDouble (..))
+import Filamento.Classes (Abs, FromAbs (..), MaybeFromDouble (..), ToDouble (..))
 import Fmt
 import GHC.Generics
 import Relude
@@ -23,3 +23,13 @@ instance ToDouble NonNegativeFactor where
 
 prettyNonNegativeFactor :: NonNegativeFactor -> Text
 prettyNonNegativeFactor (NonNegativeFactor x) = fixedF 2 x |+ ""
+
+--------------------------------------------------------------------------------
+
+class FromToNonNegativeFactor a where
+  toNonNegFactor :: a -> NonNegativeFactor
+  fromNonNegFactor :: NonNegativeFactor -> a
+
+instance FromToNonNegativeFactor (Abs Double) where
+  toNonNegFactor x = NonNegativeFactor (fromAbs x)
+  fromNonNegFactor (NonNegativeFactor x) = toAbs x

@@ -45,6 +45,7 @@ library
     Filamento
     Filamento.Classes
     Filamento.Classes.Distance
+    Filamento.Classes.Move
     Filamento.Core
     Filamento.Debug
     Filamento.Error
@@ -71,6 +72,7 @@ library
     Filamento.Types.Quantities.Length
     Filamento.Types.Quantities.Position
     Filamento.Types.Trivial
+    Filamento.Types.MeasureUnits
     Marlin.Comment
     Marlin.Core
     Marlin.Syntax

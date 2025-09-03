@@ -132,14 +132,14 @@ outOfToProportion outOf = propFromOutOf outOf
 
 rect2FromCorners :: V2 Position -> V2 Position -> Rect2D
 rect2FromCorners minCorner maxCorner =
-  from (FrontLeft minCorner, Size (fmap (fromJust . maybeViaMm) $ getDelta minCorner maxCorner))
+  rect2From (FrontLeft minCorner, Size (fmap (fromJust . maybeViaMm) $ getDelta minCorner maxCorner))
 
 rect2ToCorners :: Rect2D -> (V2 Position, V2 Position)
 rect2ToCorners rect = (rect2GetMinCorner rect, rect2GetMaxCorner rect)
 
 rect2FromCenterSize :: V2 Position -> V2 Length -> Rect2D
 rect2FromCenterSize center size =
-  from (FrontLeft (sub center size'), Size size)
+  rect2From (FrontLeft (sub center size'), Size size)
   where
     size' :: V2 Length
     size' = scale (fromJust $ maybeFromDouble @NonNegativeFactor 0.5) size
