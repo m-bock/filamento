@@ -26,4 +26,6 @@ square2GetMinCorner :: Square2D -> V2 Position
 square2GetMinCorner (Square2D rect) = rect2GetMinCorner rect
 
 square2GetSize :: Square2D -> V2 Length
-square2GetSize (Square2D rect) = rect2GetSize rect
+square2GetSize (Square2D rect) = size
+  where
+    Size size = rect2To rect

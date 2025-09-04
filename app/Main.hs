@@ -25,8 +25,8 @@ printStripesAlongX square count = do
 
 printStripesAlongY :: Position -> Rect2D -> Count -> [Line2D]
 printStripesAlongY z rect count = do
-  let V2 x1 y1 = rect2GetMinCorner rect
-      V2 x2 y2 = rect2GetMaxCorner rect
+  let FrontLeft (V2 x1 y1) = rect2To rect
+      BackRight (V2 x2 y2) = rect2To rect
 
       xs = linspace x1 x2 count
 
@@ -99,26 +99,34 @@ printSketch = section "sketch" $ withSketchTranspose do
         setFanOff
       else do
         setFanSpeedFull
-    let rect = rect2FromCenterSize (v2PosFromMm 50 50) (fmap unsafeFromMm $ V2 50 30)
-        (p1, p2, p3, p4) = rect2GetPoints rect
+
+    let rect = rect2From (centerBy (50, 50), sizeBy (50, 30))
+        (FrontLeft p1, FrontRight p2, BackRight p3, BackLeft p4) = rect2To rect
+
     withColors
       \color -> do
         color colors.red do
           printPurgeTower
             (rect2From (centerBy (-20, -55), sizeBy (12.5, 30)))
             (fromNat 20)
+
         color colors.yellow do
-          printPurgeTower (rect2FromCenterSize (v2PosFromMm (-6.5) (-55)) (fmap unsafeFromMm $ V2 12.5 30)) (fromNat 20)
+          printPurgeTower
+            (rect2From (centerBy (-6.5, -55), sizeBy (12.5, 30)))
+            (fromNat 20)
 
         color colors.red do
           withRetract $ withZHop $ moveTo p1
           extrudeTo p2
+
         color colors.yellow do
           withRetract $ withZHop $ moveTo p2
           extrudeTo p3
+
         color colors.red do
           withRetract $ withZHop $ moveTo p3
           extrudeTo p4
+
         color colors.yellow do
           withRetract $ withZHop $ moveTo p4
           extrudeTo p1

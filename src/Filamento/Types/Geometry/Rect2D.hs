@@ -1,21 +1,20 @@
 module Filamento.Types.Geometry.Rect2D
   ( Rect2D,
     rect2GetMinCorner,
-    rect2GetSize,
-    Rect2FromTo (..),
+    -- rect2GetSize,
+    Rect2From (..),
+    Rect2To (..),
   )
 where
 
-import Data.Maybe (fromJust)
 import Filamento.Classes
 import Filamento.Classes.Abs (FromToAbs (..))
+import Filamento.Classes.Distance (Distance (..))
 import Filamento.Classes.Move
 import Filamento.Types.Contexts
-import Filamento.Types.Continous.AbsFactor (AbsFactor, FromToAbsFactor (..))
-import Filamento.Types.Quantities.Delta
+import Filamento.Types.Continous.AbsFactor (FromToAbsFactor (..))
 import Filamento.Types.Quantities.Length
 import Filamento.Types.Quantities.Position
-import Filamento.Types.Trivial
 import Linear (V2 (V2))
 import Relude
 
@@ -32,18 +31,22 @@ rect2GetSize (Rect2D (_, Size size)) = size
 
 -------------------------------------------------------------------------------
 
-class Rect2FromTo a where
+class Rect2From a where
   rect2From :: a -> Rect2D
+
+class Rect2To a where
   rect2To :: Rect2D -> a
 
-instance Rect2FromTo (FrontLeft, Size) where
+instance Rect2From (FrontLeft, Size) where
   rect2From = Rect2D
+
+instance Rect2To (FrontLeft, Size) where
   rect2To (Rect2D (frontLeft, size)) =
     ( frontLeft,
       size
     )
 
-instance Rect2FromTo (FrontRight, Size) where
+instance Rect2From (FrontRight, Size) where
   rect2From (FrontRight frontRight, size) =
     Rect2D
       ( FrontLeft (frontRight & moveLeft width),
@@ -51,6 +54,8 @@ instance Rect2FromTo (FrontRight, Size) where
       )
     where
       (Size (V2 width _)) = size
+
+instance Rect2To (FrontRight, Size) where
   rect2To (Rect2D (FrontLeft frontLeft, size)) =
     ( FrontRight (frontLeft & moveRight width),
       size
@@ -58,7 +63,7 @@ instance Rect2FromTo (FrontRight, Size) where
     where
       (Size (V2 width _)) = size
 
-instance Rect2FromTo (BackRight, Size) where
+instance Rect2From (BackRight, Size) where
   rect2From (BackRight backRight, size) =
     Rect2D
       ( FrontLeft (backRight & moveLeft width & moveFront depth),
@@ -66,6 +71,8 @@ instance Rect2FromTo (BackRight, Size) where
       )
     where
       (Size (V2 width depth)) = size
+
+instance Rect2To (BackRight, Size) where
   rect2To (Rect2D (FrontLeft frontLeft, size)) =
     ( BackRight (frontLeft & moveRight width & moveBack depth),
       size
@@ -73,7 +80,7 @@ instance Rect2FromTo (BackRight, Size) where
     where
       (Size (V2 width depth)) = size
 
-instance Rect2FromTo (BackLeft, Size) where
+instance Rect2From (BackLeft, Size) where
   rect2From (BackLeft backLeft, size) =
     Rect2D
       ( FrontLeft (backLeft & moveFront depth),
@@ -81,6 +88,8 @@ instance Rect2FromTo (BackLeft, Size) where
       )
     where
       (Size (V2 _ depth)) = size
+
+instance Rect2To (BackLeft, Size) where
   rect2To (Rect2D (FrontLeft frontLeft, size)) =
     ( BackLeft (frontLeft & moveBack depth),
       size
@@ -88,7 +97,7 @@ instance Rect2FromTo (BackLeft, Size) where
     where
       (Size (V2 _ depth)) = size
 
-instance Rect2FromTo (Center, Size) where
+instance Rect2From (Center, Size) where
   rect2From (Center center, size) =
     Rect2D
       ( FrontLeft (center & moveLeft halfWidth & moveFront halfDepth),
@@ -98,6 +107,8 @@ instance Rect2FromTo (Center, Size) where
       (Size (V2 width depth)) = size
       halfWidth = scale (toAbsFactor $ toAbs @Double 0.5) width
       halfDepth = scale (toAbsFactor $ toAbs @Double 0.5) depth
+
+instance Rect2To (Center, Size) where
   rect2To (Rect2D (FrontLeft frontLeft, size)) =
     ( Center (frontLeft & moveRight halfWidth & moveBack halfDepth),
       size
@@ -107,9 +118,77 @@ instance Rect2FromTo (Center, Size) where
       halfWidth = scale (toAbsFactor $ toAbs @Double 0.5) width
       halfDepth = scale (toAbsFactor $ toAbs @Double 0.5) depth
 
-instance Rect2FromTo (Position, Position) where
-  rect2From = undefined
+instance Rect2From (V2 Position, V2 Position) where
+  rect2From (V2 x1 y1, V2 x2 y2) =
+    rect2From
+      ( FrontLeft $ V2 xFrontLeft yFrontLeft,
+        Size $ V2 width depth
+      )
+    where
+      xFrontLeft = min x1 x2
+      yFrontLeft = min y1 y2
+      xBackRight = max x1 x2
+      yBackRight = max y1 y2
+      width = getDistance xFrontLeft xBackRight
+      depth = getDistance yFrontLeft yBackRight
+
+-- fl = Position ()
+
+instance Rect2To (Position, Position) where
   rect2To = undefined
+
+instance Rect2To (FrontLeft, FrontRight, BackRight, BackLeft) where
+  rect2To (Rect2D (FrontLeft frontLeft, size)) =
+    ( FrontLeft frontLeft,
+      FrontRight (frontLeft & moveRight width),
+      BackRight (frontLeft & moveRight width & moveBack depth),
+      BackLeft (frontLeft & moveBack depth)
+    )
+    where
+      (Size (V2 width depth)) = size
+
+instance Rect2To (FrontLeft, BackRight) where
+  rect2To (Rect2D (FrontLeft frontLeft, size)) =
+    ( FrontLeft frontLeft,
+      BackRight (frontLeft & moveRight width & moveBack depth)
+    )
+    where
+      (Size (V2 width depth)) = size
+
+instance Rect2To FrontLeft where
+  rect2To (Rect2D (FrontLeft frontLeft, size)) =
+    ( FrontLeft frontLeft
+    )
+
+instance Rect2To BackLeft where
+  rect2To (Rect2D (FrontLeft frontLeft, size)) =
+    ( BackLeft (frontLeft & moveBack depth)
+    )
+    where
+      (Size (V2 _ depth)) = size
+
+instance Rect2To BackRight where
+  rect2To (Rect2D (FrontLeft frontLeft, size)) =
+    ( BackRight (frontLeft & moveRight width & moveBack depth)
+    )
+    where
+      (Size (V2 width depth)) = size
+
+instance Rect2To FrontRight where
+  rect2To (Rect2D (FrontLeft frontLeft, size)) =
+    ( FrontRight (frontLeft & moveRight width)
+    )
+    where
+      (Size (V2 width _)) = size
+
+instance Rect2To Size where
+  rect2To (Rect2D (FrontLeft frontLeft, size)) = size
+
+instance Rect2To Width where
+  rect2To (Rect2D (_, Size (V2 w _))) = Width w
+
+instance Rect2To Depth where
+  rect2To (Rect2D (_, Size (V2 _ d))) = Depth d
 
 -------------------------------------------------------------------------------
 

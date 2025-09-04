@@ -58,11 +58,14 @@ filamentConfigDefault =
 
 printSolidRect :: (Line2D -> GCode ()) -> (Rect2D -> GCode ()) -> Rect2D -> GCode ()
 printSolidRect innerPrintLine innerPrintRect frame = do
-  let V2 w _ = rect2GetSize frame
+  let Width w = rect2To frame
 
   env <- ask
-  let V2 frameX2 frameY2 = rect2GetMaxCorner frame
-      V2 frameX1 frameY1 = rect2GetMinCorner frame
+  let -- V2 frameX2 frameY2 = rect2GetMaxCorner frame
+      -- V2 frameX1 frameY1 = rect2GetMinCorner frame
+      ( FrontLeft (V2 frameX1 frameY1),
+        BackRight (V2 frameX2 frameY2)
+        ) = rect2To frame
       spansX = getSpans env.lineWidth frameX1 frameX2
       spansY = getSpans env.lineWidth frameY1 frameY2
       spans = reverse $ zip spansX spansY
@@ -76,7 +79,7 @@ printSolidRect innerPrintLine innerPrintRect frame = do
       then
         innerPrintLine (line2FromPoints end start)
       else
-        innerPrintRect (rect2FromCorners start end)
+        innerPrintRect (rect2From (start, end))
   where
     getSpans lineWidth start end =
       let ticks = linspaceByStep start end lineWidth deltaFloor
@@ -86,7 +89,7 @@ printSolidRect innerPrintLine innerPrintRect frame = do
 
 printRectFilament :: FilamentConfig -> Rect2D -> GCode ()
 printRectFilament config rect = do
-  let (frontLeft, frontRight, backRight, backLeft) = rect2GetPoints rect
+  let (FrontLeft frontLeft, FrontRight frontRight, BackRight backRight, BackLeft backLeft) = rect2To rect
 
       rectLines = [(frontRight, backRight), (backRight, backLeft), (backLeft, frontLeft), (frontLeft, frontRight)]
 
@@ -183,7 +186,7 @@ printFilamentSegment config printPlane profile = do
               rectLength = fromJust $ maybeViaMm $ getLength config prop profile.profileType profile.depth :: Length
 
               rectSize = V2 rectWidth rectLength :: V2 Length
-              rect = rect2FromCenterSize rectCenter rectSize
+              rect = rect2From (Center rectCenter, Size rectSize)
 
           comment ("prop = " <> Text.pack (printf "%.3f" (toDouble prop)))
           local (\env -> env {layerHeight = layerHeight}) do

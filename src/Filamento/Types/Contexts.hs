@@ -63,3 +63,11 @@ newtype BackLeft = BackLeft (V2 Position)
 -- newtype Radius = Radius Length
 
 -- newtype Diameter = Diameter Length
+
+-------------------------------------------------------------------------------
+
+newtype Width = Width Length
+  deriving (Show, Eq)
+
+newtype Depth = Depth Length
+  deriving (Show, Eq)
