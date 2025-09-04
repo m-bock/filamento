@@ -16,6 +16,7 @@ import Linear
 import Network.HTTP.Client
 import Network.URI (URI, parseURI)
 import Octo.API (OctoHttpCfg (..))
+import qualified Readme
 import Relude
 
 printStripesAlongX :: Square2D -> Count -> [Line2D]
@@ -187,10 +188,10 @@ mainGen = do
 
   hookUserInput <- mkHookUserInput envVars
 
-  _ <-
-    gcodeRun
-      printAll
-      ( gcodeEnvDefault
+  gcodeLaunch
+    printAll
+    ( \env ->
+        env
           { lineWidth = fromMm 0.6,
             layerHeight = fromMm 0.3,
             hotendTemperature = fromCelsius 205,
@@ -202,8 +203,8 @@ mainGen = do
             hookEmitGCode,
             hookUserInput
           }
-      )
-      (gcodeStateInit gcodeEnvDefault)
+    )
+
   pure ()
 
 mainTry :: IO ()
@@ -211,4 +212,4 @@ mainTry = do
   pure ()
 
 main :: IO ()
-main = mainGen
+main = Readme.main

@@ -22,7 +22,6 @@ module Filamento.Lib
     withColors,
     printSketchFrame,
     whileSketchZ,
-    getFilamentDef,
     getZProgress,
   )
 where
@@ -301,11 +300,6 @@ filamentChange = do
 -------
 
 -- purge TODO: implement or remove
-
-getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> IO [FilamentSection]
-getFilamentDef env state' gcode = do
-  (_, finalState) <- gcodeRun gcode env state'
-  pure $ finalState.filament & NE.reverse & NE.filter (\x -> x.endPos /= 0)
 
 -- printFilamentDef TODO: implement or remove
 

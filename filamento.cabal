@@ -113,6 +113,7 @@ executable filamento-exe
     Repl
     Sketch03
     Try
+    Readme
 
   hs-source-dirs: app
   build-depends:

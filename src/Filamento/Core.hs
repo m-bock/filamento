@@ -61,6 +61,8 @@ module Filamento.Core
     gcodeStateGet,
     nextLayer,
     setTool,
+    gcodeLaunch,
+    getFilamentDef,
     resetLayers,
     changeColor,
     incLayers,
@@ -77,6 +79,7 @@ import Data.Aeson (ToJSON)
 import Data.Aeson.Types (FromJSON)
 import Data.Convertible (convert)
 import Data.List (elemIndex)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import Filamento.Classes
 import Filamento.Classes.Distance (Distance (..))
@@ -109,18 +112,33 @@ instance (Monoid a) => Monoid (GCode a) where
   mempty = GCode (pure mempty)
   mappend = (<>)
 
-gcodeRun :: GCode a -> GCodeEnv -> GCodeState -> IO (a, GCodeState)
-gcodeRun (GCode act) env oldState = do
+gcodeRunResume :: GCode a -> GCodeEnv -> GCodeState -> IO (a, GCodeState)
+gcodeRunResume (GCode act) env oldState = do
   val <-
     act
       & (`runStateT` oldState)
       & (`runReaderT` env)
   pure val
 
+gcodeRun :: GCode a -> (GCodeEnv -> GCodeEnv) -> IO (a, GCodeState)
+gcodeRun g mkEnv = do
+  let env = mkEnv gcodeEnvDefault
+      oldState = gcodeStateInit env
+
+  gcodeRunResume g env oldState
+
+gcodeLaunch :: GCode a -> (GCodeEnv -> GCodeEnv) -> IO ()
+gcodeLaunch (GCode act) mkEnv = void $ gcodeRun (GCode act) mkEnv
+
 gcodeFromCmd :: GCodeCmd -> GCode ()
 gcodeFromCmd cmd = do
   env <- ask
   gcodeStateModify $ MsgAddGCodeLine GCodeLine {cmd = Just cmd, rawExtra = "", comment = Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)}
+
+getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> IO [FilamentSection]
+getFilamentDef env state' gcode = do
+  (_, finalState) <- gcodeRunResume gcode env state'
+  pure $ finalState.filament & NE.reverse & NE.filter (\x -> x.endPos /= 0)
 
 -------------------------------------------------------------------------------
 --- GCodeEnv

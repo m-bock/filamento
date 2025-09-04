@@ -3,6 +3,9 @@ set dotenv-load
 gen:
     cabal run
 
+ai-sync-modules:
+    cursor-agent -p "Make sure every file in the src and app directory is also listed in the cabal file as exposed module." --model "gpt-5"
+
 octo-cancel-print:
     curl -H "X-Api-Key: ${OCTO_API_KEY}" \
          -H "Content-Type: application/json" \
