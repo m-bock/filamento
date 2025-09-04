@@ -17,7 +17,7 @@ data Square2D = Square2D (Rect2D)
 
 square2FromMinSize :: V2 Position -> Length -> Square2D
 square2FromMinSize minCorner size =
-  Square2D $ rect2From (FrontLeft minCorner, Size size')
+  Square2D $ rect2From (RectFrontLeft minCorner, RectSize size')
   where
     size' :: V2 Length
     size' = V2 size size
@@ -28,4 +28,4 @@ square2GetMinCorner (Square2D rect) = rect2GetMinCorner rect
 square2GetSize :: Square2D -> V2 Length
 square2GetSize (Square2D rect) = size
   where
-    Size size = rect2To rect
+    RectSize size = rect2To rect

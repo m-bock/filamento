@@ -58,13 +58,11 @@ filamentConfigDefault =
 
 printSolidRect :: (Line2D -> GCode ()) -> (Rect2D -> GCode ()) -> Rect2D -> GCode ()
 printSolidRect innerPrintLine innerPrintRect frame = do
-  let Width w = rect2To frame
+  let RectWidth w = rect2To frame
 
   env <- ask
-  let -- V2 frameX2 frameY2 = rect2GetMaxCorner frame
-      -- V2 frameX1 frameY1 = rect2GetMinCorner frame
-      ( FrontLeft (V2 frameX1 frameY1),
-        BackRight (V2 frameX2 frameY2)
+  let ( RectFrontLeft (V2 frameX1 frameY1),
+        RectBackRight (V2 frameX2 frameY2)
         ) = rect2To frame
       spansX = getSpans env.lineWidth frameX1 frameX2
       spansY = getSpans env.lineWidth frameY1 frameY2
@@ -89,7 +87,11 @@ printSolidRect innerPrintLine innerPrintRect frame = do
 
 printRectFilament :: FilamentConfig -> Rect2D -> GCode ()
 printRectFilament config rect = do
-  let (FrontLeft frontLeft, FrontRight frontRight, BackRight backRight, BackLeft backLeft) = rect2To rect
+  let ( RectFrontLeft frontLeft,
+        RectFrontRight frontRight,
+        RectBackRight backRight,
+        RectBackLeft backLeft
+        ) = rect2To rect
 
       rectLines = [(frontRight, backRight), (backRight, backLeft), (backLeft, frontLeft), (frontLeft, frontRight)]
 
@@ -186,7 +188,7 @@ printFilamentSegment config printPlane profile = do
               rectLength = fromJust $ maybeViaMm $ getLength config prop profile.profileType profile.depth :: Length
 
               rectSize = V2 rectWidth rectLength :: V2 Length
-              rect = rect2From (Center rectCenter, Size rectSize)
+              rect = rect2From (RectCenter rectCenter, RectSize rectSize)
 
           comment ("prop = " <> Text.pack (printf "%.3f" (toDouble prop)))
           local (\env -> env {layerHeight = layerHeight}) do

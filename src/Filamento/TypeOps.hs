@@ -24,8 +24,10 @@ module Filamento.TypeOps
     squareGetLines,
     v2DeltaFromMm,
     v2DeltaToV3,
+    v2PosByMm,
     v2PosDropZ,
     v2PosFromMm,
+    v2SizeByMm,
     v3DeltaDropZ,
     v3DeltaFromMm,
     v3DeltaFromV2,
@@ -134,12 +136,12 @@ square2GetMaxCorner :: Square2D -> V2 Position
 square2GetMaxCorner square = add (square2GetMinCorner square) (square2GetSize square)
 
 square2ToRect2 :: Square2D -> Rect2D
-square2ToRect2 (square2ToCenterSize -> (center, size)) = rect2From (Center center, Size size)
+square2ToRect2 (square2ToCenterSize -> (center, size)) = rect2From (RectCenter center, RectSize size)
 
 squareGetLines :: Square2D -> (Line2D, Line2D, Line2D, Line2D)
 squareGetLines (square2ToRect2 -> rect) = (line1, line2, line3, line4)
   where
-    (FrontLeft p1, FrontRight p2, BackRight p3, BackLeft p4) = rect2To rect
+    (RectFrontLeft p1, RectFrontRight p2, RectBackRight p3, RectBackLeft p4) = rect2To rect
     line1 = line2FromPoints p1 p2
     line2 = line2FromPoints p2 p3
     line3 = line2FromPoints p3 p4
@@ -158,3 +160,11 @@ angleCircle ang = V2 (angleCos ang) (angleSin ang)
 
 angleFromProportion :: Proportion -> Angle
 angleFromProportion (toDouble -> f) = angleFromRad (f * 2 * pi)
+
+-------------------------------------------------------------------------------
+
+v2PosByMm :: (Double, Double) -> V2 Position
+v2PosByMm (x, y) = V2 (posBy x) (posBy y)
+
+v2SizeByMm :: (Double, Double) -> V2 Length
+v2SizeByMm (x, y) = V2 (lengthBy x) (lengthBy y)

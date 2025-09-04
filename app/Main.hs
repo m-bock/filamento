@@ -1,3 +1,6 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
+
 module Main where
 
 import qualified Data.Map.Strict as Map
@@ -7,6 +10,7 @@ import Filamento
 import Filamento.Filament
 import Filamento.Math
 import qualified Filamento.Octo as Octo
+import GHC.Base (Symbol)
 import GHC.Conc
 import Linear
 import Network.HTTP.Client
@@ -25,8 +29,8 @@ printStripesAlongX square count = do
 
 printStripesAlongY :: Position -> Rect2D -> Count -> [Line2D]
 printStripesAlongY z rect count = do
-  let FrontLeft (V2 x1 y1) = rect2To rect
-      BackRight (V2 x2 y2) = rect2To rect
+  let RectFrontLeft (V2 x1 y1) = rect2To rect
+      RectBackRight (V2 x2 y2) = rect2To rect
 
       xs = linspace x1 x2 count
 
@@ -100,19 +104,19 @@ printSketch = section "sketch" $ withSketchTranspose do
       else do
         setFanSpeedFull
 
-    let rect = rect2From (centerBy (50, 50), sizeBy (50, 30))
-        (FrontLeft p1, FrontRight p2, BackRight p3, BackLeft p4) = rect2To rect
+    let rect = rect2From (RectCenter $ v2PosByMm (50, 50), RectSize $ v2SizeByMm (50, 30))
+        (RectFrontLeft p1, RectFrontRight p2, RectBackRight p3, RectBackLeft p4) = rect2To rect
 
     withColors
       \color -> do
         color colors.red do
           printPurgeTower
-            (rect2From (centerBy (-20, -55), sizeBy (12.5, 30)))
+            (rect2From (RectCenter $ v2PosByMm (-20, -55), RectSize $ v2SizeByMm (12.5, 30)))
             (fromNat 20)
 
         color colors.yellow do
           printPurgeTower
-            (rect2From (centerBy (-6.5, -55), sizeBy (12.5, 30)))
+            (rect2From (RectCenter $ v2PosByMm (-6.5, -55), RectSize $ v2SizeByMm (12.5, 30)))
             (fromNat 20)
 
         color colors.red do

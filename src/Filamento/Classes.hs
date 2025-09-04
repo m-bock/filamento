@@ -293,3 +293,14 @@ class ToFactor fac a | a -> fac where
 class FromTo b a | b -> a where
   to :: a -> b
   from :: b -> a
+
+--------------------------------------------------------------------------------
+
+class ByMm2 a where
+  byMm2 :: (Double, Double) -> a
+
+class ByMm a where
+  byMm :: Double -> a
+
+instance (ByMm a) => ByMm2 (V2 a) where
+  byMm2 (x, y) = V2 (byMm x) (byMm y)
