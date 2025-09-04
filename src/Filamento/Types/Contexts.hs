@@ -1,6 +1,6 @@
 module Filamento.Types.Contexts where
 
-import Filamento.Types.MeasureUnits (Millimeter)
+import Filamento.Types.MeasureUnits (Mm)
 import Filamento.Types.Quantities.Length
 import Filamento.Types.Quantities.Position
 import Linear (V2 (V2))
@@ -19,9 +19,12 @@ instance FromToCenter (V2 Position) where
   centerFrom v = Center v
   centerTo (Center v) = v
 
-instance FromToCenter (V2 Millimeter) where
+instance FromToCenter (V2 Mm) where
   centerFrom v = Center (fmap posFrom v)
   centerTo (Center v) = fmap posTo v
+
+centerBy :: (Double, Double) -> Center
+centerBy (x, y) = Center (fmap posBy (V2 x y))
 
 -------------------------------------------------------------------------------
 
@@ -36,11 +39,8 @@ instance FromToSize (V2 Length) where
   sizeFrom v = Size v
   sizeTo (Size v) = v
 
-class SizeBy a where
-  sizeBy :: a -> Size
-
-instance SizeBy (V2 Millimeter) where
-  sizeBy v = Size (fmap lengthBy v)
+sizeBy :: (Double, Double) -> Size
+sizeBy (x, y) = Size (fmap lengthBy (V2 x y))
 
 sizeGetWidth :: Size -> Length
 sizeGetWidth (Size (V2 width _)) = width

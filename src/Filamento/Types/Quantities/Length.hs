@@ -2,7 +2,7 @@ module Filamento.Types.Quantities.Length
   ( Length,
     lengthPretty,
     LengthFromTo (..),
-    LengthBy (..),
+    lengthBy,
   )
 where
 
@@ -42,14 +42,11 @@ class LengthFromTo a where
   lengthFrom :: a -> Length
   lengthTo :: Length -> a
 
-instance LengthFromTo (Abs Millimeter) where
+instance LengthFromTo (Abs Mm) where
   lengthFrom val = Length ms
     where
       Mm ms = fromAbs val
   lengthTo (Length l) = toAbs (Mm l)
 
-class LengthBy a where
-  lengthBy :: a -> Length
-
-instance LengthBy Millimeter where
-  lengthBy (Mm val) = Length $ abs val
+lengthBy :: Double -> Length
+lengthBy val = Length (abs val)
