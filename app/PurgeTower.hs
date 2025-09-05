@@ -31,11 +31,11 @@ purgeTower (fmap toMm -> V2 x y) (toMm -> size) purgeIndex = do
       case dir of
         Vert -> do
           section "vertical" do
-            withRetract $ withZHop $ moveTo (v2PosFromMm y (x + tick))
+            withRetract $ withZHop $ moveTo (v2PosFromMm (y, (x + tick)))
             extrudeByX (fromMm size)
         Horz -> do
           section "horizontal" do
-            withRetract $ withZHop $ moveTo (v2PosFromMm (x + tick) y)
+            withRetract $ withZHop $ moveTo (v2PosFromMm ((x + tick), y))
             extrudeByY (fromMm size)
 
 printSketch :: GCode ()

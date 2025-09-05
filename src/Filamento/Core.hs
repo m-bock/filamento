@@ -133,7 +133,16 @@ gcodeLaunch (GCode act) mkEnv = void $ gcodeRun (GCode act) mkEnv
 gcodeFromCmd :: GCodeCmd -> GCode ()
 gcodeFromCmd cmd = do
   env <- ask
-  gcodeStateModify $ MsgAddGCodeLine GCodeLine {cmd = Just cmd, rawExtra = "", comment = Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)}
+  gcodeStateModify
+    $ MsgAddGCodeLine
+      GCodeLine
+        { cmd = Just cmd,
+          rawExtra = "",
+          comment =
+            if env.printDebugComments
+              then Just (toTextSectionPath env.sectionPath <> gcodeToComment cmd)
+              else Nothing
+        }
 
 getFilamentDef :: GCodeEnv -> GCodeState -> GCode () -> IO [FilamentSection]
 getFilamentDef env state' gcode = do
@@ -166,7 +175,8 @@ data GCodeEnv = Env
     bedSize :: V2 Delta,
     colors :: NonEmpty Text,
     hookEmitGCode :: HookEmitGCode,
-    hookUserInput :: HookUserInput
+    hookUserInput :: HookUserInput,
+    printDebugComments :: Bool
   }
 
 newtype HookEmitGCode = HookEmitGCode {hookEmitGCode :: Text -> [GCodeLine] -> GCode ()}
@@ -217,7 +227,8 @@ gcodeEnvDefault =
       bedSize = fmap fromMm $ V2 225 225,
       colors = "default" :| [],
       hookEmitGCode = mempty,
-      hookUserInput = mempty
+      hookUserInput = mempty,
+      printDebugComments = False
     }
 
 -------------------------------------------------------------------------------
@@ -351,7 +362,14 @@ newline :: GCode ()
 newline = gcodeStateModify $ MsgAddGCodeLine GCodeLine {cmd = Nothing, rawExtra = "", comment = Nothing}
 
 comment :: Text -> GCode ()
-comment c = gcodeStateModify $ MsgAddGCodeLine GCodeLine {cmd = Nothing, rawExtra = "", comment = Just c}
+comment c =
+  gcodeStateModify
+    $ MsgAddGCodeLine
+      GCodeLine
+        { cmd = Nothing,
+          rawExtra = "",
+          comment = Just c
+        }
 
 raw :: Text -> Text -> GCode ()
 raw extra comm = gcodeStateModify $ MsgAddGCodeLine GCodeLine {cmd = Nothing, rawExtra = extra, comment = Just comm}
@@ -495,7 +513,7 @@ moveToImpl mx my mz = do
       newX = fromMaybe x mx
       newY = fromMaybe y my
       newZ = fromMaybe z mz
-  operateTool (v3PosFromMm newX newY newZ) speed 0
+  operateTool (v3PosFromMm (newX, newY, newZ)) speed 0
 
 moveToX :: Position -> GCode ()
 moveToX (toMm -> x) =

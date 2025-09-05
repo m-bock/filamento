@@ -176,14 +176,14 @@ printTestStripes = section "Test Stripes" $ do
   moveToZ (fromMm 0.2)
 
   section "stripe 1" do
-    moveTo (v2PosFromMm 5 5)
+    moveTo (v2PosFromMm (5, 5))
     extrude 5
-    extrudeTo (v2PosFromMm 5 215.0)
+    extrudeTo (v2PosFromMm (5, 215.0))
     extrude (-1)
 
   section "stripe 2" do
-    withRetract $ withZHop $ moveTo (v2PosFromMm 10 5)
-    extrudeTo (v2PosFromMm 10 215.0)
+    withRetract $ withZHop $ moveTo (v2PosFromMm (10, 5))
+    extrudeTo (v2PosFromMm (10, 215.0))
 
 finalPark :: GCode ()
 finalPark = do
@@ -208,7 +208,7 @@ homeOrResume = do
 
 cleaningOpportunity :: GCode ()
 cleaningOpportunity = section "Cleaning Opportunity" do
-  moveTo (v3PosFromMm 0 0 2)
+  moveTo (v3PosFromMm (0, 0, 2))
   playTone_
   pause (unsafeFromSecs 10)
 
@@ -325,9 +325,9 @@ purgeTower (fmap toMm -> V2 x y) (toMm -> size) purgeIndex = section "purgeTower
       case dir of
         Vert -> do
           section "vertical" do
-            withRetract $ withZHop $ moveTo (v2PosFromMm x (y + tick))
+            withRetract $ withZHop $ moveTo (v2PosFromMm (x, (y + tick)))
             extrudeByX (fromMm size)
         Horz -> do
           section "horizontal" do
-            withRetract $ withZHop $ moveTo (v2PosFromMm (x + tick) y)
+            withRetract $ withZHop $ moveTo (v2PosFromMm ((x + tick), y))
             extrudeByY (fromMm size)

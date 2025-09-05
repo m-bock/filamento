@@ -105,19 +105,19 @@ printSketch = section "sketch" $ withSketchTranspose do
       else do
         setFanSpeedFull
 
-    let rect = rect2From (RectCenter $ v2PosByMm (50, 50), RectSize $ v2SizeByMm (50, 30))
+    let rect = rect2From (RectCenter $ v2PosFromMm (50, 50), RectSize $ v2SizeByMm (50, 30))
         (RectFrontLeft p1, RectFrontRight p2, RectBackRight p3, RectBackLeft p4) = rect2To rect
 
     withColors
       \color -> do
         color colors.red do
           printPurgeTower
-            (rect2From (RectCenter $ v2PosByMm (-20, -55), RectSize $ v2SizeByMm (12.5, 30)))
+            (rect2From (RectCenter $ v2PosFromMm (-20, -55), RectSize $ v2SizeByMm (12.5, 30)))
             (fromNat 20)
 
         color colors.yellow do
           printPurgeTower
-            (rect2From (RectCenter $ v2PosByMm (-6.5, -55), RectSize $ v2SizeByMm (12.5, 30)))
+            (rect2From (RectCenter $ v2PosFromMm (-6.5, -55), RectSize $ v2SizeByMm (12.5, 30)))
             (fromNat 20)
 
         color colors.red do
@@ -199,7 +199,7 @@ mainGen = do
             retractLength = fromMm 1.5,
             colors = allColors,
             sketchSize = fmap fromMm $ V3 100 100 10,
-            parkingPosition = v3PosFromMm 0 0 20,
+            parkingPosition = v3PosFromMm (0, 0, 20),
             hookEmitGCode,
             hookUserInput
           }

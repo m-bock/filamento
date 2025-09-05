@@ -15,9 +15,9 @@ sketch = initPrinter do
     comment $ "Layer " <> show i
     nextLayer
 
-    let p1 = v2PosFromMm 50 60
-        p2 = v2PosFromMm 75 25
-        p3 = v2PosFromMm 80 80
+    let p1 = v2PosFromMm (50, 60)
+        p2 = v2PosFromMm (75, 25)
+        p3 = v2PosFromMm (80, 80)
 
     moveTo p1
     extrudeTo p2

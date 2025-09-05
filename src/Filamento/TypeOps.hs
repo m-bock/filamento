@@ -24,7 +24,7 @@ module Filamento.TypeOps
     squareGetLines,
     v2DeltaFromMm,
     v2DeltaToV3,
-    v2PosByMm,
+    v2PosFromMm,
     v2PosDropZ,
     v2PosFromMm,
     v2SizeByMm,
@@ -36,7 +36,6 @@ module Filamento.TypeOps
 where
 
 import Filamento.Classes
-import Filamento.Types.Contexts
 import Filamento.Types.Continous.AbsFactor (AbsFactor)
 import Filamento.Types.Continous.Factor
 import Filamento.Types.Geometry.Line2D
@@ -63,9 +62,6 @@ posFromDelta d = add (posFromMm 0) d
 
 posToMm :: Position -> Double
 posToMm = toMm
-
-posFromMm :: Double -> Position
-posFromMm = fromMm
 
 posMiddle :: Position -> Position -> Position
 posMiddle p1 p2 = add p1 (scale @Factor 0.5 (getDelta p1 p2))
@@ -102,16 +98,13 @@ freqBeepHigh = fromHz 1320 -- E6, attention-grabbing but not painful
 
 -------------------------------------------------------------------------------
 
-v2PosFromMm :: Double -> Double -> V2 Position
-v2PosFromMm x y = V2 (posFromMm x) (posFromMm y)
-
 v2PosDropZ :: V3 Position -> V2 Position
 v2PosDropZ (V3 x y _) = V2 x y
 
 -------------------------------------------------------------------------------
 
-v3PosFromMm :: Double -> Double -> Double -> V3 Position
-v3PosFromMm x y z = V3 (posFromMm x) (posFromMm y) (posFromMm z)
+v3PosFromMm :: (Double, Double, Double) -> V3 Position
+v3PosFromMm (x, y, z) = V3 (posFromMm x) (posFromMm y) (posFromMm z)
 
 -------------------------------------------------------------------------------
 
@@ -163,8 +156,8 @@ angleFromProportion (toDouble -> f) = angleFromRad (f * 2 * pi)
 
 -------------------------------------------------------------------------------
 
-v2PosByMm :: (Double, Double) -> V2 Position
-v2PosByMm (x, y) = V2 (posBy x) (posBy y)
+v2PosFromMm :: (Double, Double) -> V2 Position
+v2PosFromMm (x, y) = V2 (posFromMm x) (posFromMm y)
 
 v2SizeByMm :: (Double, Double) -> V2 Length
-v2SizeByMm (x, y) = V2 (lengthBy x) (lengthBy y)
+v2SizeByMm (x, y) = V2 (lengthByMm x) (lengthByMm y)

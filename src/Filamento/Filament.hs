@@ -48,7 +48,7 @@ filamentConfigDefault =
     { overlap = fromMm 2,
       filamentDia = fromMm 1.75,
       splitLinesEvery = Just $ fromMm 6,
-      spiralCenter = v3PosFromMm 110 110 0,
+      spiralCenter = v3PosFromMm (110, 110, 0),
       spiralRadius = fromMm 105,
       spiralConstant = fromMm (-0.5),
       disableSpiral = False
@@ -238,7 +238,7 @@ printTestStripes' = section "Test Stripes" $ do
   moveToZ (fromMm 0.2)
 
   section "stripe 1" do
-    let lines = getLines filamentConfigDefault (line2FromPoints (v2PosFromMm (5) 0) (v2PosFromMm (5) 215.0))
+    let lines = getLines filamentConfigDefault (line2FromPoints (v2PosFromMm (5, 0)) (v2PosFromMm (5, 215.0)))
         firstLine = L.head lines
         firstVec = line2GetStart firstLine
 
@@ -252,7 +252,7 @@ printTestStripes' = section "Test Stripes" $ do
     extrude (-1)
 
   section "stripe 2" do
-    let lines = getLines filamentConfigDefault (line2FromPoints (v2PosFromMm (5) 230) (v2PosFromMm (5) 445.0))
+    let lines = getLines filamentConfigDefault (line2FromPoints (v2PosFromMm (5, 230)) (v2PosFromMm (5, 445.0)))
         firstLine = L.head lines
         firstVec = line2GetStart firstLine
 
@@ -289,7 +289,7 @@ printFilamentChain innerPrintSegment secs = do
             innerPrintSegment segment
 
 translateSpiral :: FilamentConfig -> V3 Position -> V3 Position
-translateSpiral config pos = v3PosFromMm x' y' z
+translateSpiral config pos = v3PosFromMm (x', y', z)
   where
     V3 centerX centerY _ = fmap toMm config.spiralCenter
     V3 x y z = fmap toMm pos

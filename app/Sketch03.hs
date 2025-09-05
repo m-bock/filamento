@@ -17,7 +17,7 @@ changeEnv env =
 
 printLayer :: Int -> GCode ()
 printLayer n = section ("Layer " <> T.pack (show n)) $ do
-  printRect (v3PosFromMm 100 100 0) (fmap fromMm $ V2 50 50)
+  printRect (v3PosFromMm (100, 100, 0)) (fmap fromMm $ V2 50 50)
 
 sketch :: GCode ()
 sketch = local changeEnv $ initPrinter $ do
