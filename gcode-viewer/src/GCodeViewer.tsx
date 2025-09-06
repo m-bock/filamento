@@ -18,6 +18,8 @@ const GCodeViewer = ({ gcode }: GCodeViewerProps) => {
                 renderTravel: false,
                 renderExtrusion: true,
                 renderTubes: false,
+                startLayer: 10,
+                endLayer: 20,
                 buildVolume: {
                     x: 220,
                     y: 220,
@@ -26,7 +28,7 @@ const GCodeViewer = ({ gcode }: GCodeViewerProps) => {
             });
 
 
-            gcodePreview.processGCode(gcode.splice(100, 200));
+            gcodePreview.processGCode(gcode);
         }
     }, [gcode]);
 
