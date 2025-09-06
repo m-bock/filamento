@@ -8,11 +8,11 @@ import GHC.IO.FD (mkFD)
 import Linear.V2
 import Relude
 
-justX :: V2 Double -> V2 Double
-justX (V2 x _) = V2 x 0
+-- justX :: V2 Double -> V2 Double
+-- justX (V2 x _) = V2 x 0
 
-justY :: V2 Double -> V2 Double
-justY (V2 _ y) = V2 0 y
+-- justY :: V2 Double -> V2 Double
+-- justY (V2 _ y) = V2 0 y
 
 deltaLinspace :: Delta -> Delta -> Count -> [Delta]
 deltaLinspace d1 d2 count = map viaMm $ linspace (posFromDelta d1) (posFromDelta d2) count
@@ -70,10 +70,17 @@ itemsWithNext xs =
     Just xsTail -> zip xs xsTail
     Nothing -> []
 
-project :: Range -> Range -> Position -> Position
-project rangeIn rangeOut val =
-  let inDelta = rangeToDelta rangeIn
-      outDelta = rangeToDelta rangeOut
-      inVal = val - rangeGetFrom rangeIn
-      outVal = scale (mkFactor (toMm outDelta / toMm inDelta)) inVal
-   in outVal + rangeGetFrom rangeOut
+project :: (Num a, Fractional a) => Range a -> Range a -> a -> a
+project (Range rangeInFrom rangeInTo) (Range rangeOutFrom rangeOutTo) val =
+  let inDelta = rangeInTo - rangeInFrom
+      outDelta = rangeOutTo - rangeOutFrom
+      factor = outDelta / inDelta
+      inVal = val - rangeInFrom
+      outVal = factor * inVal
+   in rangeOutFrom + outVal
+
+-- let inDelta = rangeToDelta rangeIn
+--     outDelta = rangeToDelta rangeOut
+--     inVal = val - rangeGetFrom rangeIn
+--     outVal = scale (mkFactor (toMm outDelta / toMm inDelta)) inVal
+--  in outVal + rangeGetFrom rangeOut

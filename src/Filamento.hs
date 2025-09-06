@@ -8,5 +8,6 @@ import Filamento.Classes.Abs as Export
 import Filamento.Core as Export
 import Filamento.IO as Export
 import Filamento.Lib as Export
+import Filamento.Math as Export
 import Filamento.TypeOps as Export
 import Filamento.Types as Export

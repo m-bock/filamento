@@ -17,10 +17,8 @@ module Filamento.Types.Trivial
     outOfGetCount,
     outOfGetTotal,
     outOfFromCountTotal,
-    Range,
-    rangeFromPos,
+    Range (..),
     propFromOutOf,
-    rangeToDelta,
     rangeGetFrom,
     rangeGetTo,
     Radius (..),
@@ -163,17 +161,15 @@ propMax = Proportion 1
 
 -------------------------------------------------------------------------------
 
-data Range = Range {from :: Position, to :: Position}
+data Range a = Range {from :: a, to :: a}
   deriving (Show, Eq, Ord)
 
-rangeFromPos :: Position -> Position -> Range
-rangeFromPos from to = Range {from, to}
+-- rangeToDelta :: Range a -> Delta
+-- rangeToDelta (Range {from, to}) = getDelta from to
+-- rangeToDelta (Range {from, to}) = getDelta from to
 
-rangeToDelta :: Range -> Delta
-rangeToDelta (Range {from, to}) = getDelta from to
-
-rangeGetFrom :: Range -> Position
+rangeGetFrom :: Range a -> a
 rangeGetFrom (Range {from}) = from
 
-rangeGetTo :: Range -> Position
+rangeGetTo :: Range a -> a
 rangeGetTo (Range {to}) = to

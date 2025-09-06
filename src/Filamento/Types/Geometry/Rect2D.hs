@@ -3,6 +3,7 @@ module Filamento.Types.Geometry.Rect2D
     rect2GetMinCorner,
     rect2GetSize,
     Rect2From (..),
+    RectCorners (..),
     Rect2To (..),
     RectFrontLeft (..),
     RectFrontRight (..),
@@ -61,6 +62,9 @@ newtype RectDepth = RectDepth Length
   deriving (Show, Eq)
 
 newtype RectCenter = RectCenter (V2 Position)
+  deriving (Show, Eq)
+
+data RectCorners = RectCorners (V2 Position) (V2 Position) (V2 Position) (V2 Position)
   deriving (Show, Eq)
 
 -------------------------------------------------------------------------------
@@ -217,6 +221,14 @@ instance Rect2To RectWidth where
 
 instance Rect2To RectDepth where
   rect2To (Rect2D (_, RectSize (V2 _ d))) = RectDepth d
+
+instance Rect2To RectCorners where
+  rect2To (Rect2D (RectFrontLeft frontLeft, RectSize (V2 width depth))) =
+    RectCorners
+      frontLeft
+      (frontLeft & moveRight width)
+      (frontLeft & moveRight width & moveBack depth)
+      (frontLeft & moveBack depth)
 
 -------------------------------------------------------------------------------
 

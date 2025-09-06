@@ -10,7 +10,7 @@ interface IndexFileItem {
 };
 
 
-const MyViewerItem = ({ item, loadedCode }: { item: IndexFileItem, loadedCode?: string }) => {
+const MyViewerItem = ({ item, loadedCode }: { item: IndexFileItem, loadedCode?: string[] }) => {
   return <div className="viewer-item">
     <h3>{item.name}</h3>
     <div className="gcode-path">G-code: {item.gcode}</div>
@@ -22,12 +22,12 @@ const MyViewerItem = ({ item, loadedCode }: { item: IndexFileItem, loadedCode?: 
       </div>
     )}
     <code>{loadedCode}</code>
-    <GCodeViewer gcode={loadedCode || ''} />
+    <GCodeViewer gcode={loadedCode || []} />
   </div>
 }
 
 const MyViewer = ({ index }: { index: IndexFileItem[] }) => {
-  const [loadedCode, setLoadedCode] = useState<Map<string, string>>(new Map());
+  const [loadedCode, setLoadedCode] = useState<Map<string, string[]>>(new Map());
 
   useEffect(() => {
     const fetchCode = async () => {
@@ -35,7 +35,7 @@ const MyViewer = ({ index }: { index: IndexFileItem[] }) => {
         const response = await fetch(`${baseUrl}/${item.gcode}`).then(response => response.text());
         setLoadedCode(prev => {
           const newMap = new Map(prev);
-          newMap.set(item.name, response);
+          newMap.set(item.name, response.split('\n'));
           return newMap;
         });
       }

@@ -12,14 +12,19 @@ sketch = initPrinter do
 
   moveToZ (fromMm 0.2)
 
-  forM_ [1 .. 100] \i -> do
+  let countLayers = 120
+
+  forM_ [1 .. countLayers] \i -> do
     comment $ "Layer " <> show i
     nextLayer
 
-    let len = lengthByMm 50
-        rect = rect2From (RectCenter (V2 (fromMm 100) (fromMm 100)), RectSize (V2 len len))
+    let len = lengthByMm $ project (Range 1 countLayers) (Range 50 10) i
 
-        (RectFrontLeft p1, RectFrontRight p2, RectBackRight p3, RectBackLeft p4) = rect2To rect
+        rectX = posFromMm 100
+        rectY = posFromMm 100
+        rect = rect2From (RectCenter (V2 rectX rectY), RectSize (V2 len len))
+
+        (RectCorners p1 p2 p3 p4) = rect2To rect
 
     moveTo p1
     extrudeTo p2

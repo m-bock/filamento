@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import * as GCodePreview from 'gcode-preview';
 
 interface GCodeViewerProps {
-    gcode: string;
+    gcode: string[];
 }
 
 const GCodeViewer = ({ gcode }: GCodeViewerProps) => {
@@ -25,9 +25,8 @@ const GCodeViewer = ({ gcode }: GCodeViewerProps) => {
                 },
             });
 
-            console.log(gcode + " " + gcode.length);
 
-            gcodePreview.processGCode(gcode);
+            gcodePreview.processGCode(gcode.splice(100, 200));
         }
     }, [gcode]);
 
