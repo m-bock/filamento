@@ -44,9 +44,9 @@ library
   exposed-modules:
     Filamento
     Filamento.Classes
+    Filamento.Classes.Abs
     Filamento.Classes.Distance
     Filamento.Classes.Move
-    Filamento.Classes.Abs
     Filamento.Core
     Filamento.Debug
     Filamento.Error
@@ -110,10 +110,11 @@ executable filamento-exe
   main-is: Main.hs
   other-modules:
     PurgeTower
+    Readme
     Repl
+    SamplePyramid
     Sketch03
     Try
-    Readme
 
   hs-source-dirs: app
   build-depends:

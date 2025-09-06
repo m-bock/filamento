@@ -18,6 +18,7 @@ import Network.URI (URI, parseURI)
 import Octo.API (OctoHttpCfg (..))
 import qualified Readme
 import Relude
+import qualified SamplePyramid
 
 printStripesAlongX :: Square2D -> Count -> [Line2D]
 printStripesAlongX square count = do
@@ -212,4 +213,6 @@ mainTry = do
   pure ()
 
 main :: IO ()
-main = Readme.main
+main = do
+  Readme.main
+  SamplePyramid.main
