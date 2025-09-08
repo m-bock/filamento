@@ -115,11 +115,18 @@ const App2: React.FC = () => {
 };
 
 
+const ViewSingle = ({ item, dispatchers }: { item: Purs.Item, dispatchers: Purs.Dispatchers }) => {
+  return <div>
+    {item.file.name}
+
+  </div>
+}
+
 const useIt = (): [Purs.PubState, Purs.Dispatchers] => {
   const [st, setSt] = useState<Purs.AppState>(Purs.initialState)
 
   const dispatchers = Purs.tsDispatchers({
-    updateState: (newSt) => () => setSt(newSt),
+    updateState: (stFn) => () => setSt((st) => stFn(st)()),
     readState: () => st,
   })
 
@@ -131,11 +138,10 @@ const App: React.FC = () => {
   const [st, dispatchers] = useIt()
 
 
-  return <div>Loading... {Purs.intToNumber(st.endLayer)}
+  return <div>
     <br />
-    {st.indexFile}
     <button onClick={() => dispatchers.fetchIndexFile()}>Fetch Index File</button>
-    <button onClick={() => dispatchers.changeEndLayer(Purs.round(10))()}>Change End Layer</button>
+    {st.items.map((item) => <ViewSingle key={item.file.name} item={item} dispatchers={dispatchers} />)}
   </div>
 };
 

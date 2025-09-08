@@ -5,6 +5,7 @@ import Prelude
 import DTS as DTS
 import Data.Either (Either)
 import Data.Function.Uncurried (Fn2, Fn3, Fn4)
+import Data.Maybe (Maybe)
 import Effect (Effect)
 import TsBridge as TSB
 import Type.Proxy (Proxy)
@@ -34,6 +35,12 @@ instance TsBridge String where
 
 instance TsBridge a => TsBridge (Effect a) where
   tsBridge = TSB.tsBridgeEffect Tok
+
+instance TsBridge a => TsBridge (Maybe a) where
+  tsBridge = TSB.tsBridgeMaybe Tok
+
+instance TsBridge a => TsBridge (Array a) where
+  tsBridge = TSB.tsBridgeArray Tok
 
 instance (TsBridge a, TsBridge b) => TsBridge (a -> b) where
   tsBridge = TSB.tsBridgeFunction Tok

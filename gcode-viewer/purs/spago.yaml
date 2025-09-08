@@ -8,6 +8,8 @@ package:
     main: Test.Main
     dependencies:
       - ts-bridge
+      - codec-argonaut
+      - affjax-web
 workspace:
   packageSet:
     registry: 66.4.0

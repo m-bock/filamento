@@ -3,9 +3,10 @@ module GCodeViewer.Lib where
 import Prelude
 
 import DTS as DTS
-import Data.Either (Either)
+import Data.Either (Either(..))
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
+import Effect.Class.Console (log)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..), tsBridge)
 import TsBridge as TSB
 import Type.Prelude (Proxy(..))
@@ -30,14 +31,24 @@ getPubState (MkAppState state) = state.pubState
 ---
 
 type TsApi state =
-  { updateState :: (state -> state) -> Effect Unit
+  { updateState :: (state -> Effect state) -> Effect Unit
   , readState :: Effect state
   }
 
-tsApiToDispatcherApi :: forall msg pubState privState. (msg -> pubState -> pubState) -> TsApi (MkAppState pubState privState) -> DispatcherApi msg pubState privState
+tsApiToDispatcherApi
+  :: forall msg pubState privState
+   . (msg -> pubState -> Either String pubState)
+  -> TsApi (MkAppState pubState privState)
+  -> DispatcherApi msg pubState privState
 tsApiToDispatcherApi updatePubState { updateState, readState } =
   { emitMsg: \msg ->
-      updateState (\(MkAppState state) -> MkAppState (state { pubState = updatePubState msg state.pubState }))
+      updateState
+        ( \(MkAppState state) -> case updatePubState msg state.pubState of
+            Left err -> do
+              log err
+              pure $ MkAppState state
+            Right newState -> pure $ MkAppState (state { pubState = newState })
+        )
 
   , readPubState: do
       MkAppState st <- readState
@@ -48,7 +59,7 @@ tsApiToDispatcherApi updatePubState { updateState, readState } =
       pure st.privState
 
   , updatePubState: \f ->
-      updateState (\(MkAppState state) -> MkAppState (state { pubState = f state.pubState }))
+      updateState (\(MkAppState state) -> pure $ MkAppState (state { pubState = f state.pubState }))
   }
 
 ---
