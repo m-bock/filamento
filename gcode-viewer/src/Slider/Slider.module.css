@@ -1,0 +1,46 @@
+@import "@radix-ui/colors/black-alpha.css";
+@import "@radix-ui/colors/violet.css";
+@import "@radix-ui/colors/white-alpha.css";
+
+.Root {
+	position: relative;
+	display: flex;
+    flex-direction: column;
+	align-items: center;
+	user-select: none;
+	touch-action: none;
+	width: 20px;
+	height: 100%;
+}
+
+.Track {
+	background-color: var(--white-a10);
+	position: relative;
+	flex-grow: 1;
+	border-radius: 9999px;
+	height: 100%;
+    width: 3px;
+}
+
+.Range {
+	position: absolute;
+	background-color: white;
+	border-radius: 9999px;
+	height: 100%;
+}
+
+.Thumb {
+	display: block;
+	width: 20px;
+	height: 20px;
+	background-color: white;
+	box-shadow: 0 2px 10px var(--black-a7);
+	border-radius: 10px;
+}
+.Thumb:hover {
+	background-color: var(--violet-3);
+}
+.Thumb:focus {
+	outline: none;
+	box-shadow: 0 0 0 5px var(--black-a8);
+}

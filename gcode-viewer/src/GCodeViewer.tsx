@@ -1,5 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import * as GCodePreview from 'gcode-preview';
+import { Slider } from "radix-ui";
+import './styles.css';
 
 interface GCodeViewerProps {
     gcode: string[];
@@ -11,15 +13,17 @@ const GCodeViewer = ({ gcode }: GCodeViewerProps) => {
     useEffect(() => {
         if (canvasRef.current) {
             const canvas = canvasRef.current;
+
             const gcodePreview = GCodePreview.init({
                 canvas,
-                lineWidth: 2,
-                lineHeight: 2,
+                lineWidth: 4,
+                lineHeight: 4,
                 renderTravel: false,
                 renderExtrusion: true,
                 renderTubes: false,
                 startLayer: 10,
                 endLayer: 20,
+                backgroundColor: 'black',
                 buildVolume: {
                     x: 220,
                     y: 220,
@@ -27,12 +31,15 @@ const GCodeViewer = ({ gcode }: GCodeViewerProps) => {
                 },
             });
 
+            //gcodePreview.canvas.getContext('webgl', { antialias: true })
+
 
             gcodePreview.processGCode(gcode);
         }
     }, [gcode]);
 
     return <canvas ref={canvasRef} />
+
 }
 
 export default GCodeViewer;

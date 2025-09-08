@@ -9,7 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/colors": "^3.0.0",
     "gcode-preview": "^2.18.0",
+    "radix-ui": "^1.4.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
