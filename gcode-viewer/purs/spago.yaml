@@ -1,0 +1,14 @@
+package:
+  name: purs
+  dependencies:
+    - console
+    - effect
+    - prelude
+  test:
+    main: Test.Main
+    dependencies:
+      - ts-bridge
+workspace:
+  packageSet:
+    registry: 66.4.0
+  extraPackages: {}

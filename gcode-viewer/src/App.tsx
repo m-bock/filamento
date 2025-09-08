@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useReducer } from 'react';
 import * as GCodePreview from 'gcode-preview';
 import './style.css';
 import { Slider } from './Slider';
+import * as Purs from "../purs/output/GCodeViewer.State"
 
 interface IndexFileItem {
   name: string;
@@ -97,7 +98,7 @@ const ManyViewers = ({ index }: { index: IndexFileItem[] }) => {
 const baseUrl = "/out";
 const indexUrl = `${baseUrl}/index.json`;
 
-const App: React.FC = () => {
+const App2: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<any>(null);
 
@@ -111,6 +112,31 @@ const App: React.FC = () => {
 
 
   return indexFile ? <ManyViewers index={indexFile} /> : <div>Loading...</div>
+};
+
+
+const useIt = (): [Purs.PubState, Purs.Dispatchers] => {
+  const [st, setSt] = useState<Purs.AppState>(Purs.initialState)
+
+  const dispatchers = Purs.tsDispatchers({
+    updateState: (newSt) => () => setSt(newSt),
+    readState: () => st,
+  })
+
+  return [Purs.getPubState(st), dispatchers]
+}
+
+
+const App: React.FC = () => {
+  const [st, dispatchers] = useIt()
+
+
+  return <div>Loading... {Purs.intToNumber(st.endLayer)}
+    <br />
+    {st.indexFile}
+    <button onClick={() => dispatchers.fetchIndexFile()}>Fetch Index File</button>
+    <button onClick={() => dispatchers.changeEndLayer(Purs.round(10))()}>Change End Layer</button>
+  </div>
 };
 
 export default App;

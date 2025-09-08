@@ -1,0 +1,3 @@
+gen:
+    npx spago run
+    npx prettier --write --ignore-path "" 'output/*/index.d.ts'

@@ -1,0 +1,51 @@
+module GCodeViewer.TsBridge where
+
+import Prelude
+
+import DTS as DTS
+import Data.Either (Either)
+import Data.Function.Uncurried (Fn2, Fn3, Fn4)
+import Effect (Effect)
+import TsBridge as TSB
+import Type.Proxy (Proxy)
+
+data Tok = Tok
+
+instance TsBridge a => TSB.TsBridgeBy Tok a where
+  tsBridgeBy _ = tsBridge
+
+class TsBridge (a :: Type) where
+  tsBridge :: Proxy a -> TSB.TsBridgeM DTS.TsType
+
+instance TsBridge Unit where
+  tsBridge = TSB.tsBridgeUnit
+
+instance TsBridge Number where
+  tsBridge = TSB.tsBridgeNumber
+
+instance TsBridge Int where
+  tsBridge = TSB.tsBridgeInt
+
+instance TsBridge Boolean where
+  tsBridge = TSB.tsBridgeBoolean
+
+instance TsBridge String where
+  tsBridge = TSB.tsBridgeString
+
+instance TsBridge a => TsBridge (Effect a) where
+  tsBridge = TSB.tsBridgeEffect Tok
+
+instance (TsBridge a, TsBridge b) => TsBridge (a -> b) where
+  tsBridge = TSB.tsBridgeFunction Tok
+
+instance (TsBridge a, TsBridge b, TsBridge c) => TsBridge (Fn2 a b c) where
+  tsBridge = TSB.tsBridgeFn2 Tok
+
+instance (TsBridge a, TsBridge b, TsBridge c, TsBridge d) => TsBridge (Fn3 a b c d) where
+  tsBridge = TSB.tsBridgeFn3 Tok
+
+instance (TsBridge a, TsBridge b, TsBridge c, TsBridge d, TsBridge e) => TsBridge (Fn4 a b c d e) where
+  tsBridge = TSB.tsBridgeFn4 Tok
+
+instance (TSB.TsBridgeRecord Tok r) => TsBridge (Record r) where
+  tsBridge = TSB.tsBridgeRecord Tok
