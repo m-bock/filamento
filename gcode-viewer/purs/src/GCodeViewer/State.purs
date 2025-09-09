@@ -2,233 +2,284 @@ module GCodeViewer.State where
 
 import Prelude
 
-import Affjax as Affjax
-import Affjax.ResponseFormat (json)
-import Affjax.StatusCode (StatusCode(..))
-import Affjax.Web as AffjaxWeb
-import Control.Monad.Error.Class (class MonadError, throwError)
-import Control.Monad.Except (Except, ExceptT, runExcept, runExceptT)
-import Control.Monad.Writer (Writer)
-import DTS as DTS
-import Data.Argonaut.Core (stringify)
-import Data.Array as Array
-import Data.Codec.Argonaut (JsonCodec)
-import Data.Codec.Argonaut as CA
-import Data.Codec.Argonaut.Record as CAR
-import Data.Either (Either(..))
-import Data.Int as Int
-import Data.Maybe (Maybe(..))
-import Data.Time.Duration (Milliseconds(..))
-import Effect (Effect)
-import Effect.Aff (Aff, Fiber, delay, launchAff_)
-import Effect.Aff.Class (class MonadAff, liftAff)
-import Effect.Class (liftEffect)
-import Effect.Class.Console (log)
-import GCodeViewer.Lib (MkAppState, DispatcherApi, TsApi, tsApiToDispatcherApi)
-import GCodeViewer.Lib as Lib
-import GCodeViewer.TsBridge (class TsBridge, Tok(..))
-import TsBridge (tsTypeAlias)
-import TsBridge as TSB
-import Type.Prelude (Proxy(..))
-import Unsafe.Coerce (unsafeCoerce)
+-- import Affjax as Affjax
+-- import Affjax.ResponseFormat (json, string)
+-- import Affjax.StatusCode (StatusCode(..))
+-- import Affjax.Web as AffjaxWeb
+-- import Control.Monad.Error.Class (class MonadError, catchError, throwError)
+-- import Control.Monad.Except (Except, ExceptT, runExcept, runExceptT)
+-- import Control.Monad.Writer (Writer)
+-- import DTS as DTS
+-- import Data.Argonaut.Core (stringify)
+-- import Data.Array as Array
+-- import Data.Codec.Argonaut (JsonCodec)
+-- import Data.Codec.Argonaut as CA
+-- import Data.Codec.Argonaut.Record as CAR
+-- import Data.Either (Either(..))
+-- import Data.Int as Int
+-- import Data.Lens (over, set)
+-- import Data.Lens.Record (prop)
+-- import Data.Map.Internal (unsafeBalancedNode)
+-- import Data.Maybe (Maybe(..), fromMaybe)
+-- import Data.Time.Duration (Milliseconds(..))
+-- import Data.Traversable (for_)
+-- import Data.Tuple.Nested ((/\))
+-- import Effect (Effect)
+-- import Effect.Aff (Aff, Fiber, delay, launchAff_)
+-- import Effect.Aff.Class (class MonadAff, liftAff)
+-- import Effect.Class (liftEffect)
+-- import Effect.Class.Console (log)
+-- import GCodeViewer.Lib (MkAppState, DispatcherApi, TsApi, tsApiToDispatcherApi)
+-- import GCodeViewer.Lib as Lib
+-- import GCodeViewer.TsBridge (class TsBridge, Tok(..), tsBridge)
+-- import TsBridge (tsTypeAlias)
+-- import TsBridge as TSB
+-- import Type.Prelude (Proxy(..))
+-- import Unsafe.Coerce (unsafeCoerce)
 
 -- Public state
 
-type AppState = Lib.MkAppState PubState PrivState
+-- type AppState = Lib.MkAppState PubState PrivState
 
-type PubState =
-  { items :: Array Item
-  , errors :: Array String
-  }
+-- type PubState =
+--   { items :: RemoteData (Array Item)
+--   , errors :: Array String
+--   }
 
-type IndexFile =
-  Array IndexFileItem
+-- type RemoteData a =
+--   { value :: a
+--   , status :: RemoteDataStatus
+--   }
 
-type IndexFileItem =
-  { name :: String
-  , gcode :: String
-  , pictures :: Array String
-  }
+-- data RemoteDataStatus
+--   = NotAsked
+--   | Loading
+--   | Loaded
+--   | Error String
 
-codecIndexFileItem :: JsonCodec IndexFileItem
-codecIndexFileItem = CAR.object "IndexFileItem"
-  { name: CA.string
-  , gcode: CA.string
-  , pictures: CA.array CA.string
-  }
+-- mkRemoteDataStatus
+--   :: { notAsked :: RemoteDataStatus
+--      , loading :: RemoteDataStatus
+--      , loaded :: RemoteDataStatus
+--      , error :: String -> RemoteDataStatus
+--      }
+-- mkRemoteDataStatus =
+--   { notAsked: NotAsked
+--   , loading: Loading
+--   , loaded: Loaded
+--   , error: Error
+--   }
 
-type Item =
-  { file :: IndexFileItem
-  , lines :: Maybe (Array String)
-  , startLayer :: Int
-  , endLayer :: Int
-  }
+-- onRemoteDataStatus
+--   :: forall @z
+--    . { notAsked :: z
+--      , loading :: z
+--      , loaded :: z
+--      , error :: String -> z
+--      }
+--   -> RemoteDataStatus
+--   -> z
+-- onRemoteDataStatus = \{ notAsked, loading, loaded, error } rd -> case rd of
+--   NotAsked -> notAsked
+--   Loading -> loading
+--   Loaded -> loaded
+--   Error err -> error err
 
-mkItem :: IndexFileItem -> Item
-mkItem file =
-  { file
-  , lines: Nothing
-  , startLayer: 0
-  , endLayer: 0
-  }
+-- instance TsBridge RemoteDataStatus where
+--   tsBridge = TSB.tsBridgeOpaqueType
+--     { moduleName
+--     , typeName: "RemoteDataStatus"
+--     , typeArgs: []
+--     }
 
-initPubState :: PubState
-initPubState =
-  { items: []
-  , errors: []
-  }
+-- derive instance Eq RemoteDataStatus
 
-data Msg
-  = MsgSetItems (Array Item)
-  | MsgLoadLines { itemIndex :: Int, lines :: Array String }
-  | MsgChangeStartLayer { itemIndex :: Int, startLayer :: Int }
-  | MsgChangeEndLayer { itemIndex :: Int, endLayer :: Int }
-  | MsgAddError String
+-- type Item =
+--   { file :: IndexFileItem
+--   , lines :: Maybe (Array String)
+--   , startLayer :: Int
+--   , endLayer :: Int
+--   }
 
-updatePubState :: Msg -> PubState -> Except String PubState
-updatePubState msg pubState = case msg of
-  MsgChangeStartLayer { itemIndex, startLayer } ->
-    updateItem itemIndex (\item -> item { startLayer = startLayer }) pubState
+-- mkItem :: IndexFileItem -> Item
+-- mkItem file =
+--   { file
+--   , lines: Nothing
+--   , startLayer: 0
+--   , endLayer: 0
+--   }
 
-  MsgChangeEndLayer { itemIndex, endLayer } ->
-    updateItem itemIndex (\item -> item { endLayer = endLayer }) pubState
+-- initPubState :: PubState
+-- initPubState =
+--   { items: { value: [], status: NotAsked }
+--   , errors: []
+--   }
 
-  MsgSetItems items ->
-    pure $ pubState { items = items }
+-- data Msg
+--   = MsgLoadLines { itemIndex :: Int, lines :: Array String }
+--   | MsgChangeStartLayer { itemIndex :: Int, startLayer :: Int }
+--   | MsgChangeEndLayer { itemIndex :: Int, endLayer :: Int }
+--   | MsgAddError String
+--   | MsgSetItems { value :: Maybe (Array Item), status :: RemoteDataStatus }
 
-  MsgLoadLines { itemIndex, lines } ->
-    updateItem itemIndex (\item -> item { lines = Just lines }) pubState
+-- updatePubState :: Msg -> PubState -> Except String PubState
+-- updatePubState msg pubState = case msg of
+--   MsgChangeStartLayer { itemIndex, startLayer } ->
+--     updateItem itemIndex (\item -> item { startLayer = startLayer }) pubState
 
-  MsgAddError error -> pure $ pubState { errors = [ error ] }
+--   MsgChangeEndLayer { itemIndex, endLayer } ->
+--     updateItem itemIndex (\item -> item { endLayer = endLayer }) pubState
 
-updateItem :: Int -> (Item -> Item) -> PubState -> Except String PubState
-updateItem itemIndex f pubState = case Array.modifyAt itemIndex f pubState.items of
-  Just items -> pure $ pubState { items = items }
-  Nothing -> throwError "Item not found"
+--   MsgSetItems items -> unsafeCoerce ""
+--   -- pure $ pubState { items = items }
 
--- Priv state
+--   MsgLoadLines { itemIndex, lines } ->
+--     updateItem itemIndex (\item -> item { lines = Just lines }) pubState
 
-newtype PrivState = PrivState {}
+--   MsgAddError error -> pure $ pubState { errors = [ error ] }
 
-initPrivState :: PrivState
-initPrivState = PrivState {}
+--   MsgSetItems { value, status } -> do --pure $ pubState { items = { fromMaybe  value, status } }
 
--- State
+--     case value of
+--       Just items -> pure $ set (prop (Proxy :: _ "items") <<< prop (Proxy :: _ "value")) items pubState
+--       Nothing -> pure unit
 
-initialState :: AppState
-initialState = Lib.MkAppState
-  { pubState: initPubState
-  , privState: initPrivState
-  }
+--     pure $ over (prop (Proxy :: _ "items") <<< prop (Proxy :: _ "status")) status pubState
 
----
+-- updateItem :: Int -> (Item -> Item) -> PubState -> Except String PubState
+-- updateItem itemIndex f pubState = unsafeCoerce ""
 
-type Dispatchers =
-  { fetchIndexFile :: Effect Unit
-  , loadLines :: { itemIndex :: Int, lines :: Array String } -> Effect Unit
-  , changeStartLayer :: { itemIndex :: Int, startLayer :: Int } -> Effect Unit
-  , changeEndLayer :: { itemIndex :: Int, endLayer :: Int } -> Effect Unit
-  }
+-- --  case Array.modifyAt itemIndex f pubState.items of
+-- --   Just items -> pure $ pubState { items = items }
+-- --   Nothing -> throwError "Item not found"
 
-catchByEmit :: { emitMsg :: Msg -> Effect Unit } -> ExceptT String Aff Unit -> Effect Unit
-catchByEmit { emitMsg } act = launchAff_ do
-  result <- runExceptT act
-  case result of
-    Left err -> do
-      liftEffect $ emitMsg (MsgAddError err)
-      log ("error: " <> err)
-    Right _ -> pure unit
+-- -- Priv state
 
-handleAffEither :: forall m err a. MonadError String m => MonadAff m => (err -> String) -> Aff (Either err a) -> m a
-handleAffEither errToString act = do
-  ret <- liftAff act
-  case ret of
-    Left err -> throwError $ errToString err
-    Right a -> pure a
+-- newtype PrivState = PrivState {}
 
-handleEither :: forall m err a. MonadError String m => (err -> String) -> Either err a -> m a
-handleEither errToString = case _ of
-  Left err -> throwError $ errToString err
-  Right a -> pure a
+-- initPrivState :: PrivState
+-- initPrivState = PrivState {}
 
-getIndexFile :: ExceptT String Aff IndexFile
-getIndexFile = do
-  ret <- handleAffEither Affjax.printError $ AffjaxWeb.get json "/out/index.json"
+-- -- State
 
-  when (ret.status /= StatusCode 200) $ throwError "Failed to get index file"
+-- initialState :: AppState
+-- initialState = Lib.MkAppState
+--   { pubState: initPubState
+--   , privState: initPrivState
+--   }
 
-  val <- handleEither CA.printJsonDecodeError $ CA.decode (CA.array codecIndexFileItem) ret.body
+-- ---
 
-  pure val
+-- catchByEmit :: { emitError :: String -> Effect Unit } -> ExceptT String Aff Unit -> Effect Unit
+-- catchByEmit { emitError } act = launchAff_ do
+--   result <- runExceptT act
+--   case result of
+--     Left err -> do
+--       liftEffect $ emitError err
+--       log ("error: " <> err)
+--     Right _ -> pure unit
 
-dispatchers :: DispatcherApi Msg PubState PrivState -> Dispatchers
-dispatchers { emitMsg } =
-  { fetchIndexFile: catchByEmit { emitMsg } do
-      liftAff $ delay (Milliseconds 1000.0)
+-- dispatchers :: DispatcherApi Msg PubState PrivState -> _
+-- dispatchers { emitMsg, readPubState } =
+--   { fetchIndexFile
+--   , fetchAllFiles
+--   , changeStartLayer
+--   , changeEndLayer
+--   }
 
-      ret <- getIndexFile
+--   where
+--   changeStartLayer :: { itemIndex :: Int, startLayer :: Int } -> Effect Unit
+--   changeStartLayer n = emitMsg (MsgChangeStartLayer n)
 
-      liftEffect $ emitMsg (MsgSetItems (map mkItem ret))
+--   changeEndLayer :: { itemIndex :: Int, endLayer :: Int } -> Effect Unit
+--   changeEndLayer n = emitMsg (MsgChangeEndLayer n)
 
-  , loadLines: \n -> emitMsg (MsgLoadLines n)
+--   fetchIndexFile :: Effect Unit
+--   fetchIndexFile = catchByEmit
+--     { emitError: \err -> do
+--         emitMsg (MsgAddError err)
+--     --emitMsg (MsgSetItems (Error err))
+--     }
+--     do
+--       --liftEffect $ emitMsg (MsgSetItems Loading)
+--       liftAff $ delay (Milliseconds 1000.0)
 
-  , changeStartLayer: \n -> emitMsg (MsgChangeStartLayer n)
+--       ret <- getIndexFile
 
-  , changeEndLayer: \n -> emitMsg (MsgChangeEndLayer n)
-  }
+--       pure unit
 
----
+--   --liftEffect $ emitMsg (MsgSetItems (Loaded $ map mkItem ret))
 
-tsDispatchers :: TsApi AppState -> Dispatchers
-tsDispatchers tsApi = dispatchers (tsApiToDispatcherApi updatePubState' tsApi)
-  where
-  updatePubState' msg pubState = runExcept (updatePubState msg pubState)
+--   fetchAllFiles :: Effect Unit
+--   fetchAllFiles = catchByEmit
+--     { emitError: \err -> emitMsg (MsgAddError err)
+--     }
+--     do
+--       st <- liftEffect $ readPubState
 
-intToNumber :: Int -> Number
-intToNumber = Int.toNumber
+--       pure unit
 
-round :: Number -> Int
-round = Int.round
+-- -- for_ st.items \item -> do
+-- --   liftAff $ delay (Milliseconds 1000.0)
 
-getPubState :: AppState -> PubState
-getPubState (Lib.MkAppState state) = state.pubState
+-- --   -- ret <- getGCodeFile item.file.gcode
 
----
+-- --   pure unit
 
-eqPubState :: PubState -> PubState -> Boolean
-eqPubState a b = a == b
+-- ---
 
-moduleName :: String
-moduleName = "GCodeViewer.State"
+-- tsDispatchers :: TsApi AppState -> _
+-- tsDispatchers tsApi = dispatchers (tsApiToDispatcherApi updatePubState' tsApi)
+--   where
+--   updatePubState' msg pubState = runExcept (updatePubState msg pubState)
 
-instance TsBridge Msg where
-  tsBridge = TSB.tsBridgeOpaqueType
-    { moduleName
-    , typeName: "Msg"
-    , typeArgs: []
-    }
+-- intToNumber :: Int -> Number
+-- intToNumber = Int.toNumber
 
--- --
+-- round :: Number -> Int
+-- round = Int.round
 
-instance TsBridge PrivState where
-  tsBridge = TSB.tsBridgeOpaqueType
-    { moduleName
-    , typeName: "PrivState"
-    , typeArgs: []
-    }
+-- getPubState :: AppState -> PubState
+-- getPubState (Lib.MkAppState state) = state.pubState
 
-tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
-tsExports = TSB.tsModuleFile moduleName
-  [ TSB.tsValues Tok
-      { initialState
-      , tsDispatchers
-      , getPubState
-      , eqPubState
-      , intToNumber
-      , round
-      }
-  , tsTypeAlias Tok "AppState" (Proxy :: _ AppState)
-  , tsTypeAlias Tok "PubState" (Proxy :: _ PubState)
-  , tsTypeAlias Tok "Dispatchers" (Proxy :: _ Dispatchers)
-  , tsTypeAlias Tok "Item" (Proxy :: _ Item)
-  ]
+-- ---
+
+-- eqPubState :: PubState -> PubState -> Boolean
+-- eqPubState a b = a == b
+
+-- moduleName :: String
+-- moduleName = "GCodeViewer.State"
+
+-- instance TsBridge Msg where
+--   tsBridge = TSB.tsBridgeOpaqueType
+--     { moduleName
+--     , typeName: "Msg"
+--     , typeArgs: []
+--     }
+
+-- -- --
+
+-- instance TsBridge PrivState where
+--   tsBridge = TSB.tsBridgeOpaqueType
+--     { moduleName
+--     , typeName: "PrivState"
+--     , typeArgs: []
+--     }
+
+-- tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
+-- tsExports = TSB.tsModuleFile moduleName
+--   [ TSB.tsValues Tok
+--       { initialState
+--       , tsDispatchers
+--       , getPubState
+--       , eqPubState
+--       , intToNumber
+--       , round
+--       , mkRemoteDataStatus
+--       , onRemoteDataStatus: onRemoteDataStatus @String
+--       }
+--   , tsTypeAlias Tok "AppState" (Proxy :: _ AppState)
+--   , tsTypeAlias Tok "PubState" (Proxy :: _ PubState)
+--   --, tsTypeAlias Tok "Dispatchers" (Proxy :: _ Dispatchers)
+--   , tsTypeAlias Tok "Item" (Proxy :: _ Item)
+--   ]

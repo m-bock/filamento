@@ -7,13 +7,13 @@ import Effect (Effect)
 import Effect.Console (log)
 import TsBridge as TSB
 import DTS as DTS
-import GCodeViewer.State as GCodeViewer.State
 import GCodeViewer.Lib as GCodeViewer.Lib
+import GCodeViewer.StateMachine as GCodeViewer.StateMachine
 
 myTsProgram :: Either TSB.AppError DTS.TsProgram
 myTsProgram =
   TSB.tsProgram
-    [ GCodeViewer.State.tsExports
+    [ GCodeViewer.StateMachine.tsExports
     , GCodeViewer.Lib.tsExports
     ]
 

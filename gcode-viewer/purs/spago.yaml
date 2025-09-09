@@ -10,6 +10,8 @@ package:
       - ts-bridge
       - codec-argonaut
       - affjax-web
+      - profunctor-lenses
+
 workspace:
   packageSet:
     registry: 66.4.0

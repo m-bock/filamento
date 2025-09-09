@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useReducer } from 'react';
 import * as GCodePreview from 'gcode-preview';
 import './style.css';
 import { Slider } from './Slider';
-import * as Purs from "../purs/output/GCodeViewer.State"
+import * as Purs from "../purs/output/GCodeViewer.StateMachine"
+import { useStateMachine } from './Lib';
 
 interface IndexFileItem {
   name: string;
@@ -115,33 +116,16 @@ const App2: React.FC = () => {
 };
 
 
-const ViewSingle = ({ item, dispatchers }: { item: Purs.Item, dispatchers: Purs.Dispatchers }) => {
-  return <div>
-    {item.file.name}
-
-  </div>
-}
-
-const useIt = (): [Purs.PubState, Purs.Dispatchers] => {
-  const [st, setSt] = useState<Purs.AppState>(Purs.initialState)
-
-  const dispatchers = Purs.tsDispatchers({
-    updateState: (stFn) => () => setSt((st) => stFn(st)()),
-    readState: () => st,
-  })
-
-  return [Purs.getPubState(st), dispatchers]
-}
-
 
 const App: React.FC = () => {
-  const [st, dispatchers] = useIt()
 
+  const [state, dispatch] = useStateMachine(Purs.tsApi)
 
   return <div>
     <br />
-    <button onClick={() => dispatchers.fetchIndexFile()}>Fetch Index File</button>
-    {st.items.map((item) => <ViewSingle key={item.file.name} item={item} dispatchers={dispatchers} />)}
+
+    <button onClick={() => dispatch.disp1()}>Fetch Index File</button>
+
   </div>
 };
 

@@ -6,6 +6,7 @@ import DTS as DTS
 import Data.Either (Either)
 import Data.Function.Uncurried (Fn2, Fn3, Fn4)
 import Data.Maybe (Maybe)
+import Data.Symbol (class IsSymbol)
 import Effect (Effect)
 import TsBridge as TSB
 import Type.Proxy (Proxy)
@@ -56,3 +57,6 @@ instance (TsBridge a, TsBridge b, TsBridge c, TsBridge d, TsBridge e) => TsBridg
 
 instance (TSB.TsBridgeRecord Tok r) => TsBridge (Record r) where
   tsBridge = TSB.tsBridgeRecord Tok
+
+instance IsSymbol sym => TsBridge (TSB.TypeVar sym) where
+  tsBridge = TSB.tsBridgeTypeVar

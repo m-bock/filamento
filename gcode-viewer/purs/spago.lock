@@ -19,6 +19,7 @@
           "dependencies": [
             "affjax-web",
             "codec-argonaut",
+            "profunctor-lenses",
             "ts-bridge"
           ],
           "build_plan": [
@@ -84,6 +85,7 @@
             "posix-types",
             "prelude",
             "profunctor",
+            "profunctor-lenses",
             "psci-support",
             "record",
             "refs",
@@ -1475,6 +1477,33 @@
         "invariant",
         "newtype",
         "prelude",
+        "tuples"
+      ]
+    },
+    "profunctor-lenses": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-K7f29rHRHgVSb2Y/PaSKtfYPriP6n87BJNO7EhsZHas=",
+      "dependencies": [
+        "arrays",
+        "bifunctors",
+        "const",
+        "control",
+        "distributive",
+        "either",
+        "foldable-traversable",
+        "foreign-object",
+        "functors",
+        "identity",
+        "lists",
+        "maybe",
+        "newtype",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "profunctor",
+        "record",
+        "transformers",
         "tuples"
       ]
     },

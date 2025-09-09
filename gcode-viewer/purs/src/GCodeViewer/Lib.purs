@@ -1,13 +1,22 @@
-module GCodeViewer.Lib where
+module GCodeViewer.Lib
+  ( MkAppState
+  , mkTsApi
+  , DispatcherApi
+  , TsApi(..)
+  , TsStateHandle
+  , tsExports
+  ) where
 
 import Prelude
 
 import DTS as DTS
 import Data.Either (Either(..))
+import Data.Newtype (class Newtype)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Class.Console (log)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..), tsBridge)
+import TsBridge (TypeVar)
 import TsBridge as TSB
 import Type.Prelude (Proxy(..))
 
@@ -22,7 +31,7 @@ type DispatcherApi msg pubState privState =
   { emitMsg :: msg -> Effect Unit
   , readPubState :: Effect pubState
   , readPrivState :: Effect privState
-  , updatePubState :: (pubState -> pubState) -> Effect Unit
+  , updatePrivState :: (privState -> privState) -> Effect Unit
   }
 
 getPubState :: forall pubState privState. MkAppState pubState privState -> pubState
@@ -30,37 +39,64 @@ getPubState (MkAppState state) = state.pubState
 
 ---
 
-type TsApi state =
+type PursConfig msg pubState privState err disp =
+  { updatePubState :: msg -> pubState -> Either String pubState
+  , dispatchers :: DispatcherApi msg pubState privState -> disp
+  , printError :: err -> String
+  , initPubState :: pubState
+  , initPrivState :: privState
+  }
+
+type TsStateHandle state =
   { updateState :: (state -> Effect state) -> Effect Unit
   , readState :: Effect state
   }
 
-tsApiToDispatcherApi
-  :: forall msg pubState privState
-   . (msg -> pubState -> Either String pubState)
-  -> TsApi (MkAppState pubState privState)
-  -> DispatcherApi msg pubState privState
-tsApiToDispatcherApi updatePubState { updateState, readState } =
-  { emitMsg: \msg ->
-      updateState
+newtype TsApi pubState state disp = TsApi
+  { dispatchers :: TsStateHandle state -> disp
+  , initState :: state
+  , getPubState :: state -> pubState
+  }
+
+derive instance Newtype (TsApi pubState state disp) _
+
+instance (TsBridge pubState, TsBridge state, TsBridge disp) => TsBridge (TsApi pubState state disp) where
+  tsBridge = TSB.tsBridgeNewtype Tok
+    { moduleName
+    , typeName: "TsApi"
+    , typeArgs:
+        [ "pubState" /\ tsBridge (Proxy :: _ pubState)
+        , "state" /\ tsBridge (Proxy :: _ state)
+        , "disp" /\ tsBridge (Proxy :: _ disp)
+        ]
+    }
+
+mkTsApi :: forall msg pubState privState err disp. PursConfig msg pubState privState err disp -> TsApi pubState (MkAppState pubState privState) disp
+mkTsApi { initPubState, initPrivState, dispatchers, updatePubState } =
+  TsApi
+    { dispatchers: f >>> dispatchers
+    , initState: MkAppState { pubState: initPubState, privState: initPrivState }
+    , getPubState
+    }
+  where
+  f :: TsStateHandle (MkAppState pubState privState) -> DispatcherApi msg pubState privState
+  f ts =
+    { emitMsg: \msg -> ts.updateState
         ( \(MkAppState state) -> case updatePubState msg state.pubState of
             Left err -> do
               log err
               pure $ MkAppState state
             Right newState -> pure $ MkAppState (state { pubState = newState })
         )
-
-  , readPubState: do
-      MkAppState st <- readState
-      pure st.pubState
-
-  , readPrivState: do
-      MkAppState st <- readState
-      pure st.privState
-
-  , updatePubState: \f ->
-      updateState (\(MkAppState state) -> pure $ MkAppState (state { pubState = f state.pubState }))
-  }
+    , readPubState: do
+        MkAppState st <- ts.readState
+        pure st.pubState
+    , readPrivState: do
+        MkAppState st <- ts.readState
+        pure st.privState
+    , updatePrivState: \f ->
+        ts.updateState (\(MkAppState state) -> pure $ MkAppState (state { privState = f state.privState }))
+    }
 
 ---
 
@@ -70,8 +106,11 @@ moduleName = "GCodeViewer.Lib"
 instance (TsBridge pubState, TsBridge privState) => TsBridge (MkAppState pubState privState) where
   tsBridge = TSB.tsBridgeOpaqueType
     { moduleName
-    , typeName: "AppState"
-    , typeArgs: [ "pubState" /\ tsBridge (Proxy :: _ pubState), "privState" /\ tsBridge (Proxy :: _ privState) ]
+    , typeName: "MkAppState"
+    , typeArgs:
+        [ "pubState" /\ tsBridge (Proxy :: _ pubState)
+        , "privState" /\ tsBridge (Proxy :: _ privState)
+        ]
     }
 
 tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
@@ -79,4 +118,5 @@ tsExports = TSB.tsModuleFile moduleName
   [ TSB.tsValues Tok
       {
       }
+  --, TSB.tsTypeAlias Tok "TsApi" (Proxy :: _ (TsApi (TypeVar "A") (TypeVar "B") (TypeVar "C")))
   ]
