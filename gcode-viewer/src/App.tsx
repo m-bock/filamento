@@ -124,7 +124,7 @@ const App: React.FC = () => {
   return <div>
     <br />
 
-    <button onClick={() => dispatch.disp1()}>Fetch Index File</button>
+    <button onClick={() => dispatch.loadGcodeLines({ url: "" })}>Fetch Index File</button>
 
   </div>
 };

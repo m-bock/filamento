@@ -21,6 +21,7 @@ data ErrCode
   | XErr8
   | XErr9
   | XErr10
+  | ErrX
 
 derive instance Eq ErrCode
 

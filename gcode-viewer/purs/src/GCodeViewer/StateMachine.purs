@@ -2,33 +2,54 @@ module GCodeViewer.StateMachine where
 
 import GCodeViewer.Prelude
 
+import Control.Monad.Error.Class (catchError)
 import DTS as DTS
+import Data.Lens (set)
+import Data.Lens.Iso.Newtype (unto)
 import Data.Newtype (class Newtype)
-import GCodeViewer.Error (Err, printErr)
+import Data.String as Str
+import GCodeViewer.Api as Api
+import GCodeViewer.Error (Err, mkErr, printErr)
+import GCodeViewer.Error as Err
 import GCodeViewer.Lib (DispatcherApi, MkAppState, TsApi, mkTsApi)
+import GCodeViewer.RemoteData (RemoteData, RemoteDataStatus(..))
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
 import TsBridge as TSB
 
-newtype PubState = PubState
-  { x :: Int }
-
-derive instance Newtype PubState _
-
-instance TsBridge PubState where
-  tsBridge = TSB.tsBridgeNewtype Tok
-    { moduleName
-    , typeName: "PubState"
-    , typeArgs: []
-    }
+type PubState =
+  { gcodeLines :: RemoteData (Array String)
+  , startLayer :: Int
+  , endLayer :: Int
+  }
 
 initPubState :: PubState
-initPubState = PubState
-  { x: 0 }
+initPubState =
+  { gcodeLines: { value: [], status: NotAsked }
+  , startLayer: 0
+  , endLayer: 0
+  }
 
 updatePubState :: Msg -> PubState -> Except String PubState
-updatePubState msg pubState = pure pubState
+updatePubState msg pubState = case msg of
+  MsgSetStartLayer startLayer -> pubState
+    # set (prop @"startLayer") startLayer
+    # pure
 
-data Msg = Msg1 | Msg2 | Msg3
+  MsgSetEndLayer endLayer -> pubState
+    # set (prop @"endLayer") endLayer
+    # pure
+
+  MsgSetGcodeLines { value, status } -> pubState
+    # set (prop @"gcodeLines" <<< prop @"status") status
+    # case value of
+        Just value -> set (prop @"gcodeLines" <<< prop @"value") value
+        Nothing -> identity
+    # pure
+
+data Msg
+  = MsgSetStartLayer Int
+  | MsgSetEndLayer Int
+  | MsgSetGcodeLines { value :: Maybe (Array String), status :: RemoteDataStatus }
 
 runSafe :: ExceptT Err Aff Unit -> Effect Unit
 runSafe act = launchAff_ do
@@ -39,25 +60,29 @@ runSafe act = launchAff_ do
 
 dispatchers :: DispatcherApi Msg PubState {} -> _
 dispatchers { emitMsg, readPubState } =
-  { disp1: emitMsg Msg1
-  , disp2: emitMsg Msg2
-  , disp3: emitMsg Msg3
-  , disp4: runSafe disp4
+  { setStartLayer: emitMsg <<< MsgSetStartLayer
+  , setEndLayer: emitMsg <<< MsgSetEndLayer
+  , loadGcodeLines: runSafe <<< loadGcodeLines
   }
   where
-  disp4 :: ExceptT Err Aff Unit
-  disp4 = do
-    liftAff $ delay (Milliseconds 1000.0)
-    st <- liftEffect $ readPubState
-    liftEffect $ emitMsg Msg1
+  loadGcodeLines :: { url :: String } -> ExceptT Err Aff Unit
+  loadGcodeLines { url } = flip catchError
+    ( \e ->
+        liftEffect $ emitMsg $ MsgSetGcodeLines { value: Nothing, status: Error { message: Err.printErr e } }
+    )
+    do
+      st <- liftEffect $ readPubState
 
-    liftAff $ delay (Milliseconds 1000.0)
-    liftEffect $ emitMsg Msg2
+      when (st.gcodeLines.status == Loading) $ do
+        throwError (mkErr Err.ErrX "Gcode lines are already loading")
 
-    liftAff $ delay (Milliseconds 1000.0)
-    liftEffect $ emitMsg Msg3
+      liftEffect $ emitMsg $ MsgSetGcodeLines { value: Nothing, status: Loading }
 
-    pure unit
+      ret <- Api.getGCodeFile url
+
+      let lines = Str.split (Str.Pattern "\n") ret
+
+      liftEffect $ emitMsg $ MsgSetGcodeLines { value: Just lines, status: Loaded }
 
 tsApi :: TsApi PubState (MkAppState PubState {}) _
 tsApi = mkTsApi
@@ -67,6 +92,8 @@ tsApi = mkTsApi
   , initPrivState: {}
   , printError: identity
   }
+
+-----
 
 moduleName :: String
 moduleName = "GCodeViewer.StateMachine"
