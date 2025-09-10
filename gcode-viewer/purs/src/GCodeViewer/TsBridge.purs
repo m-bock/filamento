@@ -8,6 +8,7 @@ import Data.Function.Uncurried (Fn2, Fn3, Fn4)
 import Data.Maybe (Maybe)
 import Data.Symbol (class IsSymbol)
 import Effect (Effect)
+import Effect.Uncurried (EffectFn1)
 import TsBridge as TSB
 import Type.Proxy (Proxy)
 
@@ -60,3 +61,6 @@ instance (TSB.TsBridgeRecord Tok r) => TsBridge (Record r) where
 
 instance IsSymbol sym => TsBridge (TSB.TypeVar sym) where
   tsBridge = TSB.tsBridgeTypeVar
+
+instance (TsBridge a, TsBridge b) => TsBridge (EffectFn1 a b) where
+  tsBridge = TSB.tsBridgeEffectFn1 Tok

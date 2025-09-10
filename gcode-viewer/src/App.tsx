@@ -124,11 +124,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     dispatch.loadGcodeLines({ url: "/out/001.gcode" });
+
   }, []);
 
   return (
     <div>
       {state.gcodeLines.value.length}
+      <button onClick={() => dispatch.loadGcodeLines({ url: "/out/001.gcode" })}>Load Gcode</button>
       <br />
       {onRemoteDataStatus({
         notAsked: "Not Asked",

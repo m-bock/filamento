@@ -5,26 +5,33 @@ type TsStateHandle<state> = {
   readState: () => state;
 };
 
-type FullState<pubState, privState> = {
+type FullState<msg, pubState, privState> = {
   pubState: pubState;
   privState: privState;
+  history: { msg: msg; pubState: pubState }[];
+  historyIndex: number;
 };
 
-type TsApi<pubState, privState, disp> = {
+type TsApi<msg, pubState, privState, disp> = {
   readonly dispatchers: (
-    state: TsStateHandle<FullState<pubState, privState>>
+    state: TsStateHandle<FullState<msg, pubState, privState>>
   ) => disp;
-  readonly initState: FullState<pubState, privState>;
+  readonly initState: FullState<msg, pubState, privState>;
 };
 
-export const useStateMachine = <pubState, privState, disp>(
-  tsApi: TsApi<pubState, privState, disp>
+export const useStateMachine = <msg, pubState, privState, disp>(
+  tsApi: TsApi<msg, pubState, privState, disp>
 ): [pubState, disp] => {
-  const [st, setSt] = useState<FullState<pubState, privState>>(tsApi.initState);
+  const [st, setSt] = useState<FullState<msg, pubState, privState>>(
+    tsApi.initState
+  );
 
-  const tsStateHandle: TsStateHandle<FullState<pubState, privState>> = {
+  const tsStateHandle: TsStateHandle<FullState<msg, pubState, privState>> = {
     updateState: (stateFn) => () => setSt((st) => stateFn(st)()),
-    readState: () => st,
+    readState: () => {
+      console.log("readState", st);
+      return st;
+    },
   };
 
   const dispatchers: disp = tsApi.dispatchers(tsStateHandle);
