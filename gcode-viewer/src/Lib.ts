@@ -5,25 +5,31 @@ type TsStateHandle<state> = {
   readState: () => state;
 };
 
-type TsApi<pubState, state, disp> = {
-  readonly dispatchers: (state: TsStateHandle<state>) => disp;
-  readonly initState: state;
-  readonly getPubState: (state: state) => pubState;
+type FullState<pubState, privState> = {
+  pubState: pubState;
+  privState: privState;
 };
 
-export const useStateMachine = <pubState, state, disp>(
-  tsApi: TsApi<pubState, state, disp>
-): [pubState, disp] => {
-  const [st, setSt] = useState<state>(tsApi.initState);
+type TsApi<pubState, privState, disp> = {
+  readonly dispatchers: (
+    state: TsStateHandle<FullState<pubState, privState>>
+  ) => disp;
+  readonly initState: FullState<pubState, privState>;
+};
 
-  const tsStateHandle: TsStateHandle<state> = {
+export const useStateMachine = <pubState, privState, disp>(
+  tsApi: TsApi<pubState, privState, disp>
+): [pubState, disp] => {
+  const [st, setSt] = useState<FullState<pubState, privState>>(tsApi.initState);
+
+  const tsStateHandle: TsStateHandle<FullState<pubState, privState>> = {
     updateState: (stateFn) => () => setSt((st) => stateFn(st)()),
     readState: () => st,
   };
 
   const dispatchers: disp = tsApi.dispatchers(tsStateHandle);
 
-  const pubState: pubState = tsApi.getPubState(st);
+  const pubState: pubState = st.pubState;
 
   return [pubState, dispatchers];
 };

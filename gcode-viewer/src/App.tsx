@@ -4,6 +4,7 @@ import './style.css';
 import { Slider } from './Slider';
 import * as Purs from "../purs/output/GCodeViewer.StateMachine"
 import { useStateMachine } from './Lib';
+import { onRemoteDataStatus } from '../purs/output/GCodeViewer.RemoteData';
 
 interface IndexFileItem {
   name: string;
@@ -121,12 +122,21 @@ const App: React.FC = () => {
 
   const [state, dispatch] = useStateMachine(Purs.tsApi)
 
-  return <div>
-    <br />
+  useEffect(() => {
+    dispatch.loadGcodeLines({ url: "/out/001.gcode" });
+  }, []);
 
-    <button onClick={() => dispatch.loadGcodeLines({ url: "" })}>Fetch Index File</button>
-
-  </div>
+  return (
+    <div>
+      {state.gcodeLines.value.length}
+      <br />
+      {onRemoteDataStatus({
+        notAsked: "Not Asked",
+        loading: "Loading",
+        loaded: "Loaded",
+        error: (err) => "Error: " + err.message
+      })(state.gcodeLines.status)}
+    </div>)
 };
 
 export default App;

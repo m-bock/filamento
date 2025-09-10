@@ -5,6 +5,7 @@ import Prelude
 import DTS as DTS
 import GCodeViewer.Prelude (Either)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
+import TsBridge (TypeVar)
 import TsBridge as TSB
 
 type RemoteData a =
@@ -64,7 +65,6 @@ tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
 tsExports = TSB.tsModuleFile moduleName
   [ TSB.tsValues Tok
       { mkRemoteDataStatus
-      , onRemoteDataStatus: onRemoteDataStatus @String
+      , onRemoteDataStatus: onRemoteDataStatus @(TypeVar "Z")
       }
-  --, tsTypeAlias Tok "AppState" (Proxy :: _ AppState)
   ]

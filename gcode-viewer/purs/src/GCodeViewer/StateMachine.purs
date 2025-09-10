@@ -5,18 +5,16 @@ import GCodeViewer.Prelude
 import Control.Monad.Error.Class (catchError)
 import DTS as DTS
 import Data.Lens (set)
-import Data.Lens.Iso.Newtype (unto)
 import Data.Newtype (class Newtype)
 import Data.String as Str
 import GCodeViewer.Api as Api
 import GCodeViewer.Error (Err, mkErr, printErr)
 import GCodeViewer.Error as Err
-import GCodeViewer.Lib (DispatcherApi, MkAppState, TsApi, mkTsApi)
+import GCodeViewer.Lib (DispatcherApi, TsApi, mkTsApi)
 import GCodeViewer.RemoteData (RemoteData, RemoteDataStatus(..))
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
 import Safe.Coerce (coerce)
 import TsBridge as TSB
-import Unsafe.Coerce (unsafeCoerce)
 
 type PubState =
   { gcodeLines :: RemoteData (Array String)
@@ -79,6 +77,8 @@ dispatchers { emitMsg, readPubState } =
         liftEffect $ emitMsg $ MsgSetGcodeLines { value: Nothing, status: Error { message: Err.printErr e } }
     )
     do
+      log "loadGcodeLines"
+
       st <- liftEffect $ readPubState
 
       when (st.gcodeLines.status == Loading) $ do
