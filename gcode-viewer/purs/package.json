@@ -1,11 +1,16 @@
 {
   "name": "purs",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "directories": {
     "test": "test"
   },
+  "exports": {
+    "ts": "./output/GCodeViewer.StateMachine.d.ts"
+  },
+  "files": [
+    "output"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,6 +21,8 @@
     "prettier": "^3.6.2",
     "purescript": "^0.15.15",
     "purs-tidy": "^0.11.0",
-    "spago": "^0.93.44"
-  }
+    "spago": "^0.93.44",
+    "typedoc": "^0.28.12"
+  },
+  "description": ""
 }

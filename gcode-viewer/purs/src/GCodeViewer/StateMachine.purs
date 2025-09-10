@@ -14,7 +14,9 @@ import GCodeViewer.Error as Err
 import GCodeViewer.Lib (DispatcherApi, MkAppState, TsApi, mkTsApi)
 import GCodeViewer.RemoteData (RemoteData, RemoteDataStatus(..))
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
+import Safe.Coerce (coerce)
 import TsBridge as TSB
+import Unsafe.Coerce (unsafeCoerce)
 
 type PubState =
   { gcodeLines :: RemoteData (Array String)
@@ -58,7 +60,13 @@ runSafe act = launchAff_ do
     Left err -> log (printErr err)
     Right _ -> pure unit
 
-dispatchers :: DispatcherApi Msg PubState {} -> _
+type Dispatchers =
+  { setStartLayer :: Int -> Effect Unit
+  , setEndLayer :: Int -> Effect Unit
+  , loadGcodeLines :: { url :: String } -> Effect Unit
+  }
+
+dispatchers :: DispatcherApi Msg PubState {} -> Dispatchers
 dispatchers { emitMsg, readPubState } =
   { setStartLayer: emitMsg <<< MsgSetStartLayer
   , setEndLayer: emitMsg <<< MsgSetEndLayer
@@ -84,7 +92,7 @@ dispatchers { emitMsg, readPubState } =
 
       liftEffect $ emitMsg $ MsgSetGcodeLines { value: Just lines, status: Loaded }
 
-tsApi :: TsApi PubState (MkAppState PubState {}) _
+tsApi :: TsApi PubState {} Dispatchers
 tsApi = mkTsApi
   { updatePubState: \msg s -> runExcept (updatePubState msg s)
   , dispatchers
@@ -92,6 +100,28 @@ tsApi = mkTsApi
   , initPrivState: {}
   , printError: identity
   }
+
+newtype PubStateAlias = PubStateAlias PubState
+
+derive instance Newtype (PubStateAlias) _
+
+instance TsBridge (PubStateAlias) where
+  tsBridge = TSB.tsBridgeNewtype Tok
+    { moduleName
+    , typeName: "PubState"
+    , typeArgs: []
+    }
+
+newtype DispatchersAlias = DispatchersAlias Dispatchers
+
+derive instance Newtype (DispatchersAlias) _
+
+instance TsBridge (DispatchersAlias) where
+  tsBridge = TSB.tsBridgeNewtype Tok
+    { moduleName
+    , typeName: "Dispatchers"
+    , typeArgs: []
+    }
 
 -----
 
@@ -101,6 +131,6 @@ moduleName = "GCodeViewer.StateMachine"
 tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
 tsExports = TSB.tsModuleFile moduleName
   [ TSB.tsValues Tok
-      { tsApi
+      { tsApi: coerce tsApi :: TsApi PubStateAlias {} DispatchersAlias
       }
   ]

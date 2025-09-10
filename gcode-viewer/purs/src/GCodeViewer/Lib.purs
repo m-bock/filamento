@@ -52,10 +52,10 @@ type TsStateHandle state =
   , readState :: Effect state
   }
 
-newtype TsApi pubState state disp = TsApi
-  { dispatchers :: TsStateHandle state -> disp
-  , initState :: state
-  , getPubState :: state -> pubState
+newtype TsApi pubState privState disp = TsApi
+  { dispatchers :: TsStateHandle (MkAppState pubState privState) -> disp
+  , initState :: MkAppState pubState privState
+  , getPubState :: MkAppState pubState privState -> pubState
   }
 
 derive instance Newtype (TsApi pubState state disp) _
@@ -71,7 +71,7 @@ instance (TsBridge pubState, TsBridge state, TsBridge disp) => TsBridge (TsApi p
         ]
     }
 
-mkTsApi :: forall msg pubState privState err disp. PursConfig msg pubState privState err disp -> TsApi pubState (MkAppState pubState privState) disp
+mkTsApi :: forall msg pubState privState err disp. PursConfig msg pubState privState err disp -> TsApi pubState privState disp
 mkTsApi { initPubState, initPrivState, dispatchers, updatePubState } =
   TsApi
     { dispatchers: f >>> dispatchers
