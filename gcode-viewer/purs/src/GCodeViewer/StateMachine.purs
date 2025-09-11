@@ -1,32 +1,32 @@
-module GCodeViewer.StateMachine where
+module GCodeViewer.StateMachine
+  ( PubState
+  , Msg
+  , Dispatchers
+  , tsApi
+  , tsExports
+  ) where
 
 import GCodeViewer.Prelude
 
-import Control.Alt ((<|>))
 import Control.Monad.Error.Class (catchError)
 import DTS as DTS
-import Data.Argonaut.Core (Json)
-import Data.Argonaut.Encode.Class (encodeJson)
 import Data.Codec (encode)
-import Data.Codec.Argonaut (JsonCodec, JsonDecodeError)
+import Data.Codec.Argonaut (JsonCodec)
 import Data.Codec.Argonaut as CA
-import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.Lens (set)
 import Data.Newtype (class Newtype)
 import Data.String as Str
-import Effect.Aff (launchAff)
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
 import GCodeViewer.Api as Api
-import GCodeViewer.CodecExtra as CE
 import GCodeViewer.Error (Err, mkErr, printErr)
 import GCodeViewer.Error as Err
-import GCodeViewer.Lib (DispatcherApi, TsApi, logJson, mkTsApi)
+import GCodeViewer.Lib (DispatcherApi, TsApi, mkTsApi)
 import GCodeViewer.RemoteData (RemoteData, RemoteDataStatus(..), codecRemoteData, codecRemoteDataStatus)
+import GCodeViewer.TagName (class TagName)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
 import Safe.Coerce (coerce)
 import TsBridge as TSB
-import Unsafe.Coerce (unsafeCoerce)
 
 type PubState =
   { gcodeLines :: RemoteData (Array String)
@@ -41,78 +41,98 @@ initPubState =
   , endLayer: 0
   }
 
+data Msg
+  = MsgSetStartLayer Int
+  | MsgSetEndLayer Int
+  | MsgSetGcodeLines (Array String)
+  | MsgSetGcodeLinesStatus RemoteDataStatus
+
 updatePubState :: Msg -> PubState -> Except String PubState
 updatePubState msg pubState = case msg of
   MsgSetStartLayer startLayer -> pubState
-    # set (prop @"startLayer") startLayer.layer
+    # set (prop @"startLayer") startLayer
     # pure
 
   MsgSetEndLayer endLayer -> pubState
-    # set (prop @"endLayer") endLayer.layer
+    # set (prop @"endLayer") endLayer
     # pure
 
-  MsgSetGcodeLines { value, status } -> pubState
+  MsgSetGcodeLines value -> pubState
+    # set (prop @"gcodeLines" <<< prop @"value") value
+    # pure
+
+  MsgSetGcodeLinesStatus status -> pubState
     # set (prop @"gcodeLines" <<< prop @"status") status
-    # case value of
-        Just value -> set (prop @"gcodeLines" <<< prop @"value") value
-        Nothing -> identity
     # pure
 
-data Msg
-  = MsgSetStartLayer { layer :: Int }
-  | MsgSetEndLayer { layer :: Int }
-  | MsgSetGcodeLines { value :: Maybe (Array String), status :: RemoteDataStatus }
-
-runSafe :: ExceptT Err Aff Unit -> Effect Unit
-runSafe act = launchAff_ do
-  result <- runExceptT act
-  case result of
-    Left err -> log (printErr err)
-    Right _ -> pure unit
+instance TagName Msg where
+  tagName = case _ of
+    MsgSetStartLayer r ->
+      { tag: "MsgSetStartLayer"
+      , args: CA.encode CA.int r
+      }
+    MsgSetEndLayer r ->
+      { tag: "MsgSetEndLayer"
+      , args: CA.encode CA.int r
+      }
+    MsgSetGcodeLines r ->
+      { tag: "MsgSetGcodeLines"
+      , args: CA.encode (CA.array CA.string) r
+      }
+    MsgSetGcodeLinesStatus r ->
+      { tag: "MsgSetGcodeLinesStatus"
+      , args: CA.encode codecRemoteDataStatus r
+      }
 
 type Dispatchers =
-  { setStartLayer :: { layer :: Int } -> Effect Unit
-  , setEndLayer :: { layer :: Int } -> Effect Unit
-  , loadGcodeLines :: EffectFn1 { url :: String } Unit
+  { emitSetStartLayer :: EffectFn1 Int Unit
+  , emitSetEndLayer :: EffectFn1 Int Unit
+  , runLoadGcodeLines :: EffectFn1 { url :: String } Unit
   }
 
-run :: forall a. (a -> ExceptT Err Aff Unit) -> EffectFn1 a Unit
-run f = mkEffectFn1 \arg -> launchAff_ do
-  result <- runExceptT $ f arg
-  case result of
-    Left err -> log (printErr err)
-    Right _ -> pure unit
-
 dispatchers :: DispatcherApi Msg PubState {} -> Dispatchers
-dispatchers { emitMsg, readPubState } =
-  { setStartLayer: emitMsg <<< MsgSetStartLayer
-  , setEndLayer: emitMsg <<< MsgSetEndLayer
-  , loadGcodeLines: run loadGcodeLines
+dispatchers { emitMsg, emitMsgCtx, readPubState } =
+  { emitSetStartLayer: emit MsgSetStartLayer
+  , emitSetEndLayer: emit MsgSetEndLayer
+  , runLoadGcodeLines: run loadGcodeLines
   }
   where
   loadGcodeLines :: { url :: String } -> ExceptT Err Aff Unit
-  loadGcodeLines { url } = flip catchError
-    ( \e ->
-        --liftEffect $ emitMsg $ MsgSetGcodeLines { value: Nothing, status: Error { message: Err.printErr e } }
-        log $ Err.printErr e
-    )
-    do
-      log "loadGcodeLines"
+  loadGcodeLines { url } =
+    let
+      emitMsg' = liftEffect <<< emitMsgCtx "loadGcodeLines"
+    in
+      ( do
+          st <- liftEffect $ readPubState
 
-      st <- liftEffect $ readPubState
+          when (st.gcodeLines.status == Loading) $ do
+            throwError (mkErr Err.Err6 "Gcode lines are already loading")
 
-      when (st.gcodeLines.status == Loading) $ do
-        throwError (mkErr Err.ErrX "Gcode lines are already loading")
+          emitMsg' $ MsgSetGcodeLinesStatus Loading
+          ret <- Api.getGCodeFile url
 
-      liftEffect $ emitMsg $ MsgSetGcodeLines { value: Nothing, status: Loading }
+          let lines = Str.split (Str.Pattern "\n") ret
+          emitMsg' $ MsgSetGcodeLines lines
+          emitMsg' $ MsgSetGcodeLinesStatus Loaded
+      )
+        `catchError`
+          ( \e -> do
+              log $ Err.printErr e
 
-      ret <- Api.getGCodeFile url
+              case e.code of
+                Err.Err6 -> pure unit
+                _ -> emitMsg' $ MsgSetGcodeLinesStatus (Error { message: printErr e })
+          )
 
-      liftAff $ delay (Milliseconds 5000.0)
+  emit :: forall a. (a -> Msg) -> EffectFn1 a Unit
+  emit f = mkEffectFn1 \arg -> emitMsg (f arg)
 
-      let lines = Str.split (Str.Pattern "\n") ret
-
-      liftEffect $ emitMsg $ MsgSetGcodeLines { value: Just lines, status: Loaded }
+  run :: forall a. (a -> ExceptT Err Aff Unit) -> EffectFn1 a Unit
+  run f = mkEffectFn1 \arg -> launchAff_ do
+    result <- runExceptT $ f arg
+    case result of
+      Left err -> log (printErr err)
+      Right _ -> pure unit
 
 tsApi :: TsApi Msg PubState {} Dispatchers
 tsApi = mkTsApi
@@ -122,25 +142,7 @@ tsApi = mkTsApi
   , initPrivState: {}
   , printError: identity
   , encodeJsonPubState: encode codecPubState
-  , encodeJsonMsg: encode codecMsg
   }
-
-codecMsg :: JsonCodec Msg
-codecMsg = CA.codec' dec enc
-  where
-  dec :: Json -> Either JsonDecodeError Msg
-  dec j = CE.decTagWithArgs "MsgSetStartLayer" MsgSetStartLayer (CAR.object "MsgSetStartLayer" { layer: CA.int }) j
-    <|> CE.decTagWithArgs "MsgSetEndLayer" MsgSetEndLayer (CAR.object "MsgSetEndLayer" { layer: CA.int }) j
-    <|> CE.decTagWithArgs "MsgSetGcodeLines" MsgSetGcodeLines (CAR.object "MsgSetGcodeLines" { value: CAC.maybe (CA.array CA.string), status: codecRemoteDataStatus }) j
-
-  enc :: Msg -> Json
-  enc = case _ of
-    MsgSetStartLayer startLayer ->
-      CE.encTagWithArgs "MsgSetStartLayer" (CAR.object "MsgSetStartLayer" { layer: CA.int }) startLayer
-    MsgSetEndLayer endLayer ->
-      CE.encTagWithArgs "MsgSetEndLayer" (CAR.object "MsgSetEndLayer" { layer: CA.int }) endLayer
-    MsgSetGcodeLines r ->
-      CE.encTagWithArgs "MsgSetGcodeLines" (CAR.object "MsgSetGcodeLines" { value: CAC.maybe (CA.array CA.string), status: codecRemoteDataStatus }) r
 
 codecPubState :: JsonCodec PubState
 codecPubState = CAR.object "PubState"
@@ -154,29 +156,17 @@ newtype PubStateAlias = PubStateAlias PubState
 derive instance Newtype (PubStateAlias) _
 
 instance TsBridge (PubStateAlias) where
-  tsBridge = TSB.tsBridgeNewtype Tok
-    { moduleName
-    , typeName: "PubState"
-    , typeArgs: []
-    }
+  tsBridge = TSB.tsBridgeNewtype0 Tok { moduleName, typeName: "PubState" }
 
 newtype DispatchersAlias = DispatchersAlias Dispatchers
 
 derive instance Newtype (DispatchersAlias) _
 
 instance TsBridge (DispatchersAlias) where
-  tsBridge = TSB.tsBridgeNewtype Tok
-    { moduleName
-    , typeName: "Dispatchers"
-    , typeArgs: []
-    }
+  tsBridge = TSB.tsBridgeNewtype0 Tok { moduleName, typeName: "Dispatchers" }
 
 instance TsBridge Msg where
-  tsBridge = TSB.tsBridgeOpaqueType
-    { moduleName
-    , typeName: "Msg"
-    , typeArgs: []
-    }
+  tsBridge = TSB.tsBridgeOpaqueType { moduleName, typeName: "Msg", typeArgs: [] }
 
 -----
 

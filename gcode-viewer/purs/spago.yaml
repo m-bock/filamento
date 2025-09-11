@@ -15,4 +15,6 @@ package:
 workspace:
   packageSet:
     registry: 66.4.0
-  extraPackages: {}
+  extraPackages:
+    ts-bridge:
+      path: ../../../purescript-ts-bridge

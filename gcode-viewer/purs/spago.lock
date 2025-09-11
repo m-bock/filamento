@@ -664,7 +664,11 @@
         "zipperarray": "2.0.0"
       }
     },
-    "extra_packages": {}
+    "extra_packages": {
+      "ts-bridge": {
+        "path": "../../../purescript-ts-bridge"
+      }
+    }
   },
   "packages": {
     "aff": {
@@ -1616,9 +1620,8 @@
       ]
     },
     "ts-bridge": {
-      "type": "registry",
-      "version": "4.0.0",
-      "integrity": "sha256-wn41rslFlNyorT/fnkuKwyi2PTYQt/3PAyWCi/FdLvg=",
+      "type": "local",
+      "path": "../../../purescript-ts-bridge",
       "dependencies": [
         "aff",
         "aff-promise",

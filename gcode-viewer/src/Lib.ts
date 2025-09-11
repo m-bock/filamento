@@ -29,7 +29,6 @@ export const useStateMachine = <msg, pubState, privState, disp>(
   const tsStateHandle: TsStateHandle<FullState<msg, pubState, privState>> = {
     updateState: (stateFn) => () => setSt((st) => stateFn(st)()),
     readState: () => {
-      console.log("readState", st);
       return st;
     },
   };

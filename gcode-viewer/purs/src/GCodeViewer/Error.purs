@@ -16,7 +16,7 @@ data ErrCode
   | Err3
   | Err4
   | Err5
-  | XErr6
+  | Err6
   | XErr7
   | XErr8
   | XErr9

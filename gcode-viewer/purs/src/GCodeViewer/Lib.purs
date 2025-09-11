@@ -1,5 +1,5 @@
 module GCodeViewer.Lib
-  ( FullState
+  ( FullState(..)
   , mkTsApi
   , DispatcherApi
   , TsApi(..)
@@ -13,23 +13,19 @@ import GCodeViewer.Prelude
 import DTS as DTS
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Encode (encodeJson)
-import Data.Either (Either(..))
 import Data.Lens (over, set)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (maybe)
 import Data.Newtype (class Newtype)
 import Data.Tuple.Nested ((/\))
-import Effect (Effect)
-import Effect.Class.Console (log)
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
+import GCodeViewer.TagName (class TagName, tagName)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..), tsBridge)
-import TsBridge (TypeVar)
 import TsBridge as TSB
 import Type.Prelude (Proxy(..))
-import Web.DOM.Document (doctype)
 
 -- Public state
 
-type FullState msg pubState privState =
+newtype FullState msg pubState privState = FullState
   { pubState :: pubState
   , privState :: privState
   , history :: Array { msg :: msg, pubState :: pubState }
@@ -38,6 +34,7 @@ type FullState msg pubState privState =
 
 type DispatcherApi msg pubState privState =
   { emitMsg :: msg -> Effect Unit
+  , emitMsgCtx :: String -> msg -> Effect Unit
   , readPubState :: Effect pubState
   , readPrivState :: Effect privState
   , updatePrivState :: (privState -> privState) -> Effect Unit
@@ -52,7 +49,6 @@ type PursConfig msg pubState privState err disp =
   , initPubState :: pubState
   , initPrivState :: privState
   , encodeJsonPubState :: pubState -> Json
-  , encodeJsonMsg :: msg -> Json
   }
 
 type TsStateHandle state =
@@ -68,60 +64,77 @@ newtype TsApi msg pubState privState disp = TsApi
 
 derive instance Newtype (TsApi msg pubState state disp) _
 
-instance (TsBridge pubState, TsBridge privState, TsBridge disp, TsBridge msg) => TsBridge (TsApi msg pubState privState disp) where
-  tsBridge = TSB.tsBridgeNewtype Tok
+instance
+  ( TsBridge pubState
+  , TsBridge privState
+  , TsBridge disp
+  , TsBridge msg
+  ) =>
+  TsBridge (TsApi msg pubState privState disp) where
+  tsBridge = TSB.tsBridgeNewtype4 @"msg" @"pubState" @"privState" @"disp" Tok { moduleName, typeName: "TsApi" }
+
+derive instance Newtype (FullState msg pubState privState) _
+
+instance
+  ( TsBridge msg
+  , TsBridge pubState
+  , TsBridge privState
+  ) =>
+  TsBridge (FullState msg pubState privState) where
+  tsBridge = TSB.tsBridgeNewtype2 @"msg" @"pubState" Tok
     { moduleName
-    , typeName: "TsApi"
-    , typeArgs:
-        [ "msg" /\ tsBridge (Proxy :: _ msg)
-        , "pubState" /\ tsBridge (Proxy :: _ pubState)
-        , "privState" /\ tsBridge (Proxy :: _ privState)
-        , "disp" /\ tsBridge (Proxy :: _ disp)
-        ]
+    , typeName: "FullState"
     }
 
-mkTsApi :: forall msg pubState privState err disp. PursConfig msg pubState privState err disp -> TsApi msg pubState privState disp
-mkTsApi { initPubState, initPrivState, dispatchers, updatePubState, encodeJsonPubState, encodeJsonMsg } =
+mkTsApi :: forall msg pubState privState err disp. TagName msg => PursConfig msg pubState privState err disp -> TsApi msg pubState privState disp
+mkTsApi { initPubState, initPrivState, dispatchers, updatePubState, encodeJsonPubState } =
   TsApi
     { dispatchers: f >>> dispatchers
-    , initState: { history: [], historyIndex: 0.0, pubState: initPubState, privState: initPrivState }
+    , initState: FullState { history: [], historyIndex: 0.0, pubState: initPubState, privState: initPrivState }
     , timeTravel: mkEffectFn1 \n -> pure unit
     }
   where
   f :: TsStateHandle (FullState msg pubState privState) -> DispatcherApi msg pubState privState
   f ts =
-    { emitMsg: \msg -> ts.updateState
-        ( \state -> case updatePubState msg state.pubState of
-            Left err -> do
-              log err
-              pure state
-            Right newState -> do
-              logJson
-                [ encodeJson "msg"
-                , encodeJsonMsg msg
-                ]
-
-              logJson
-                [ encodeJson "newState"
-                , encodeJsonPubState newState
-                ]
-
-              pure
-                ( state
-                    # set (prop @"pubState") newState
-                    # set (prop @"historyIndex") (state.historyIndex + 1.0)
-                    # over (prop @"history") (\xs -> xs <> [ { msg, pubState: newState } ])
-                )
-        )
+    { emitMsg: emitMsg Nothing
+    , emitMsgCtx: \ctx -> emitMsg (Just ctx)
     , readPubState: do
-        st <- ts.readState
+        FullState st <- ts.readState
         pure st.pubState
     , readPrivState: do
-        st <- ts.readState
+        FullState st <- ts.readState
         pure st.privState
     , updatePrivState: \f ->
-        ts.updateState (\(state) -> pure (state { privState = f state.privState }))
+        ts.updateState (\(FullState state) -> pure (FullState state { privState = f state.privState }))
     }
+    where
+    emitMsg :: Maybe String -> msg -> Effect Unit
+    emitMsg mayCtx msg = ts.updateState
+      ( \(FullState state) -> case updatePubState msg state.pubState of
+          Left err -> do
+            log err
+            pure (FullState state)
+          Right newState -> do
+            let { tag, args } = tagName msg
+
+            logJson
+              ( [ encodeJson ("%c" <> tag)
+                , encodeJson "color: white; background: #cc8a21; padding: 2px 4px;"
+                ] <> (maybe [] (\v -> [ encodeJson ("@" <> v) ]) mayCtx) <>
+                  [ args
+                  , encodeJson "\nnewState"
+                  , encodeJsonPubState newState
+                  ]
+              )
+
+            pure
+              ( state
+                  # set (prop @"pubState") newState
+                  # set (prop @"historyIndex") (state.historyIndex + 1.0)
+                  # over (prop @"history") (\xs -> xs <> [ { msg, pubState: newState } ])
+                  # FullState
+              )
+      )
 
 ---
 
@@ -133,7 +146,6 @@ tsExports = TSB.tsModuleFile moduleName
   [ TSB.tsValues Tok
       {
       }
-  --, TSB.tsTypeAlias Tok "TsApi" (Proxy :: _ (TsApi (TypeVar "A") (TypeVar "B") (TypeVar "C")))
   ]
 
 foreign import logJson :: Array Json -> Effect Unit
