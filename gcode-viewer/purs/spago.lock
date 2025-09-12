@@ -19,7 +19,9 @@
           "dependencies": [
             "affjax-web",
             "codec-argonaut",
+            "heterogeneous",
             "profunctor-lenses",
+            "record",
             "ts-bridge"
           ],
           "build_plan": [
@@ -55,6 +57,7 @@
             "functions",
             "functors",
             "gen",
+            "heterogeneous",
             "http-methods",
             "identity",
             "integers",
@@ -1117,6 +1120,20 @@
         "tailrec",
         "tuples",
         "unfoldable"
+      ]
+    },
+    "heterogeneous": {
+      "type": "registry",
+      "version": "0.7.0",
+      "integrity": "sha256-GwpFqhE6nT2brsMbGBqeCEtkdeU9qLgBk8L1YHI+f2A=",
+      "dependencies": [
+        "either",
+        "foldable-traversable",
+        "functors",
+        "prelude",
+        "record",
+        "tuples",
+        "variant"
       ]
     },
     "http-methods": {

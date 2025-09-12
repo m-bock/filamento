@@ -15,6 +15,7 @@ import Data.Codec.Argonaut.Record as CAR
 import GCodeViewer.CodecExtra as CE
 import GCodeViewer.Prelude (class Generic, Either)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
+import Stadium.TL (mkConstructors)
 import TsBridge (TypeVar)
 import TsBridge as TSB
 import Unsafe.Coerce (unsafeCoerce)
@@ -58,17 +59,12 @@ derive instance Eq RemoteDataStatus
 derive instance Generic RemoteDataStatus _
 
 mkRemoteDataStatus
-  :: { notAsked :: RemoteDataStatus
-     , loading :: RemoteDataStatus
-     , loaded :: RemoteDataStatus
-     , error :: { message :: String } -> RemoteDataStatus
+  :: { "NotAsked" :: RemoteDataStatus
+     , "Loading" :: RemoteDataStatus
+     , "Loaded" :: RemoteDataStatus
+     , "Error" :: { message :: String } -> RemoteDataStatus
      }
-mkRemoteDataStatus =
-  { notAsked: NotAsked
-  , loading: Loading
-  , loaded: Loaded
-  , error: Error
-  }
+mkRemoteDataStatus = mkConstructors @RemoteDataStatus
 
 onRemoteDataStatus
   :: forall @z

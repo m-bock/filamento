@@ -11,6 +11,8 @@ package:
       - codec-argonaut
       - affjax-web
       - profunctor-lenses
+      - record
+      - heterogeneous
 
 workspace:
   packageSet:
