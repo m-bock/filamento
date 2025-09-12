@@ -9,7 +9,7 @@ import DTS as DTS
 import GCodeViewer.StateMachines.App as GCodeViewer.StateMachines.App
 import GCodeViewer.StateMachines.Viewer as GCodeViewer.StateMachines.Viewer
 import GCodeViewer.RemoteData as GCodeViewer.RemoteData
-import Data.Int as Int
+import Extra.Data.Int as Extra.Data.Int
 
 myTsProgram :: Either TSB.AppError DTS.TsProgram
 myTsProgram =
@@ -17,11 +17,7 @@ myTsProgram =
     [ GCodeViewer.StateMachines.App.tsExports
     , GCodeViewer.StateMachines.Viewer.tsExports
     , GCodeViewer.RemoteData.tsExports
-    -- , TSB.tsModuleFile "Data.Int"
-    --     [ TSB.tsValues Tok
-    --         { 
-    --         }
-    --     ]
+    , Extra.Data.Int.tsExports
     ]
 
 main :: Effect Unit

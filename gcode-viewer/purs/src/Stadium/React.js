@@ -7,7 +7,7 @@ export const useStateMachine = (tsApi) => () => {
     updateState: (stateFn) => () =>
       setSt((ref) => {
         ref.state = stateFn(ref.state)();
-        return ref;
+        return { ...ref };
       }),
     readState: () => {
       return ref.state;

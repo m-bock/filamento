@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import * as GCodePreview from 'gcode-preview';
-import { useViewer } from "core/StateMachines/Viewer"
-import { onRemoteDataStatus } from 'core/RemoteData';
+import { useViewer } from "core/GCodeViewer/StateMachines/Viewer"
+import { onRemoteDataStatus } from 'core/GCodeViewer/RemoteData';
+import { trunc, toNumber } from "core/Data/Int";
+
 
 
 const App: React.FC = () => {
@@ -12,10 +14,19 @@ const App: React.FC = () => {
     dispatch.runLoadGcodeLines({ url: "/out/001.gcode" });
   }, []);
 
+  useEffect(() => {
+    console.log("render", state);
+  }, []);
+
   return (
     <div>
       <h1>Hello World</h1>
-      {/* <button onClick={() => dispatch.emitSetStartLayer(round(10))}>Load Gcode</button> */}
+      {toNumber(state.startLayer)}
+      <br />
+      {toNumber(state.endLayer)}
+      <br />
+      <button onClick={() => dispatch.emitSetStartLayer(trunc(10))}>set to 10</button>
+      <button onClick={() => dispatch.emitSetStartLayer(trunc(20))}>set to 20</button>
     </div>
   )
 
