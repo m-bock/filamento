@@ -68,18 +68,14 @@ mkRemoteDataStatus = mkConstructors @RemoteDataStatus
 
 onRemoteDataStatus
   :: forall @z
-   . { notAsked :: z
-     , loading :: z
-     , loaded :: z
-     , error :: { message :: String } -> z
+   . { "NotAsked" :: z
+     , "Loading" :: z
+     , "Loaded" :: z
+     , "Error" :: { message :: String } -> z
      }
   -> RemoteDataStatus
   -> z
-onRemoteDataStatus = \{ notAsked, loading, loaded, error } rd -> case rd of
-  NotAsked -> notAsked
-  Loading -> loading
-  Loaded -> loaded
-  Error err -> error err
+onRemoteDataStatus = mkMatcher @RemoteDataStatus
 
 ---
 
@@ -102,10 +98,3 @@ tsExports = TSB.tsModuleFile moduleName
   ]
 
 ---
-
-data D = Foo Int -- | Bar | Baz
-
-derive instance Generic D _
-
---onD :: forall a. { "Foo" :: a } -> D -> a
-onD = mkMatcher @D :: ?A

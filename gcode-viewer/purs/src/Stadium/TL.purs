@@ -2,7 +2,7 @@ module Stadium.TL where
 
 import Prelude
 
-import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Sum(..), to)
+import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Sum(..), from, to)
 import Heterogeneous.Mapping (class HMap, class Mapping, hmap)
 import Prim.Row as Row
 import Record as Record
@@ -117,31 +117,26 @@ class MkMatcher a r z | a -> r where
   mkMatcher :: Record r -> a -> z
 
 instance main7 :: (Generic a rep, MkMatcherRep rep r z) => MkMatcher a r z where
-  mkMatcher = unsafeCoerce ""
+  mkMatcher rec val = mkMatcherRep @_ @_ @z rec (from val)
 
 class MkMatcherRep :: Type -> Row Type -> Type -> Constraint
 class MkMatcherRep rep r z | rep -> r where
   mkMatcherRep :: Record r -> rep -> z
 
--- instance main834 :: MkMatcherRep (Sum a b) r where
---   mkMatcherRep rec val = ret
---     where
---     ret :: Int
---     ret = unsafeCoerce ""
-
---     y = case val of
---       Inl x -> 2
---       Inr x -> 1
-
---     x :: Sum a b -> Int
---     x = unsafeCoerce val
+instance (MkMatcherRep a r z, MkMatcherRep b r z) => MkMatcherRep (Sum a b) r z where
+  mkMatcherRep rec val = ret
+    where
+    ret :: z
+    ret = case val of
+      Inl x -> mkMatcherRep @_ @_ @z rec x
+      Inr x -> mkMatcherRep @_ @_ @z rec x
 
 instance main8 ::
-  ( Row.Cons sym z () r
+  ( Row.Cons sym z rx r
   , IsSymbol sym
   ) =>
   MkMatcherRep (Constructor sym NoArguments) r z where
-  mkMatcherRep rec val = ret
+  mkMatcherRep rec _ = ret
     where
     ret :: z
     ret = on
@@ -150,7 +145,7 @@ instance main8 ::
     on = Record.get (Proxy :: _ sym) rec
 
 instance
-  ( Row.Cons sym (arg -> z) () r
+  ( Row.Cons sym (arg -> z) rx r
   , IsSymbol sym
   ) =>
   MkMatcherRep (Constructor sym (Argument arg)) r z where
