@@ -15,7 +15,7 @@ import Data.Codec.Argonaut.Record as CAR
 import GCodeViewer.CodecExtra as CE
 import GCodeViewer.Prelude (class Generic, Either)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
-import Stadium.TL (mkConstructors)
+import Stadium.TL (mkConstructors, mkMatcher)
 import TsBridge (TypeVar)
 import TsBridge as TSB
 import Unsafe.Coerce (unsafeCoerce)
@@ -100,3 +100,12 @@ tsExports = TSB.tsModuleFile moduleName
       , onRemoteDataStatus: onRemoteDataStatus @(TypeVar "Z")
       }
   ]
+
+---
+
+data D = Foo Int -- | Bar | Baz
+
+derive instance Generic D _
+
+--onD :: forall a. { "Foo" :: a } -> D -> a
+onD = mkMatcher @D :: ?A

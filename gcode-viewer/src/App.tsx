@@ -15,7 +15,7 @@ const App: React.FC = () => {
   return (
     <div>
       <h1>Hello World</h1>
-      <button onClick={() => dispatch.emitSetStartLayer(round(10))}>Load Gcode</button>
+      {/* <button onClick={() => dispatch.emitSetStartLayer(round(10))}>Load Gcode</button> */}
     </div>
   )
 
