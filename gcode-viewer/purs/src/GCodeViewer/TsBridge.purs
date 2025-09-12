@@ -3,7 +3,6 @@ module GCodeViewer.TsBridge where
 import Prelude
 
 import DTS as DTS
-import Data.Either (Either)
 import Data.Function.Uncurried (Fn2, Fn3, Fn4)
 import Data.Maybe (Maybe)
 import Data.Symbol (class IsSymbol)

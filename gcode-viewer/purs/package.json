@@ -1,12 +1,14 @@
 {
-  "name": "purs",
+  "name": "core",
   "version": "1.0.0",
   "main": "index.js",
   "directories": {
     "test": "test"
   },
   "exports": {
-    "ts": "./output/GCodeViewer.StateMachine.d.ts"
+    "./RemoteData": "./output/GCodeViewer.RemoteData/index.d.ts",
+    "./StateMachines/App": "./output/GCodeViewer.StateMachines.App/index.d.ts",
+    "./StateMachines/Viewer": "./output/GCodeViewer.StateMachines.Viewer/index.d.ts"
   },
   "files": [
     "output"

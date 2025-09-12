@@ -1,3 +1,104 @@
-module GCodeViewer.StateMachines.App where
+module GCodeViewer.StateMachines.App
+  ( PubState
+  , Msg
+  , Dispatchers
+  , tsApi
+  , tsExports
+  ) where
 
-import Prelude
+import GCodeViewer.Prelude
+
+import DTS as DTS
+import Data.Argonaut.Core (Json)
+import Data.Codec (encode)
+import Data.Codec.Argonaut (JsonCodec)
+import Data.Codec.Argonaut as CA
+import Data.Codec.Argonaut.Record as CAR
+import Data.Newtype (class Newtype)
+import Effect.Uncurried (EffectFn1, mkEffectFn1)
+import GCodeViewer.Error (Err, printErr)
+import Stadium.Core (DispatcherApi, TsApi, mkTsApi)
+import GCodeViewer.TsBridge (class TsBridge, Tok(..))
+import TsBridge as TSB
+
+type PubState =
+  {}
+
+initPubState :: PubState
+initPubState =
+  {}
+
+data Msg = Msg1 Int
+
+updatePubState :: Msg -> PubState -> Except String PubState
+updatePubState msg pubState = case msg of
+  Msg1 r -> pure pubState
+
+encodeMsg :: Msg -> { tag :: String, args :: Json }
+encodeMsg = case _ of
+  Msg1 r ->
+    { tag: "Msg1"
+    , args: CA.encode CA.int r
+    }
+
+type Dispatchers =
+  {}
+
+dispatchers :: DispatcherApi Msg PubState {} -> Dispatchers
+dispatchers { emitMsg, emitMsgCtx, readPubState } =
+  {}
+  where
+
+  emit :: forall a. (a -> Msg) -> EffectFn1 a Unit
+  emit f = mkEffectFn1 \arg -> emitMsg (f arg)
+
+  run :: forall a. (a -> ExceptT Err Aff Unit) -> EffectFn1 a Unit
+  run f = mkEffectFn1 \arg -> launchAff_ do
+    result <- runExceptT $ f arg
+    case result of
+      Left err -> log (printErr err)
+      Right _ -> pure unit
+
+tsApi :: TsApi Msg PubState {} Dispatchers
+tsApi = mkTsApi
+  { updatePubState: \msg s -> runExcept (updatePubState msg s)
+  , dispatchers
+  , initPubState
+  , initPrivState: {}
+  , printError: identity
+  , encodeJsonPubState: encode codecPubState
+  , encodeMsg
+  }
+
+codecPubState :: JsonCodec PubState
+codecPubState = CAR.object "PubState"
+  {}
+
+newtype PubStateAlias = PubStateAlias PubState
+
+derive instance Newtype (PubStateAlias) _
+
+instance TsBridge (PubStateAlias) where
+  tsBridge = TSB.tsBridgeNewtype0 Tok { moduleName, typeName: "PubState" }
+
+newtype DispatchersAlias = DispatchersAlias Dispatchers
+
+derive instance Newtype (DispatchersAlias) _
+
+instance TsBridge (DispatchersAlias) where
+  tsBridge = TSB.tsBridgeNewtype0 Tok { moduleName, typeName: "Dispatchers" }
+
+instance TsBridge Msg where
+  tsBridge = TSB.tsBridgeOpaqueType { moduleName, typeName: "Msg", typeArgs: [] }
+
+-----
+
+moduleName :: String
+moduleName = "GCodeViewer.StateMachines.App"
+
+tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
+tsExports = TSB.tsModuleFile moduleName
+  [ TSB.tsValues Tok
+      { -- tsApi: coerce tsApi :: TsApi Msg PubStateAlias {} DispatchersAlias
+      }
+  ]

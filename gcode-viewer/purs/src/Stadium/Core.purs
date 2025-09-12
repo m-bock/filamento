@@ -1,26 +1,26 @@
-module GCodeViewer.Lib
+module Stadium.Core
   ( FullState(..)
   , mkTsApi
   , DispatcherApi
   , TsApi(..)
-  , TsStateHandle
+  , TsStateHandle(..)
   , logJson
-  , tsExports
   ) where
 
-import GCodeViewer.Prelude
+import Prelude
 
-import DTS as DTS
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Encode (encodeJson)
-import Data.Lens (over, set)
-import Data.Maybe (maybe)
+import Data.Either (Either(..))
+import Data.Lens (Lens, over, set)
+import Data.Lens.Record as LensRecord
+import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype)
-import Data.Tuple.Nested ((/\))
+import Data.Symbol (class IsSymbol)
+import Effect (Effect)
+import Effect.Class.Console (log)
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
-import GCodeViewer.TagName (class TagName, tagName)
-import GCodeViewer.TsBridge (class TsBridge, Tok(..), tsBridge)
-import TsBridge as TSB
+import Prim.Row as Row
 import Type.Prelude (Proxy(..))
 
 -- Public state
@@ -49,12 +49,15 @@ type PursConfig msg pubState privState err disp =
   , initPubState :: pubState
   , initPrivState :: privState
   , encodeJsonPubState :: pubState -> Json
+  , encodeMsg :: msg -> { tag :: String, args :: Json }
   }
 
-type TsStateHandle state =
+newtype TsStateHandle state = TsStateHandle
   { updateState :: (state -> Effect state) -> Effect Unit
   , readState :: Effect state
   }
+
+derive instance Newtype (TsStateHandle state) _
 
 newtype TsApi msg pubState privState disp = TsApi
   { dispatchers :: TsStateHandle (FullState msg pubState privState) -> disp
@@ -64,38 +67,26 @@ newtype TsApi msg pubState privState disp = TsApi
 
 derive instance Newtype (TsApi msg pubState state disp) _
 
-instance
-  ( TsBridge pubState
-  , TsBridge privState
-  , TsBridge disp
-  , TsBridge msg
-  ) =>
-  TsBridge (TsApi msg pubState privState disp) where
-  tsBridge = TSB.tsBridgeNewtype4 @"msg" @"pubState" @"privState" @"disp" Tok { moduleName, typeName: "TsApi" }
-
 derive instance Newtype (FullState msg pubState privState) _
 
-instance
-  ( TsBridge msg
-  , TsBridge pubState
-  , TsBridge privState
-  ) =>
-  TsBridge (FullState msg pubState privState) where
-  tsBridge = TSB.tsBridgeNewtype2 @"msg" @"pubState" Tok
-    { moduleName
-    , typeName: "FullState"
-    }
-
-mkTsApi :: forall msg pubState privState err disp. TagName msg => PursConfig msg pubState privState err disp -> TsApi msg pubState privState disp
-mkTsApi { initPubState, initPrivState, dispatchers, updatePubState, encodeJsonPubState } =
+mkTsApi :: forall msg pubState privState err disp. PursConfig msg pubState privState err disp -> TsApi msg pubState privState disp
+mkTsApi { initPubState, initPrivState, dispatchers, updatePubState, encodeJsonPubState, encodeMsg } =
   TsApi
-    { dispatchers: f >>> dispatchers
-    , initState: FullState { history: [], historyIndex: 0.0, pubState: initPubState, privState: initPrivState }
+    { dispatchers: mkDispatcherApi >>> dispatchers
+    , initState
     , timeTravel: mkEffectFn1 \n -> pure unit
     }
   where
-  f :: TsStateHandle (FullState msg pubState privState) -> DispatcherApi msg pubState privState
-  f ts =
+  initState :: FullState msg pubState privState
+  initState = FullState
+    { history: []
+    , historyIndex: 0.0
+    , pubState: initPubState
+    , privState: initPrivState
+    }
+
+  mkDispatcherApi :: TsStateHandle (FullState msg pubState privState) -> DispatcherApi msg pubState privState
+  mkDispatcherApi (TsStateHandle ts) =
     { emitMsg: emitMsg Nothing
     , emitMsgCtx: \ctx -> emitMsg (Just ctx)
     , readPubState: do
@@ -115,7 +106,7 @@ mkTsApi { initPubState, initPrivState, dispatchers, updatePubState, encodeJsonPu
             log err
             pure (FullState state)
           Right newState -> do
-            let { tag, args } = tagName msg
+            let { tag, args } = encodeMsg msg
 
             logJson
               ( [ encodeJson ("%c" <> tag)
@@ -138,14 +129,7 @@ mkTsApi { initPubState, initPrivState, dispatchers, updatePubState, encodeJsonPu
 
 ---
 
-moduleName :: String
-moduleName = "GCodeViewer.Lib"
-
-tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
-tsExports = TSB.tsModuleFile moduleName
-  [ TSB.tsValues Tok
-      {
-      }
-  ]
-
 foreign import logJson :: Array Json -> Effect Unit
+
+prop :: forall @l r1 r2 r a b. IsSymbol l => Row.Cons l a r r1 => Row.Cons l b r r2 => Lens (Record r1) (Record r2) a b
+prop = LensRecord.prop (Proxy :: _ l)
