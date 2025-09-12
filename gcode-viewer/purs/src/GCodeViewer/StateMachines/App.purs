@@ -8,6 +8,7 @@ module GCodeViewer.StateMachines.App
 
 import GCodeViewer.Prelude
 
+import Control.Monad.Error.Class (try)
 import DTS as DTS
 import Data.Argonaut.Core (Json)
 import Data.Codec (encode)
@@ -16,13 +17,16 @@ import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
 import Data.Newtype (class Newtype)
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
+import GCodeViewer.Api (IndexFile)
+import GCodeViewer.Api as Api
 import GCodeViewer.Error (Err, printErr)
-import Stadium.Core (DispatcherApi, TsApi, mkTsApi)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
+import Stadium.Core (DispatcherApi, TsApi, mkTsApi)
 import TsBridge as TSB
 
 type PubState =
-  {}
+  { -- index :: IndexFile
+  }
 
 initPubState :: PubState
 initPubState =
@@ -42,22 +46,27 @@ encodeMsg = case _ of
     }
 
 type Dispatchers =
-  {}
+  { msg :: EffectFn1 Msg Unit
+  , runFetchIndex :: EffectFn1 { url :: String } Unit
+  }
 
 dispatchers :: DispatcherApi Msg PubState {} -> Dispatchers
 dispatchers { emitMsg, emitMsgCtx, readPubState } =
-  {}
+  { msg: mkEffectFn1 emitMsg
+  , runFetchIndex: run fetchIndex
+  }
   where
+  fetchIndex :: { url :: String } -> ExceptT Err Aff Unit
+  fetchIndex { url } = do
+    index <- Api.getIndexFile { url }
+    pure unit
 
-  emit :: forall a. (a -> Msg) -> EffectFn1 a Unit
-  emit f = mkEffectFn1 \arg -> emitMsg (f arg)
-
-  run :: forall a. (a -> ExceptT Err Aff Unit) -> EffectFn1 a Unit
-  run f = mkEffectFn1 \arg -> launchAff_ do
-    result <- runExceptT $ f arg
-    case result of
-      Left err -> log (printErr err)
-      Right _ -> pure unit
+run :: forall a. (a -> ExceptT Err Aff Unit) -> EffectFn1 a Unit
+run f = mkEffectFn1 \arg -> launchAff_ do
+  result <- runExceptT $ f arg
+  case result of
+    Left err -> log (printErr err)
+    Right _ -> pure unit
 
 tsApi :: TsApi Msg PubState {} Dispatchers
 tsApi = mkTsApi

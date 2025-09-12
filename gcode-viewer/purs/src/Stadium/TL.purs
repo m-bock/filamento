@@ -30,7 +30,27 @@ instance main ::
 
 ---
 
-class MkConstructorsRep :: Type -> Row Type -> Constraint
+class MkConstructors1 :: (Type -> Type) -> Row Type -> Constraint
+class MkConstructors1 fa r | fa -> r where
+  mkConstructors1 :: Record r
+
+instance
+  ( Generic (f a) rep
+  , MkConstructorsRep rep r'
+  , HMap (FnMapFromRep (f a)) (Record r') (Record r)
+  ) =>
+  MkConstructors1 f r where
+  mkConstructors1 = ret
+    where
+    ret :: Record r
+    ret = hmap (FnMapFromRep @(f a)) r'
+
+    r' :: Record r'
+    r' = mkConstructorsRep @rep
+
+---
+
+class MkConstructorsRep :: forall k. k -> Row Type -> Constraint
 class MkConstructorsRep rep r | rep -> r where
   mkConstructorsRep :: Record r
 
@@ -118,6 +138,13 @@ class MkMatcher a r z | a -> r where
 
 instance main7 :: (Generic a rep, MkMatcherRep rep r z) => MkMatcher a r z where
   mkMatcher rec val = mkMatcherRep @_ @_ @z rec (from val)
+
+class MkMatcher1 :: (Type -> Type) -> Type -> Row Type -> Type -> Constraint
+class MkMatcher1 fa a r z | fa -> r where
+  mkMatcher1 :: Record r -> fa a -> z
+
+instance main71 :: (Generic (f a) rep, MkMatcherRep rep r z) => MkMatcher1 f a r z where
+  mkMatcher1 rec val = mkMatcherRep @rep @r @z rec (from val)
 
 class MkMatcherRep :: Type -> Row Type -> Type -> Constraint
 class MkMatcherRep rep r z | rep -> r where

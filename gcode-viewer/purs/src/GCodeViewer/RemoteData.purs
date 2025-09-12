@@ -15,7 +15,7 @@ import Data.Codec.Argonaut.Record as CAR
 import GCodeViewer.CodecExtra as CE
 import GCodeViewer.Prelude (class Generic, Either)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
-import Stadium.TL (mkConstructors, mkMatcher)
+import Stadium.TL (mkConstructors, mkConstructors1, mkMatcher, mkMatcher1)
 import TsBridge (TypeVar)
 import TsBridge as TSB
 import Unsafe.Coerce (unsafeCoerce)
@@ -65,6 +65,14 @@ mkRemoteDataStatus
      , "Error" :: { message :: String } -> RemoteDataStatus
      }
 mkRemoteDataStatus = mkConstructors @RemoteDataStatus
+
+data D a = Foo a | Bar a
+
+derive instance Generic (D a) _
+
+mkD = mkConstructors1 @D :: ?A
+
+onD = mkMatcher1 @D :: ?A
 
 onRemoteDataStatus
   :: forall @z

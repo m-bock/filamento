@@ -38,9 +38,9 @@ codecIndexFileItem = CAR.object "IndexFileItem"
   , pictures: CA.array CA.string
   }
 
-getIndexFile :: ExceptT Err Aff IndexFile
-getIndexFile = do
-  ret <- handleAffEither (mkErr Err.Err1 <<< Affjax.printError) $ AffjaxWeb.get json "/out/index.json"
+getIndexFile :: { url :: String } -> ExceptT Err Aff IndexFile
+getIndexFile { url } = do
+  ret <- handleAffEither (mkErr Err.Err1 <<< Affjax.printError) $ AffjaxWeb.get json url
 
   when (ret.status /= StatusCode 200) $ throwError (mkErr Err.Err3 "Failed to get index file")
 
