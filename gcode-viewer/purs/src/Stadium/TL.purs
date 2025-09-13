@@ -2,6 +2,7 @@ module Stadium.TL where
 
 import Prelude
 
+import Data.Function.Uncurried (Fn2, mkFn2)
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Sum(..), from, to)
 import Heterogeneous.Mapping (class HMap, class Mapping, hmap)
 import Prim.Row (class Union)
@@ -135,17 +136,17 @@ else instance main5 :: (Generic a rep) => Mapping (FnMapFromRep a) rep a where
 
 class MkMatcher :: Type -> Row Type -> Type -> Constraint
 class MkMatcher a r z | a -> r where
-  mkMatcher :: Record r -> a -> z
+  mkMatcher :: Fn2 a (Record r) z
 
 instance main7 :: (Generic a rep, MkMatcherRep rep () r z) => MkMatcher a r z where
-  mkMatcher rec val = mkMatcherRep @_ @() @_ @z rec (from val)
+  mkMatcher = mkFn2 \val rec -> mkMatcherRep @_ @() @_ @z rec (from val)
 
 class MkMatcher1 :: (Type -> Type) -> Type -> Type -> Row Type -> Constraint
 class MkMatcher1 fa a z r | fa a -> r where
-  mkMatcher1 :: Record r -> fa a -> z
+  mkMatcher1 :: Fn2 (fa a) (Record r) z
 
 instance main71 :: (Generic (f a) rep, MkMatcherRep rep () r z) => MkMatcher1 f a z r where
-  mkMatcher1 rec val = mkMatcherRep @rep @() @r @z rec (from val)
+  mkMatcher1 = mkFn2 \val rec -> mkMatcherRep @rep @() @r @z rec (from val)
 
 class MkMatcherRep :: Type -> Row Type -> Row Type -> Type -> Constraint
 class MkMatcherRep rep rin r z | rep rin -> r where

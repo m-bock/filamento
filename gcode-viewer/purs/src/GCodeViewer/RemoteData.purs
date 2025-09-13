@@ -46,10 +46,16 @@ instance TsBridge a => TsBridge (RemoteData a) where
         ]
     }
 
+mkRemoteData :: _
+mkRemoteData = mkConstructors1 @RemoteData @(TypeVar "A")
+
+onRemoteData :: _
+onRemoteData = mkMatcher1 @RemoteData @(TypeVar "A") @(TypeVar "Z")
+
 tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
 tsExports = TSB.tsModuleFile moduleName
   [ TSB.tsValues Tok
-      { mkRemoteData: mkConstructors1 @RemoteData @(TypeVar "A")
-      , onRemoteData: mkMatcher1 @RemoteData @(TypeVar "A") @(TypeVar "Z")
+      { mkRemoteData
+      , onRemoteData
       }
   ]

@@ -1,9 +1,10 @@
 module GCodeViewer.StateMachines.App
   ( PubState
-  , Msg
+  , Msg(..)
   , Dispatchers
   , tsApi
   , tsExports
+  , useStateMachineApp
   ) where
 
 import GCodeViewer.Prelude
@@ -24,6 +25,8 @@ import GCodeViewer.Error (Err, printErr)
 import GCodeViewer.RemoteData (RemoteData(..), codecRemoteData)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
 import Stadium.Core (DispatcherApi, TsApi, mkTsApi)
+import Stadium.React (useStateMachine)
+import Stadium.TL (mkConstructors)
 import TsBridge as TSB
 
 type PubState =
@@ -36,6 +39,8 @@ initPubState =
   }
 
 data Msg = MsgSetIndex (RemoteData IndexFile)
+
+derive instance Generic Msg _
 
 updatePubState :: Msg -> PubState -> Except String PubState
 updatePubState msg pubState = case msg of
@@ -82,24 +87,13 @@ tsApi = mkTsApi
   , encodeMsg
   }
 
+useStateMachineApp :: Effect { state :: PubState, dispatch :: Dispatchers }
+useStateMachineApp = useStateMachine tsApi
+
 codecPubState :: JsonCodec PubState
 codecPubState = CAR.object "PubState"
   { index: codecRemoteData codecIndexFile
   }
-
-newtype PubStateAlias = PubStateAlias PubState
-
-derive instance Newtype (PubStateAlias) _
-
-instance TsBridge (PubStateAlias) where
-  tsBridge = TSB.tsBridgeNewtype0 Tok { moduleName, typeName: "PubState" }
-
-newtype DispatchersAlias = DispatchersAlias Dispatchers
-
-derive instance Newtype (DispatchersAlias) _
-
-instance TsBridge (DispatchersAlias) where
-  tsBridge = TSB.tsBridgeNewtype0 Tok { moduleName, typeName: "Dispatchers" }
 
 instance TsBridge Msg where
   tsBridge = TSB.tsBridgeOpaqueType { moduleName, typeName: "Msg", typeArgs: [] }
@@ -112,6 +106,7 @@ moduleName = "GCodeViewer.StateMachines.App"
 tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
 tsExports = TSB.tsModuleFile moduleName
   [ TSB.tsValues Tok
-      { -- tsApi: coerce tsApi :: TsApi Msg PubStateAlias {} DispatchersAlias
+      { useStateMachineApp
+      , mkMsg: mkConstructors @Msg
       }
   ]

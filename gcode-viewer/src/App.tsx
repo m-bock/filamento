@@ -1,32 +1,42 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import * as GCodePreview from 'gcode-preview';
 import { useViewer } from "core/GCodeViewer/StateMachines/Viewer"
-import { onRemoteDataStatus } from 'core/GCodeViewer/RemoteData';
+import { mkMsg, useStateMachineApp } from "core/GCodeViewer/StateMachines/App"
 import { trunc, toNumber } from "core/Data/Int";
+import { mkRemoteData, onRemoteData, RemoteData } from 'core/GCodeViewer/RemoteData';
 
 
+const App2: React.FC<{ data: State["index"] }> = ({ data }) => {
+
+  return (
+    <div>
+      <h1>App2</h1>
+    </div>
+  )
+}
+
+type State = (ReturnType<typeof useStateMachineApp>)["state"]
 
 const App: React.FC = () => {
 
-  const { state, dispatch } = useViewer()
-
-  useEffect(() => {
-    dispatch.runLoadGcodeLines({ url: "/out/001.gcode" });
-  }, []);
+  const { state, dispatch } = useStateMachineApp()
 
   useEffect(() => {
     console.log("render", state);
+  });
+
+  useEffect(() => {
+    dispatch.runFetchIndex({ url: "/out/index.json" })
   }, []);
 
   return (
     <div>
-      <h1>Hello World</h1>
-      {toNumber(state.startLayer)}
-      <br />
-      {toNumber(state.endLayer)}
-      <br />
-      <button onClick={() => dispatch.emitSetStartLayer(trunc(10))}>set to 10</button>
-      <button onClick={() => dispatch.emitSetStartLayer(trunc(20))}>set to 20</button>
+      {onRemoteData(state.index, {
+        NotAsked: () => <>"Not Asked"</>,
+        Loading: () => <>"Loading"</>,
+        Loaded: (data) => <App2 data={data} />,
+        Error: (err) => <>"Error: " + err</>
+      })}
     </div>
   )
 
