@@ -8,7 +8,10 @@ import Data.Maybe (Maybe)
 import Data.Symbol (class IsSymbol)
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1)
+import Named (NamedRecord)
 import TsBridge as TSB
+import Type.Data.Symbol (reflectSymbol)
+import Type.Prelude (Proxy(..))
 import Type.Proxy (Proxy)
 
 data Tok = Tok
@@ -57,6 +60,9 @@ instance (TsBridge a, TsBridge b, TsBridge c, TsBridge d, TsBridge e) => TsBridg
 
 instance (TSB.TsBridgeRecord Tok r) => TsBridge (Record r) where
   tsBridge = TSB.tsBridgeRecord Tok
+
+instance (TSB.TsBridgeRecord Tok r, IsSymbol s) => TsBridge (NamedRecord s r) where
+  tsBridge = TSB.tsBridgeNewtype0 Tok { moduleName: "TypeAliases", typeName: reflectSymbol (Proxy :: _ s) }
 
 instance IsSymbol sym => TsBridge (TSB.TypeVar sym) where
   tsBridge = TSB.tsBridgeTypeVar

@@ -30,6 +30,11 @@
       "types": "./output/GCodeViewer.StateMachines.Viewer/index.d.ts",
       "import": "./output/GCodeViewer.StateMachines.Viewer/index.js",
       "default": "./output/GCodeViewer.StateMachines.Viewer/index.js"
+    },
+    "./TypeAliases": {
+      "types": "./output/TypeAliases/index.d.ts",
+      "import": "./output/TypeAliases/index.js",
+      "default": "./output/TypeAliases/index.js"
     }
   },
   "files": [

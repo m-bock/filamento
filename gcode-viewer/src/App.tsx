@@ -4,18 +4,18 @@ import { useViewer } from "core/GCodeViewer/StateMachines/Viewer"
 import { mkMsg, useStateMachineApp } from "core/GCodeViewer/StateMachines/App"
 import { trunc, toNumber } from "core/Data/Int";
 import { mkRemoteData, onRemoteData, RemoteData } from 'core/GCodeViewer/RemoteData';
+import { IndexFileItem } from 'core/TypeAliases';
 
 
-const App2: React.FC<{ data: State["index"] }> = ({ data }) => {
+const App2: React.FC<{ data: IndexFileItem[] }> = ({ data }) => {
 
   return (
     <div>
-      <h1>App2</h1>
+      {data.length}
     </div>
   )
 }
 
-type State = (ReturnType<typeof useStateMachineApp>)["state"]
 
 const App: React.FC = () => {
 

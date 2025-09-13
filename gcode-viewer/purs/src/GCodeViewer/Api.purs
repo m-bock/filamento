@@ -11,9 +11,12 @@ import Control.Monad.Except (ExceptT)
 import Data.Codec.Argonaut (JsonCodec)
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
+import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Profunctor (dimap)
 import Effect.Aff (Aff)
 import GCodeViewer.Error (Err, handleAffEither, handleEither, mkErr)
 import GCodeViewer.Error as Err
+import Named (NamedRecord, carNamedObject)
 
 -------------------------------------------------------------------------------
 
@@ -25,14 +28,14 @@ codecIndexFile = CA.array codecIndexFileItem
 
 -------------------------------------------------------------------------------
 
-type IndexFileItem =
-  { name :: String
+type IndexFileItem = NamedRecord "IndexFileItem"
+  ( name :: String
   , gcode :: String
   , pictures :: Array String
-  }
+  )
 
 codecIndexFileItem :: JsonCodec IndexFileItem
-codecIndexFileItem = CAR.object "IndexFileItem"
+codecIndexFileItem = carNamedObject
   { name: CA.string
   , gcode: CA.string
   , pictures: CA.array CA.string

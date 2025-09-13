@@ -11,9 +11,8 @@ const projectRoot = path.resolve(__dirname, "..");
 // Configuration
 const CONFIG = {
   outputDir: "output",
-  modulePrefixes: ["GCodeViewer.", "Data.", "Control.", "Effect."],
   packageJsonFile: "package.json",
-  requiredFiles: ["index.js", "index.d.ts"],
+  requiredFiles: ["index.d.ts", "index.js"],
 };
 
 /**
@@ -37,36 +36,29 @@ function findPureScriptModules(options = {}) {
   for (const entry of entries) {
     if (entry.isDirectory()) {
       // Check if the module name starts with any of the configured prefixes
-      const matchingPrefix = CONFIG.modulePrefixes.find((prefix) =>
-        entry.name.startsWith(prefix)
+
+      const moduleDir = path.join(outputDir, entry.name);
+
+      // Check if all required files exist
+      const hasAllFiles = CONFIG.requiredFiles.every((file) =>
+        fs.existsSync(path.join(moduleDir, file))
       );
 
-      if (matchingPrefix) {
-        const moduleDir = path.join(outputDir, entry.name);
+      if (hasAllFiles) {
+        // Convert module name to export path
+        // GCodeViewer.StateMachines.App -> StateMachines/App
+        // Data.Maybe -> Data/Maybe
+        // Effect.Console -> Effect/Console
+        const moduleName = entry.name;
+        const exportPath = moduleName.replace(/\./g, "/");
 
-        // Check if all required files exist
-        const hasAllFiles = CONFIG.requiredFiles.every((file) =>
-          fs.existsSync(path.join(moduleDir, file))
-        );
-
-        if (hasAllFiles) {
-          // Convert module name to export path
-          // GCodeViewer.StateMachines.App -> StateMachines/App
-          // Data.Maybe -> Data/Maybe
-          // Effect.Console -> Effect/Console
-          const moduleName = entry.name;
-          const exportPath = moduleName.replace(/\./g, "/");
-
-          modules.push({
-            moduleName,
-            exportPath,
-            jsPath: `./${CONFIG.outputDir}/${moduleName}/index.js`,
-            dtsPath: `./${CONFIG.outputDir}/${moduleName}/index.d.ts`,
-            prefix: matchingPrefix,
-          });
-        } else if (!options.quiet) {
-          console.log(`⚠️  Skipping ${entry.name} - missing required files`);
-        }
+        modules.push({
+          moduleName,
+          exportPath,
+          jsPath: `./${CONFIG.outputDir}/${moduleName}/index.js`,
+          dtsPath: `./${CONFIG.outputDir}/${moduleName}/index.d.ts`,
+        });
+      } else if (!options.quiet) {
       }
     }
   }
@@ -176,7 +168,6 @@ function main() {
     if (options.verbose) {
       console.log("🔍 Scanning for PureScript modules...");
       console.log(`   Looking in: ${path.join(projectRoot, CONFIG.outputDir)}`);
-      console.log(`   Module prefixes: ${CONFIG.modulePrefixes.join(", ")}`);
       console.log(`   Required files: ${CONFIG.requiredFiles.join(", ")}`);
     } else {
       console.log("🔍 Scanning for PureScript modules...");
