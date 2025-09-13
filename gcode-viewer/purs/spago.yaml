@@ -13,6 +13,7 @@ package:
       - profunctor-lenses
       - record
       - heterogeneous
+      - stadium
 
 workspace:
   packageSet:
@@ -30,3 +31,7 @@ workspace:
         - ordered-collections
         - type-equality
         - foreign-object
+
+    stadium:
+      git: https://github.com/m-bock/purescript-stadium
+      ref: 6ea4465c4a782ffa3f9e3902d5f79be13a010bd0

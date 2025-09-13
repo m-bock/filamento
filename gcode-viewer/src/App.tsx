@@ -5,15 +5,35 @@ import { mkMsg, useStateMachineApp } from "core/GCodeViewer/StateMachines/App"
 import { trunc, toNumber } from "core/Data/Int";
 import { mkRemoteData, onRemoteData, RemoteData } from 'core/GCodeViewer/RemoteData';
 import { IndexFileItem } from 'core/TypeAliases';
+import { useEffectEq } from 'core/react-utils';
 
+// const useEffectEq = <A,>(cb: () => () => void, eq: (a: A, b: A) => boolean, dep: A) => {
+//   const prevCount = useRef(0)
+//   const prevDep = useRef(dep)
+
+//   prevDep.current = dep
+//   prevCount.current = eq(prevDep.current, dep) ? prevCount.current : prevCount.current + 1
+
+//   return useEffect(() => {
+//     return cb()
+//   }, [prevCount.current])
+// }
+
+
+const eqString = (a: string, b: string) => a === b
 
 const App3: React.FC<{ data: IndexFileItem }> = ({ data }) => {
 
   const { state, dispatch } = useViewer()
 
-  useEffect(() => {
+  useEffectEq(() => {
+    console.log("useEffectEq", data.gcode)
     dispatch.runLoadGcodeLines({ url: data.gcode })
-  }, [data.gcode])
+
+    return () => {
+      console.log("cleanup")
+    }
+  }, eqString, data.gcode)
 
   return (
     <div>

@@ -22,6 +22,7 @@
             "heterogeneous",
             "profunctor-lenses",
             "record",
+            "stadium",
             "ts-bridge"
           ],
           "build_plan": [
@@ -94,6 +95,7 @@
             "refs",
             "safe-coerce",
             "st",
+            "stadium",
             "strings",
             "tailrec",
             "transformers",
@@ -679,6 +681,10 @@
           "type-equality",
           "variant"
         ]
+      },
+      "stadium": {
+        "git": "https://github.com/m-bock/purescript-stadium",
+        "ref": "6ea4465c4a782ffa3f9e3902d5f79be13a010bd0"
       },
       "ts-bridge": {
         "path": "../../../purescript-ts-bridge"
@@ -1586,6 +1592,21 @@
         "prelude",
         "tailrec",
         "unsafe-coerce"
+      ]
+    },
+    "stadium": {
+      "type": "git",
+      "url": "https://github.com/m-bock/purescript-stadium",
+      "rev": "6ea4465c4a782ffa3f9e3902d5f79be13a010bd0",
+      "dependencies": [
+        "argonaut-core",
+        "codec-argonaut",
+        "console",
+        "effect",
+        "heterogeneous",
+        "prelude",
+        "profunctor-lenses",
+        "record"
       ]
     },
     "strings": {
