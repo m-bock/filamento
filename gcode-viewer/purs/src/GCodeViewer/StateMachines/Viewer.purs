@@ -25,7 +25,7 @@ import GCodeViewer.Error (Err, mkErr, printErr)
 import GCodeViewer.Error as Err
 import Stadium.Core (DispatcherApi, TsApi, mkTsApi)
 import Stadium.React (useStateMachine)
-import GCodeViewer.RemoteData (RemoteData, RemoteDataStatus(..), codecRemoteData, codecRemoteDataStatus)
+import GCodeViewer.RemoteData (RemoteData(..), codecRemoteData)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
 import TsBridge as TSB
 
@@ -37,7 +37,7 @@ type PubState =
 
 initPubState :: PubState
 initPubState =
-  { gcodeLines: { value: [], status: NotAsked }
+  { gcodeLines: NotAsked
   , startLayer: 0
   , endLayer: 0
   }
@@ -45,8 +45,7 @@ initPubState =
 data Msg
   = MsgSetStartLayer Int
   | MsgSetEndLayer Int
-  | MsgSetGcodeLines (Array String)
-  | MsgSetGcodeLinesStatus RemoteDataStatus
+  | MsgSetGcodeLines (RemoteData (Array String))
 
 updatePubState :: Msg -> PubState -> Except String PubState
 updatePubState msg pubState = case msg of
@@ -59,11 +58,7 @@ updatePubState msg pubState = case msg of
     # pure
 
   MsgSetGcodeLines value -> pubState
-    # set (prop @"gcodeLines" <<< prop @"value") value
-    # pure
-
-  MsgSetGcodeLinesStatus status -> pubState
-    # set (prop @"gcodeLines" <<< prop @"status") status
+    # set (prop @"gcodeLines") value
     # pure
 
 encodeMsg :: Msg -> { tag :: String, args :: Json }
@@ -78,11 +73,7 @@ encodeMsg = case _ of
     }
   MsgSetGcodeLines r ->
     { tag: "MsgSetGcodeLines"
-    , args: CA.encode (CA.array CA.string) r
-    }
-  MsgSetGcodeLinesStatus r ->
-    { tag: "MsgSetGcodeLinesStatus"
-    , args: CA.encode codecRemoteDataStatus r
+    , args: CA.encode (codecRemoteData (CA.array CA.string)) r
     }
 
 type Dispatchers =
@@ -106,15 +97,14 @@ dispatchers { emitMsg, emitMsgCtx, readPubState } =
       ( do
           st <- liftEffect $ readPubState
 
-          when (st.gcodeLines.status == Loading) $ do
+          when (st.gcodeLines == Loading) $ do
             throwError (mkErr Err.Err6 "Gcode lines are already loading")
 
-          emitMsg' $ MsgSetGcodeLinesStatus Loading
+          emitMsg' $ MsgSetGcodeLines Loading
           ret <- Api.getGCodeFile url
 
           let lines = Str.split (Str.Pattern "\n") ret
-          emitMsg' $ MsgSetGcodeLines lines
-          emitMsg' $ MsgSetGcodeLinesStatus Loaded
+          emitMsg' $ MsgSetGcodeLines (Loaded lines)
       )
         `catchError`
           ( \e -> do
@@ -122,7 +112,7 @@ dispatchers { emitMsg, emitMsgCtx, readPubState } =
 
               case e.code of
                 Err.Err6 -> pure unit
-                _ -> emitMsg' $ MsgSetGcodeLinesStatus (Error { message: printErr e })
+                _ -> emitMsg' $ MsgSetGcodeLines (Error (printErr e))
           )
 
   emit :: forall a. (a -> Msg) -> EffectFn1 a Unit

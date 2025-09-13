@@ -4,6 +4,7 @@ import Prelude
 
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Sum(..), from, to)
 import Heterogeneous.Mapping (class HMap, class Mapping, hmap)
+import Prim.Row (class Union)
 import Prim.Row as Row
 import Record as Record
 import Type.Data.Symbol (class IsSymbol)
@@ -30,8 +31,8 @@ instance main ::
 
 ---
 
-class MkConstructors1 :: (Type -> Type) -> Row Type -> Constraint
-class MkConstructors1 fa r | fa -> r where
+class MkConstructors1 :: (Type -> Type) -> Type -> Row Type -> Constraint
+class MkConstructors1 fa a r | fa a -> r where
   mkConstructors1 :: Record r
 
 instance
@@ -39,7 +40,7 @@ instance
   , MkConstructorsRep rep r'
   , HMap (FnMapFromRep (f a)) (Record r') (Record r)
   ) =>
-  MkConstructors1 f r where
+  MkConstructors1 f a r where
   mkConstructors1 = ret
     where
     ret :: Record r
@@ -80,17 +81,17 @@ instance main2 ::
     ret = Record.union lhsr rhsr
 
 instance main6 ::
-  ( Row.Cons sym (Constructor sym NoArguments) () r
+  ( Row.Cons sym (Unit -> Constructor sym NoArguments) () r
   , IsSymbol sym
   ) =>
   MkConstructorsRep (Constructor sym NoArguments) r where
   mkConstructorsRep = ret
     where
-    val :: Constructor sym NoArguments
-    val = Constructor NoArguments
+    fn :: Unit -> Constructor sym NoArguments
+    fn _ = Constructor NoArguments
 
     ret :: Record r
-    ret = Record.insert (Proxy :: _ sym) val {}
+    ret = Record.insert (Proxy :: _ sym) fn {}
 
 else instance
   ( Row.Cons sym (args -> Constructor sym (Argument args)) () r
@@ -136,46 +137,52 @@ class MkMatcher :: Type -> Row Type -> Type -> Constraint
 class MkMatcher a r z | a -> r where
   mkMatcher :: Record r -> a -> z
 
-instance main7 :: (Generic a rep, MkMatcherRep rep r z) => MkMatcher a r z where
-  mkMatcher rec val = mkMatcherRep @_ @_ @z rec (from val)
+instance main7 :: (Generic a rep, MkMatcherRep rep () r z) => MkMatcher a r z where
+  mkMatcher rec val = mkMatcherRep @_ @() @_ @z rec (from val)
 
-class MkMatcher1 :: (Type -> Type) -> Type -> Row Type -> Type -> Constraint
-class MkMatcher1 fa a r z | fa -> r where
+class MkMatcher1 :: (Type -> Type) -> Type -> Type -> Row Type -> Constraint
+class MkMatcher1 fa a z r | fa a -> r where
   mkMatcher1 :: Record r -> fa a -> z
 
-instance main71 :: (Generic (f a) rep, MkMatcherRep rep r z) => MkMatcher1 f a r z where
-  mkMatcher1 rec val = mkMatcherRep @rep @r @z rec (from val)
+instance main71 :: (Generic (f a) rep, MkMatcherRep rep () r z) => MkMatcher1 f a z r where
+  mkMatcher1 rec val = mkMatcherRep @rep @() @r @z rec (from val)
 
-class MkMatcherRep :: Type -> Row Type -> Type -> Constraint
-class MkMatcherRep rep r z | rep -> r where
+class MkMatcherRep :: Type -> Row Type -> Row Type -> Type -> Constraint
+class MkMatcherRep rep rin r z | rep rin -> r where
   mkMatcherRep :: Record r -> rep -> z
 
-instance (MkMatcherRep a r z, MkMatcherRep b r z) => MkMatcherRep (Sum a b) r z where
+instance (MkMatcherRep a rin ra z, MkMatcherRep b rin rb z, Union ra rb r) => MkMatcherRep (Sum a b) rin r z where
   mkMatcherRep rec val = ret
     where
     ret :: z
     ret = case val of
-      Inl x -> mkMatcherRep @_ @_ @z rec x
-      Inr x -> mkMatcherRep @_ @_ @z rec x
+      Inl x -> mkMatcherRep @a @rin @ra @z (dropFields rec :: Record ra) x
+      Inr x -> mkMatcherRep @b @rin @rb @z (dropFields' rec :: Record rb) x
+
+dropFields :: forall rx r2 r1. (Row.Union r2 rx r1) => Record r1 -> Record r2
+dropFields = unsafeCoerce
+
+dropFields' :: forall rx r2 r1. (Row.Union rx r2 r1) => Record r1 -> Record r2
+dropFields' = unsafeCoerce
 
 instance main8 ::
-  ( Row.Cons sym z rx r
+  ( Row.Cons sym (Unit -> z) rin r
   , IsSymbol sym
   ) =>
-  MkMatcherRep (Constructor sym NoArguments) r z where
+  MkMatcherRep (Constructor sym NoArguments) rin r z where
   mkMatcherRep rec _ = ret
     where
     ret :: z
-    ret = on
+    ret = on unit
 
-    on :: z
+    on :: Unit -> z
     on = Record.get (Proxy :: _ sym) rec
 
 instance
-  ( Row.Cons sym (arg -> z) rx r
+  ( Row.Cons sym (arg -> z) rin r
   , IsSymbol sym
   ) =>
-  MkMatcherRep (Constructor sym (Argument arg)) r z where
+  MkMatcherRep (Constructor sym (Argument arg)) rin r z where
   mkMatcherRep rec (Constructor (Argument arg)) = ret
     where
     ret :: z

@@ -2,107 +2,54 @@ module GCodeViewer.RemoteData where
 
 import Prelude
 
-import Control.Alt ((<|>))
-import Control.Monad.Error.Class (throwError)
 import DTS as DTS
-import Data.Argonaut.Core (Json)
-import Data.Argonaut.Decode (decodeJson)
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
-import Data.Codec (decode)
-import Data.Codec.Argonaut (JsonCodec, JsonDecodeError(..))
+import Data.Codec.Argonaut (JsonCodec)
 import Data.Codec.Argonaut as CA
-import Data.Codec.Argonaut.Record as CAR
-import GCodeViewer.CodecExtra as CE
+import Data.Codec.Argonaut.Sum as CAS
+import Data.Tuple.Nested ((/\))
 import GCodeViewer.Prelude (class Generic, Either)
-import GCodeViewer.TsBridge (class TsBridge, Tok(..))
-import Stadium.TL (mkConstructors, mkConstructors1, mkMatcher, mkMatcher1)
+import GCodeViewer.TsBridge (class TsBridge, tsBridge, Tok(..))
+import Stadium.TL (mkConstructors1, mkMatcher1)
 import TsBridge (TypeVar)
 import TsBridge as TSB
-import Unsafe.Coerce (unsafeCoerce)
+import Type.Proxy (Proxy(..))
 
-type RemoteData a =
-  { value :: a
-  , status :: RemoteDataStatus
-  }
-
-codecRemoteData :: forall a. JsonCodec a -> JsonCodec (RemoteData a)
-codecRemoteData codecValue = CAR.object "RemoteData"
-  { value: codecValue
-  , status: codecRemoteDataStatus
-  }
-
-codecRemoteDataStatus :: JsonCodec RemoteDataStatus
-codecRemoteDataStatus = CA.codec' dec enc
-  where
-  enc :: RemoteDataStatus -> Json
-  enc = case _ of
-    NotAsked -> CE.encTag "NotAsked"
-    Loading -> CE.encTag "Loading"
-    Loaded -> CE.encTag "Loaded"
-    Error r -> CE.encTagWithArgs "Error" (CAR.object "Error" { message: CA.string }) r
-
-  dec :: Json -> Either JsonDecodeError RemoteDataStatus
-  dec j =
-    CE.decTag "NotAsked" NotAsked j
-      <|> CE.decTag "Loading" Loading j
-      <|> CE.decTag "Loaded" Loaded j
-      <|> CE.decTagWithArgs "Error" Error (CAR.object "Error" { message: CA.string }) j
-
-data RemoteDataStatus
+data RemoteData a
   = NotAsked
   | Loading
-  | Loaded
-  | Error { message :: String }
+  | Loaded a
+  | Error String
 
-derive instance Eq RemoteDataStatus
+derive instance Eq a => Eq (RemoteData a)
 
-derive instance Generic RemoteDataStatus _
+derive instance Generic (RemoteData a) _
 
-mkRemoteDataStatus
-  :: { "NotAsked" :: RemoteDataStatus
-     , "Loading" :: RemoteDataStatus
-     , "Loaded" :: RemoteDataStatus
-     , "Error" :: { message :: String } -> RemoteDataStatus
-     }
-mkRemoteDataStatus = mkConstructors @RemoteDataStatus
-
-data D a = Foo a | Bar a
-
-derive instance Generic (D a) _
-
-mkD = mkConstructors1 @D :: ?A
-
-onD = mkMatcher1 @D :: ?A
-
-onRemoteDataStatus
-  :: forall @z
-   . { "NotAsked" :: z
-     , "Loading" :: z
-     , "Loaded" :: z
-     , "Error" :: { message :: String } -> z
-     }
-  -> RemoteDataStatus
-  -> z
-onRemoteDataStatus = mkMatcher @RemoteDataStatus
+codecRemoteData :: forall a. JsonCodec a -> JsonCodec (RemoteData a)
+codecRemoteData codecValue = CAS.sum "RemoteData"
+  { "NotAsked": unit
+  , "Loading": unit
+  , "Loaded": codecValue
+  , "Error": CA.string
+  }
 
 ---
 
 moduleName :: String
 moduleName = "GCodeViewer.RemoteData"
 
-instance TsBridge RemoteDataStatus where
+instance TsBridge a => TsBridge (RemoteData a) where
   tsBridge = TSB.tsBridgeOpaqueType
     { moduleName
-    , typeName: "RemoteDataStatus"
-    , typeArgs: []
+    , typeName: "RemoteData"
+    , typeArgs:
+        [ "A" /\ tsBridge (Proxy :: _ a)
+        ]
     }
 
 tsExports :: Either TSB.AppError (Array DTS.TsModuleFile)
 tsExports = TSB.tsModuleFile moduleName
   [ TSB.tsValues Tok
-      { mkRemoteDataStatus
-      , onRemoteDataStatus: onRemoteDataStatus @(TypeVar "Z")
+      { mkRemoteData: mkConstructors1 @RemoteData @(TypeVar "A")
+      , onRemoteData: mkMatcher1 @RemoteData @(TypeVar "A") @(TypeVar "Z")
       }
   ]
-
----

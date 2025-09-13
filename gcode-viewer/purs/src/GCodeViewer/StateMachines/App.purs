@@ -15,34 +15,37 @@ import Data.Codec (encode)
 import Data.Codec.Argonaut (JsonCodec)
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
+import Data.Lens (set)
 import Data.Newtype (class Newtype)
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
-import GCodeViewer.Api (IndexFile)
+import GCodeViewer.Api (IndexFile, codecIndexFile)
 import GCodeViewer.Api as Api
 import GCodeViewer.Error (Err, printErr)
+import GCodeViewer.RemoteData (RemoteData(..), codecRemoteData)
 import GCodeViewer.TsBridge (class TsBridge, Tok(..))
 import Stadium.Core (DispatcherApi, TsApi, mkTsApi)
 import TsBridge as TSB
 
 type PubState =
-  { -- index :: IndexFile
+  { index :: RemoteData IndexFile
   }
 
 initPubState :: PubState
 initPubState =
-  {}
+  { index: NotAsked
+  }
 
-data Msg = Msg1 Int
+data Msg = MsgSetIndex (RemoteData IndexFile)
 
 updatePubState :: Msg -> PubState -> Except String PubState
 updatePubState msg pubState = case msg of
-  Msg1 r -> pure pubState
+  MsgSetIndex r -> pubState # set (prop @"index") r # pure
 
 encodeMsg :: Msg -> { tag :: String, args :: Json }
 encodeMsg = case _ of
-  Msg1 r ->
-    { tag: "Msg1"
-    , args: CA.encode CA.int r
+  MsgSetIndex r ->
+    { tag: "MsgSetIndex"
+    , args: CA.encode (codecRemoteData codecIndexFile) r
     }
 
 type Dispatchers =
@@ -81,7 +84,8 @@ tsApi = mkTsApi
 
 codecPubState :: JsonCodec PubState
 codecPubState = CAR.object "PubState"
-  {}
+  { index: codecRemoteData codecIndexFile
+  }
 
 newtype PubStateAlias = PubStateAlias PubState
 
