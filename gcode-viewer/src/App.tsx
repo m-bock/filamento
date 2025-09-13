@@ -7,11 +7,27 @@ import { mkRemoteData, onRemoteData, RemoteData } from 'core/GCodeViewer/RemoteD
 import { IndexFileItem } from 'core/TypeAliases';
 
 
+const App3: React.FC<{ data: IndexFileItem }> = ({ data }) => {
+
+  const { state, dispatch } = useViewer()
+
+  useEffect(() => {
+    dispatch.runLoadGcodeLines({ url: data.gcode })
+  }, [data.gcode])
+
+  return (
+    <div>
+      {data.name}
+    </div>
+  )
+}
+
+
 const App2: React.FC<{ data: IndexFileItem[] }> = ({ data }) => {
 
   return (
     <div>
-      {data.length}
+      {data.map((item) => <App3 data={item} />)}
     </div>
   )
 }
@@ -32,33 +48,13 @@ const App: React.FC = () => {
   return (
     <div>
       {onRemoteData(state.index, {
-        NotAsked: () => <>"Not Asked"</>,
-        Loading: () => <>"Loading"</>,
+        NotAsked: () => <>Not Asked</>,
+        Loading: () => <>Loading</>,
         Loaded: (data) => <App2 data={data} />,
-        Error: (err) => <>"Error: " + err</>
+        Error: (err) => <>{"Error: " + err}</>
       })}
     </div>
   )
-
-  // const [state, dispatch] = useStateMachine(Purs.tsApi)
-
-  // useEffect(() => {
-  //   dispatch.loadGcodeLines({ url: "/out/001.gcode" });
-
-  // }, []);
-
-  // return (
-  //   <div>
-  //     {state.gcodeLines.value.length}
-  //     <button onClick={() => dispatch.loadGcodeLines({ url: "/out/001.gcode" })}>Load Gcode</button>
-  //     <br />
-  //     {onRemoteDataStatus({
-  //       notAsked: "Not Asked",
-  //       loading: "Loading",
-  //       loaded: "Loaded",
-  //       error: (err) => "Error: " + err.message
-  //     })(state.gcodeLines.status)}
-  //   </div>)
-};
+}
 
 export default App;

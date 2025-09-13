@@ -16,6 +16,10 @@ import Type.Proxy (Proxy(..))
 
 newtype NamedRecord (s :: Symbol) (r :: Row Type) = Named (Record r)
 
+derive newtype instance Show (Record r) => Show (NamedRecord s r)
+derive newtype instance Eq (Record r) => Eq (NamedRecord s r)
+derive newtype instance Ord (Record r) => Ord (NamedRecord s r)
+
 derive instance Newtype (NamedRecord s a) _
 
 carNamedObject

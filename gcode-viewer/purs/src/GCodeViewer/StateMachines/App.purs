@@ -9,7 +9,7 @@ module GCodeViewer.StateMachines.App
 
 import GCodeViewer.Prelude
 
-import Control.Monad.Error.Class (try)
+import Control.Monad.Error.Class (catchError, try)
 import DTS as DTS
 import Data.Argonaut.Core (Json)
 import Data.Codec (encode)
@@ -66,8 +66,18 @@ dispatchers { emitMsg, emitMsgCtx, readPubState } =
   where
   fetchIndex :: { url :: String } -> ExceptT Err Aff Unit
   fetchIndex { url } = do
-    index <- Api.getIndexFile { url }
-    pure unit
+    st <- liftEffect $ readPubState
+    if st.index == Loading then do
+      pure unit
+    else
+      ( do
+          liftEffect $ emitMsg $ MsgSetIndex Loading
+          index <- Api.getIndexFile { url }
+          liftEffect $ emitMsg $ MsgSetIndex (Loaded index)
+      ) `catchError`
+        ( \e -> do
+            liftEffect $ emitMsg $ MsgSetIndex (Error (printErr e))
+        )
 
 run :: forall a. (a -> ExceptT Err Aff Unit) -> EffectFn1 a Unit
 run f = mkEffectFn1 \arg -> launchAff_ do
