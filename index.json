@@ -1,0 +1,17 @@
+[
+  {
+    "name": "sample1",
+    "gcode": "sample.gcode",
+    "pictures": ["picture1.png", "picture2.png"]
+  },
+  {
+    "name": "sample-pyramid",
+    "gcode": "sample-pyramid.gcode",
+    "pictures": ["picture1.png", "picture2.png"]
+  },
+  {
+    "name": "sample3",
+    "gcode": "sample.gcode",
+    "pictures": ["picture1.png", "picture2.png"]
+  }
+]

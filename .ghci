@@ -1,0 +1,7 @@
+import Data.Aeson
+import Data.Aeson.Encode.Pretty
+import Relude
+import Data.String.Conversions
+
+-- Set prompt
+:set prompt "λ> "

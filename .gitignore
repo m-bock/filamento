@@ -1,0 +1,45 @@
+# Haskell build artifacts
+/dist-newstyle/
+/.stack-work/
+/out/
+/tmp/
+/usage/
+
+# Cabal files
+*.cabal-sandbox/
+cabal.sandbox.config
+cabal.config
+
+# GHC/Stack/Cabal logs
+*.hi
+*.o
+*.dyn_o
+*.dyn_hi
+*.prof
+*.aux
+*.hp
+*.eventlog
+*.tix
+*.log
+
+# Local environment
+.env
+
+# Editor/project files
+*.swp
+*~
+.idea/
+.vscode/
+.DS_Store
+
+# Binary executables
+*.exe
+*.out
+*.app
+*.dll
+*.so
+*.dylib
+
+# Misc
+*.tmp
+*.bak 
