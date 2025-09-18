@@ -1,7 +1,0 @@
-gen:
-    rm -rf output/*/index.d.ts
-    npx spago run
-    node scripts/fix-inline-imports.mjs
-    npx prettier --write --ignore-path "" 'output/*/index.d.ts'
-    npx typedoc "output/*/index.d.ts" --out docs --readme none --tsconfig tsconfig.typedoc.json
-    node scripts/generate-exports.mjs
